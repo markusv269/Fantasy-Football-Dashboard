@@ -1,6 +1,7 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
+from app.states.theme_state import ThemeState
 from app.components.layout import layout
 from app.pages.matchups import league_selector
 
@@ -11,11 +12,19 @@ def roster_card(roster: rx.Var) -> rx.Component:
         rx.el.div(
             rx.el.h3(
                 roster["team_name"].to(str),
-                class_name="font-bold text-lg text-gray-900 truncate",
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "font-bold text-lg text-white truncate",
+                    "font-bold text-lg text-gray-900 truncate",
+                ),
             ),
             rx.el.p(
                 roster["owner_name"].to(str),
-                class_name="text-sm text-gray-500 font-medium truncate",
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "text-sm text-gray-400 font-medium truncate",
+                    "text-sm text-gray-500 font-medium truncate",
+                ),
             ),
             class_name="mb-4",
         ),
@@ -27,7 +36,11 @@ def roster_card(roster: rx.Var) -> rx.Component:
                 ),
                 rx.el.span(
                     f"{roster_settings['wins']}-{roster_settings['losses']}-{roster_settings['ties']}",
-                    class_name="font-semibold text-gray-700",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-semibold text-gray-300",
+                        "font-semibold text-gray-700",
+                    ),
                 ),
             ),
             rx.el.div(
@@ -36,13 +49,21 @@ def roster_card(roster: rx.Var) -> rx.Component:
                 ),
                 rx.el.span(
                     roster_settings["fpts"].to_string(),
-                    class_name="font-semibold text-emerald-600",
+                    class_name="font-semibold text-[#DC2626]",
                 ),
             ),
-            class_name="flex justify-between items-center bg-gray-50 p-3 rounded-xl",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "flex justify-between items-center bg-[#161926] p-3 rounded-xl",
+                "flex justify-between items-center bg-gray-50 p-3 rounded-xl",
+            ),
         ),
         on_click=MatchupsState.view_roster(roster["roster_id"].to(int)),
-        class_name="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md cursor-pointer transition-all hover:border-emerald-200",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "bg-[#1C2033] p-5 rounded-2xl border border-gray-800 shadow-sm hover:shadow-md cursor-pointer transition-all hover:border-[#DC2626]",
+            "bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md cursor-pointer transition-all hover:border-[#DC2626]",
+        ),
     )
 
 
@@ -54,16 +75,29 @@ def roster_detail() -> rx.Component:
             rx.icon("arrow-left", class_name="w-4 h-4 mr-2"),
             "Back to Rosters",
             on_click=MatchupsState.clear_selected_roster,
-            class_name="flex items-center text-sm font-medium text-gray-500 hover:text-emerald-600 transition-colors mb-6",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "flex items-center text-sm font-medium text-gray-400 hover:text-[#DC2626] transition-colors mb-6",
+                "flex items-center text-sm font-medium text-gray-500 hover:text-[#DC2626] transition-colors mb-6",
+            ),
         ),
         rx.el.div(
             rx.el.div(
                 rx.el.h2(
                     roster["team_name"].to(str),
-                    class_name="text-2xl font-bold text-gray-900",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-2xl font-bold text-white",
+                        "text-2xl font-bold text-gray-900",
+                    ),
                 ),
                 rx.el.p(
-                    roster["owner_name"].to(str), class_name="text-gray-500 font-medium"
+                    roster["owner_name"].to(str),
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-gray-400 font-medium",
+                        "text-gray-500 font-medium",
+                    ),
                 ),
             ),
             rx.el.div(
@@ -74,9 +108,17 @@ def roster_detail() -> rx.Component:
                     ),
                     rx.el.span(
                         f"{roster_settings['wins']}-{roster_settings['losses']}-{roster_settings['ties']}",
-                        class_name="text-lg font-bold text-gray-800",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-lg font-bold text-gray-200",
+                            "text-lg font-bold text-gray-800",
+                        ),
                     ),
-                    class_name="text-center px-4 border-r border-gray-200",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-center px-4 border-r border-gray-700",
+                        "text-center px-4 border-r border-gray-200",
+                    ),
                 ),
                 rx.el.div(
                     rx.el.span(
@@ -85,19 +127,35 @@ def roster_detail() -> rx.Component:
                     ),
                     rx.el.span(
                         f"${roster_settings['waiver_budget_used']}",
-                        class_name="text-lg font-bold text-gray-800",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-lg font-bold text-gray-200",
+                            "text-lg font-bold text-gray-800",
+                        ),
                     ),
                     class_name="text-center px-4",
                 ),
-                class_name="flex items-center bg-gray-50 rounded-xl py-2",
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "flex items-center bg-[#161926] rounded-xl py-2",
+                    "flex items-center bg-gray-50 rounded-xl py-2",
+                ),
             ),
-            class_name="flex justify-between items-center bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "flex justify-between items-center bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm mb-6",
+                "flex justify-between items-center bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-6",
+            ),
         ),
         rx.el.div(
             rx.el.div(
                 rx.el.h3(
                     "Starters",
-                    class_name="font-bold text-gray-800 mb-4 flex items-center gap-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-gray-200 mb-4 flex items-center gap-2",
+                        "font-bold text-gray-800 mb-4 flex items-center gap-2",
+                    ),
                 ),
                 rx.el.div(
                     rx.foreach(
@@ -105,7 +163,11 @@ def roster_detail() -> rx.Component:
                         lambda p: rx.el.div(
                             rx.el.span(
                                 p["full_name"],
-                                class_name="font-bold text-sm text-gray-900",
+                                class_name=rx.cond(
+                                    ThemeState.is_dark,
+                                    "font-bold text-sm text-white",
+                                    "font-bold text-sm text-gray-900",
+                                ),
                             ),
                             rx.el.div(
                                 rx.el.span(
@@ -141,21 +203,37 @@ def roster_detail() -> rx.Component:
                                 ),
                                 rx.el.span(
                                     p["team"],
-                                    class_name="text-xs font-semibold text-gray-500",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "text-xs font-semibold text-gray-400",
+                                        "text-xs font-semibold text-gray-500",
+                                    ),
                                 ),
                                 class_name="flex items-center",
                             ),
-                            class_name="flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50",
+                            class_name=rx.cond(
+                                ThemeState.is_dark,
+                                "flex justify-between items-center p-3 border-b border-gray-800 last:border-0 hover:bg-[#161926]",
+                                "flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50",
+                            ),
                         ),
                     ),
-                    class_name="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-[#1C2033] border border-gray-800 rounded-xl overflow-hidden shadow-sm",
+                        "bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm",
+                    ),
                 ),
                 class_name="flex-1",
             ),
             rx.el.div(
                 rx.el.h3(
                     "Reserve / IR",
-                    class_name="font-bold text-gray-800 mb-4 flex items-center gap-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-gray-200 mb-4 flex items-center gap-2",
+                        "font-bold text-gray-800 mb-4 flex items-center gap-2",
+                    ),
                 ),
                 rx.cond(
                     roster["reserve"].to(list[dict[str, str]]).length() > 0,
@@ -165,7 +243,11 @@ def roster_detail() -> rx.Component:
                             lambda p: rx.el.div(
                                 rx.el.span(
                                     p["full_name"],
-                                    class_name="font-bold text-sm text-gray-900",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "font-bold text-sm text-white",
+                                        "font-bold text-sm text-gray-900",
+                                    ),
                                 ),
                                 rx.el.div(
                                     rx.el.span(
@@ -201,18 +283,34 @@ def roster_detail() -> rx.Component:
                                     ),
                                     rx.el.span(
                                         p["team"],
-                                        class_name="text-xs font-semibold text-gray-500",
+                                        class_name=rx.cond(
+                                            ThemeState.is_dark,
+                                            "text-xs font-semibold text-gray-400",
+                                            "text-xs font-semibold text-gray-500",
+                                        ),
                                     ),
                                     class_name="flex items-center",
                                 ),
-                                class_name="flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50",
+                                class_name=rx.cond(
+                                    ThemeState.is_dark,
+                                    "flex justify-between items-center p-3 border-b border-gray-800 last:border-0 hover:bg-[#161926]",
+                                    "flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50",
+                                ),
                             ),
                         ),
-                        class_name="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "bg-[#1C2033] border border-gray-800 rounded-xl overflow-hidden shadow-sm",
+                            "bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm",
+                        ),
                     ),
                     rx.el.p(
                         "No players on reserve/IR.",
-                        class_name="text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl border border-gray-200 border-dashed",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-sm text-gray-500 italic p-4 bg-[#161926] rounded-xl border border-gray-800 border-dashed",
+                            "text-sm text-gray-500 italic p-4 bg-gray-50 rounded-xl border border-gray-200 border-dashed",
+                        ),
                     ),
                 ),
                 class_name="flex-1",

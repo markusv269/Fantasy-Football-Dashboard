@@ -1,5 +1,6 @@
 import reflex as rx
 from app.states.draft_state import DraftState
+from app.states.theme_state import ThemeState
 from app.components.layout import layout
 
 
@@ -11,10 +12,19 @@ def stat_card(
             rx.el.div(
                 rx.el.h3(
                     title,
-                    class_name="text-sm font-bold text-gray-500 uppercase tracking-wide",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-sm font-bold text-gray-400 uppercase tracking-wide",
+                        "text-sm font-bold text-gray-500 uppercase tracking-wide",
+                    ),
                 ),
                 rx.el.span(
-                    value, class_name="text-3xl font-bold text-gray-900 mt-1 block"
+                    value,
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-3xl font-bold text-white mt-1 block",
+                        "text-3xl font-bold text-gray-900 mt-1 block",
+                    ),
                 ),
             ),
             rx.el.div(
@@ -23,7 +33,11 @@ def stat_card(
             ),
             class_name="flex justify-between items-start",
         ),
-        class_name="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm",
+            "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm",
+        ),
     )
 
 
@@ -33,8 +47,12 @@ def draft_filter_tab(label: str) -> rx.Component:
         on_click=DraftState.set_draft_filter(label),
         class_name=rx.cond(
             DraftState.draft_filter == label,
-            "px-4 py-2 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 transition-colors shadow-sm",
-            "px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors",
+            "px-4 py-2 rounded-full text-sm font-bold bg-[#DC2626]/20 text-[#DC2626] transition-colors shadow-sm",
+            rx.cond(
+                ThemeState.is_dark,
+                "px-4 py-2 rounded-full text-sm font-semibold bg-[#1C2033] text-gray-400 border border-gray-800 hover:bg-gray-800 transition-colors",
+                "px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors",
+            ),
         ),
     )
 
@@ -46,7 +64,11 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
             rx.el.div(
                 rx.el.h3(
                     draft["league_name"].to(str),
-                    class_name="font-bold text-lg text-gray-900 line-clamp-1",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-lg text-white line-clamp-1",
+                        "font-bold text-lg text-gray-900 line-clamp-1",
+                    ),
                 ),
                 rx.el.div(
                     rx.el.span(
@@ -105,8 +127,16 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
                     rx.cond(is_scheduled, draft["start_date_str"].to(str), "TBD"),
                     class_name=rx.cond(
                         is_scheduled,
-                        "text-sm font-semibold text-gray-700",
-                        "text-sm font-bold text-gray-500 italic",
+                        rx.cond(
+                            ThemeState.is_dark,
+                            "text-sm font-semibold text-gray-300",
+                            "text-sm font-semibold text-gray-700",
+                        ),
+                        rx.cond(
+                            ThemeState.is_dark,
+                            "text-sm font-bold text-gray-500 italic",
+                            "text-sm font-bold text-gray-500 italic",
+                        ),
                     ),
                 ),
                 class_name="flex items-center mt-4 mb-4",
@@ -114,11 +144,19 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
             rx.el.div(
                 rx.el.span(
                     f"{draft['rounds'].to(str)} Rounds",
-                    class_name="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-md mr-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-gray-800 border border-gray-700 text-gray-400 text-xs font-medium px-2 py-1 rounded-md mr-2",
+                        "bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-md mr-2",
+                    ),
                 ),
                 rx.el.span(
                     f"{draft['teams'].to(str)} Teams",
-                    class_name="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-md",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-gray-800 border border-gray-700 text-gray-400 text-xs font-medium px-2 py-1 rounded-md",
+                        "bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-md",
+                    ),
                 ),
                 class_name="flex items-center",
             ),
@@ -126,9 +164,17 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
         href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
         target="_blank",
         class_name=rx.cond(
-            is_scheduled,
-            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
-            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow block",
+            ThemeState.is_dark,
+            rx.cond(
+                is_scheduled,
+                "bg-[#1C2033] p-5 rounded-2xl shadow-sm border border-gray-800 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
+                "bg-[#1C2033] p-5 rounded-2xl shadow-sm border border-gray-800 border-l-4 border-l-gray-600 border-dashed hover:shadow-md transition-shadow block",
+            ),
+            rx.cond(
+                is_scheduled,
+                "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
+                "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow block",
+            ),
         ),
     )
 
@@ -139,11 +185,19 @@ def historical_draft_row(draft: dict) -> rx.Component:
             rx.el.div(
                 rx.el.span(
                     draft["league_name"].to(str),
-                    class_name="font-bold text-gray-900 block",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-white block",
+                        "font-bold text-gray-900 block",
+                    ),
                 ),
                 rx.el.span(
                     f"Season {draft['season'].to(str)}",
-                    class_name="text-xs text-gray-500 font-medium",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-xs text-gray-400 font-medium",
+                        "text-xs text-gray-500 font-medium",
+                    ),
                 ),
             ),
             class_name="p-4 whitespace-nowrap",
@@ -175,7 +229,11 @@ def historical_draft_row(draft: dict) -> rx.Component:
                 draft["league_type"].to(str) != "",
                 rx.el.span(
                     draft["league_type"].to(str).title(),
-                    class_name="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded-md",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-gray-800 border border-gray-700 text-gray-300 text-xs font-bold px-2 py-1 rounded-md",
+                        "bg-gray-50 border border-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded-md",
+                    ),
                 ),
                 rx.el.span(""),
             ),
@@ -184,7 +242,11 @@ def historical_draft_row(draft: dict) -> rx.Component:
         rx.el.td(
             rx.el.span(
                 draft["start_date_str"].to(str),
-                class_name="text-sm text-gray-600 font-medium",
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "text-sm text-gray-300 font-medium",
+                    "text-sm text-gray-600 font-medium",
+                ),
             ),
             class_name="p-4 whitespace-nowrap text-right",
         ),
@@ -193,11 +255,15 @@ def historical_draft_row(draft: dict) -> rx.Component:
                 "View",
                 href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
                 target="_blank",
-                class_name="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors",
+                class_name="text-xs font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors",
             ),
             class_name="p-4 whitespace-nowrap text-center",
         ),
-        class_name="border-b border-gray-100 hover:bg-gray-50 transition-colors",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "border-b border-gray-800 hover:bg-[#161926] transition-colors",
+            "border-b border-gray-100 hover:bg-gray-50 transition-colors",
+        ),
     )
 
 
@@ -211,11 +277,19 @@ def drafts_page() -> rx.Component:
                         class_name="w-8 h-8 mr-3 text-emerald-600 inline",
                     ),
                     "Draft Center",
-                    class_name="text-3xl font-bold text-gray-900 mb-2 flex items-center",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-3xl font-bold text-white mb-2 flex items-center",
+                        "text-3xl font-bold text-gray-900 mb-2 flex items-center",
+                    ),
                 ),
                 rx.el.p(
                     "Overview of all upcoming 2026 drafts and past 2025 results.",
-                    class_name="text-gray-500 font-medium",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-gray-400 font-medium",
+                        "text-gray-500 font-medium",
+                    ),
                 ),
                 class_name="mb-8",
             ),
@@ -256,16 +330,28 @@ def drafts_page() -> rx.Component:
                     draft_filter_tab("IDP"),
                     class_name="flex flex-wrap gap-3",
                 ),
-                class_name="mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm",
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "mb-8 bg-[#1C2033] p-4 rounded-2xl border border-gray-800 shadow-sm",
+                    "mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm",
+                ),
             ),
             rx.el.div(
                 rx.el.h2(
                     "Upcoming Drafts (2026)",
-                    class_name="text-2xl font-bold text-gray-800 mb-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-2xl font-bold text-white mb-2",
+                        "text-2xl font-bold text-gray-800 mb-2",
+                    ),
                 ),
                 rx.el.p(
                     "2026 Season — Dynasty & Redraft Rookie Drafts",
-                    class_name="text-sm text-gray-500 font-medium mb-6",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-sm text-gray-400 font-medium mb-6",
+                        "text-sm text-gray-500 font-medium mb-6",
+                    ),
                 ),
                 rx.cond(
                     DraftState.is_loading,
@@ -288,9 +374,17 @@ def drafts_page() -> rx.Component:
                             rx.icon("ghost", class_name="w-12 h-12 text-gray-300 mb-4"),
                             rx.el.h3(
                                 "No Drafts Found",
-                                class_name="text-lg font-bold text-gray-700",
+                                class_name=rx.cond(
+                                    ThemeState.is_dark,
+                                    "text-lg font-bold text-gray-300",
+                                    "text-lg font-bold text-gray-700",
+                                ),
                             ),
-                            class_name="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-200 border-dashed",
+                            class_name=rx.cond(
+                                ThemeState.is_dark,
+                                "flex flex-col items-center justify-center py-20 bg-[#1C2033] rounded-3xl border border-gray-800 border-dashed",
+                                "flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-200 border-dashed",
+                            ),
                         ),
                     ),
                 ),
@@ -300,7 +394,11 @@ def drafts_page() -> rx.Component:
                 rx.el.div(
                     rx.el.h2(
                         "Completed Drafts (2025)",
-                        class_name="text-2xl font-bold text-gray-800 mb-2",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-2xl font-bold text-gray-200 mb-2",
+                            "text-2xl font-bold text-gray-800 mb-2",
+                        ),
                     ),
                     rx.el.button(
                         rx.cond(
@@ -317,25 +415,49 @@ def drafts_page() -> rx.Component:
                             rx.el.tr(
                                 rx.el.th(
                                     "League",
-                                    class_name="p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
+                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    ),
                                 ),
                                 rx.el.th(
                                     "Type",
-                                    class_name="p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
+                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    ),
                                 ),
                                 rx.el.th(
                                     "Format",
-                                    class_name="p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
+                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    ),
                                 ),
                                 rx.el.th(
                                     "Completed",
-                                    class_name="p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider",
+                                        "p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    ),
                                 ),
                                 rx.el.th(
                                     "Board",
-                                    class_name="p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    class_name=rx.cond(
+                                        ThemeState.is_dark,
+                                        "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
+                                        "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                    ),
                                 ),
-                                class_name="bg-gray-50 border-b border-gray-200",
+                                class_name=rx.cond(
+                                    ThemeState.is_dark,
+                                    "bg-[#161926] border-b border-gray-800",
+                                    "bg-gray-50 border-b border-gray-200",
+                                ),
                             )
                         ),
                         rx.el.tbody(
@@ -350,7 +472,11 @@ def drafts_page() -> rx.Component:
                         ),
                         class_name="min-w-full table-auto",
                     ),
-                    class_name="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden overflow-x-auto",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm overflow-hidden overflow-x-auto",
+                        "bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden overflow-x-auto",
+                    ),
                 ),
             ),
         )

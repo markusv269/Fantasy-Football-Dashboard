@@ -1,19 +1,35 @@
 import reflex as rx
 from app.states.community_state import CommunityState
+from app.states.theme_state import ThemeState
 from app.components.layout import layout
 
 
 def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
     return rx.el.tr(
         rx.el.td(
-            rx.el.span(index + 1, class_name="text-gray-500 font-bold"),
-            class_name="p-3 w-12 text-center border-b border-gray-100",
+            rx.el.span(
+                index + 1,
+                class_name=rx.cond(
+                    ThemeState.is_dark,
+                    "text-gray-400 font-bold",
+                    "text-gray-500 font-bold",
+                ),
+            ),
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "p-3 w-12 text-center border-b border-gray-800",
+                "p-3 w-12 text-center border-b border-gray-100",
+            ),
         ),
         rx.el.td(
             rx.el.div(
                 rx.el.span(
                     player["full_name"].to(str),
-                    class_name="font-bold text-gray-900 mr-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-white mr-2",
+                        "font-bold text-gray-900 mr-2",
+                    ),
                 ),
                 rx.el.span(
                     player["position"].to(str),
@@ -48,17 +64,29 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
                 ),
                 rx.el.span(
                     player["team"].to(str),
-                    class_name="text-xs font-semibold text-gray-500",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-xs font-semibold text-gray-400",
+                        "text-xs font-semibold text-gray-500",
+                    ),
                 ),
                 class_name="flex items-center",
             ),
-            class_name="p-3 border-b border-gray-100",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "p-3 border-b border-gray-800",
+                "p-3 border-b border-gray-100",
+            ),
         ),
         rx.el.td(
             rx.el.div(
                 rx.el.span(
                     player["count"].to_string(),
-                    class_name="font-bold text-gray-700 mr-2",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-bold text-gray-200 mr-2",
+                        "font-bold text-gray-700 mr-2",
+                    ),
                 ),
                 rx.cond(
                     is_add,
@@ -67,9 +95,17 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
                 ),
                 class_name="flex items-center justify-end",
             ),
-            class_name="p-3 border-b border-gray-100 text-right",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "p-3 border-b border-gray-800 text-right",
+                "p-3 border-b border-gray-100 text-right",
+            ),
         ),
-        class_name="hover:bg-gray-50 transition-colors",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "hover:bg-[#161926] transition-colors",
+            "hover:bg-gray-50 transition-colors",
+        ),
     )
 
 
@@ -83,11 +119,19 @@ def trending_page() -> rx.Component:
                             "flame", class_name="w-8 h-8 mr-3 text-orange-500 inline"
                         ),
                         "Trending Players",
-                        class_name="text-3xl font-bold text-gray-900 mb-2 flex items-center",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-3xl font-bold text-white mb-2 flex items-center",
+                            "text-3xl font-bold text-gray-900 mb-2 flex items-center",
+                        ),
                     ),
                     rx.el.p(
                         "The most added and dropped players across Sleeper leagues.",
-                        class_name="text-gray-500 font-medium",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "text-gray-400 font-medium",
+                            "text-gray-500 font-medium",
+                        ),
                     ),
                 ),
                 rx.el.div(
@@ -96,8 +140,12 @@ def trending_page() -> rx.Component:
                         on_click=CommunityState.change_trending_timeframe("24h"),
                         class_name=rx.cond(
                             CommunityState.trending_timeframe == "24h",
-                            "px-4 py-2 text-sm font-bold bg-emerald-600 text-white rounded-l-lg transition-colors",
-                            "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 rounded-l-lg hover:bg-gray-50 transition-colors",
+                            "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-l-lg transition-colors",
+                            rx.cond(
+                                ThemeState.is_dark,
+                                "px-4 py-2 text-sm font-bold bg-[#1C2033] text-gray-400 border border-gray-800 rounded-l-lg hover:bg-gray-800 transition-colors",
+                                "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 rounded-l-lg hover:bg-gray-50 transition-colors",
+                            ),
                         ),
                     ),
                     rx.el.button(
@@ -105,8 +153,12 @@ def trending_page() -> rx.Component:
                         on_click=CommunityState.change_trending_timeframe("48h"),
                         class_name=rx.cond(
                             CommunityState.trending_timeframe == "48h",
-                            "px-4 py-2 text-sm font-bold bg-emerald-600 text-white rounded-r-lg transition-colors",
-                            "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 border-l-0 rounded-r-lg hover:bg-gray-50 transition-colors",
+                            "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-r-lg transition-colors",
+                            rx.cond(
+                                ThemeState.is_dark,
+                                "px-4 py-2 text-sm font-bold bg-[#1C2033] text-gray-400 border border-gray-800 border-l-0 rounded-r-lg hover:bg-gray-800 transition-colors",
+                                "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 border-l-0 rounded-r-lg hover:bg-gray-50 transition-colors",
+                            ),
                         ),
                     ),
                     class_name="flex mt-4 md:mt-0 shadow-sm rounded-lg",
@@ -122,9 +174,17 @@ def trending_page() -> rx.Component:
                                 class_name="w-5 h-5 mr-2 text-emerald-500 inline",
                             ),
                             "Hot Adds",
-                            class_name="text-lg font-bold text-gray-800 flex items-center",
+                            class_name=rx.cond(
+                                ThemeState.is_dark,
+                                "text-lg font-bold text-white flex items-center",
+                                "text-lg font-bold text-gray-800 flex items-center",
+                            ),
                         ),
-                        class_name="p-4 border-b border-gray-200 bg-emerald-50 rounded-t-2xl",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "p-4 border-b border-gray-800 bg-[#DC2626]/10 rounded-t-2xl",
+                            "p-4 border-b border-gray-200 bg-emerald-50 rounded-t-2xl",
+                        ),
                     ),
                     rx.el.div(
                         rx.el.table(
@@ -140,7 +200,11 @@ def trending_page() -> rx.Component:
                         ),
                         class_name="overflow-x-auto p-2",
                     ),
-                    class_name="bg-white rounded-2xl border border-gray-200 shadow-sm",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm",
+                        "bg-white rounded-2xl border border-gray-200 shadow-sm",
+                    ),
                 ),
                 rx.el.div(
                     rx.el.div(
@@ -150,9 +214,17 @@ def trending_page() -> rx.Component:
                                 class_name="w-5 h-5 mr-2 text-red-500 inline",
                             ),
                             "Trending Drops",
-                            class_name="text-lg font-bold text-gray-800 flex items-center",
+                            class_name=rx.cond(
+                                ThemeState.is_dark,
+                                "text-lg font-bold text-white flex items-center",
+                                "text-lg font-bold text-gray-800 flex items-center",
+                            ),
                         ),
-                        class_name="p-4 border-b border-gray-200 bg-red-50 rounded-t-2xl",
+                        class_name=rx.cond(
+                            ThemeState.is_dark,
+                            "p-4 border-b border-gray-800 bg-red-900/20 rounded-t-2xl",
+                            "p-4 border-b border-gray-200 bg-red-50 rounded-t-2xl",
+                        ),
                     ),
                     rx.el.div(
                         rx.el.table(
@@ -168,7 +240,11 @@ def trending_page() -> rx.Component:
                         ),
                         class_name="overflow-x-auto p-2",
                     ),
-                    class_name="bg-white rounded-2xl border border-gray-200 shadow-sm",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm",
+                        "bg-white rounded-2xl border border-gray-200 shadow-sm",
+                    ),
                 ),
                 class_name="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6",
             ),

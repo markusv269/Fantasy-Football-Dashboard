@@ -1,6 +1,7 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
+from app.states.theme_state import ThemeState
 from app.components.layout import layout
 
 
@@ -17,7 +18,11 @@ def league_selector() -> rx.Component:
                 AppState.select_league(val),
                 MatchupsState.init_matchups(),
             ],
-            class_name="appearance-none bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block w-full p-2.5 outline-none font-medium",
+            class_name=rx.cond(
+                ThemeState.is_dark,
+                "appearance-none bg-[#1C2033] border border-gray-700 text-white text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 outline-none font-medium",
+                "appearance-none bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 outline-none font-medium",
+            ),
         ),
         rx.icon(
             "chevron-down",
@@ -32,7 +37,7 @@ def week_selector() -> rx.Component:
         rx.el.button(
             rx.icon("chevron-left", class_name="w-4 h-4"),
             on_click=MatchupsState.change_week(MatchupsState.selected_week - 1),
-            class_name="p-2 text-gray-500 hover:text-emerald-600 transition-colors",
+            class_name="p-2 text-gray-500 hover:text-[#DC2626] transition-colors",
         ),
         rx.el.div(
             rx.foreach(
@@ -42,8 +47,12 @@ def week_selector() -> rx.Component:
                     on_click=MatchupsState.change_week(w),
                     class_name=rx.cond(
                         w == MatchupsState.selected_week,
-                        "w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold text-sm flex items-center justify-center",
-                        "w-8 h-8 rounded-full text-gray-600 hover:bg-gray-100 font-medium text-sm flex items-center justify-center transition-colors",
+                        "w-8 h-8 rounded-full bg-[#DC2626]/20 text-[#DC2626] font-bold text-sm flex items-center justify-center",
+                        rx.cond(
+                            ThemeState.is_dark,
+                            "w-8 h-8 rounded-full text-gray-400 hover:bg-gray-800 font-medium text-sm flex items-center justify-center transition-colors",
+                            "w-8 h-8 rounded-full text-gray-600 hover:bg-gray-100 font-medium text-sm flex items-center justify-center transition-colors",
+                        ),
                     ),
                 ),
             ),
@@ -52,9 +61,13 @@ def week_selector() -> rx.Component:
         rx.el.button(
             rx.icon("chevron-right", class_name="w-4 h-4"),
             on_click=MatchupsState.change_week(MatchupsState.selected_week + 1),
-            class_name="p-2 text-gray-500 hover:text-emerald-600 transition-colors",
+            class_name="p-2 text-gray-500 hover:text-[#DC2626] transition-colors",
         ),
-        class_name="flex items-center bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm w-full md:w-auto overflow-hidden",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "flex items-center bg-[#1C2033] border border-gray-700 rounded-full px-2 py-1 shadow-sm w-full md:w-auto overflow-hidden",
+            "flex items-center bg-white border border-gray-200 rounded-full px-2 py-1 shadow-sm w-full md:w-auto overflow-hidden",
+        ),
     )
 
 
@@ -66,14 +79,22 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
             rx.el.div(
                 rx.el.span(
                     team_a["team_name"].to(str),
-                    class_name="font-semibold text-gray-800 text-sm truncate max-w-[120px]",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-semibold text-white text-sm truncate max-w-[120px]",
+                        "font-semibold text-gray-800 text-sm truncate max-w-[120px]",
+                    ),
                 ),
                 rx.el.span(
                     team_a["points"].to_string(),
                     class_name=rx.cond(
                         team_a["points"].to(float) > team_b["points"].to(float),
-                        "font-bold text-lg text-emerald-600",
-                        "font-semibold text-lg text-gray-600",
+                        "font-bold text-lg text-[#DC2626]",
+                        rx.cond(
+                            ThemeState.is_dark,
+                            "font-semibold text-lg text-gray-500",
+                            "font-semibold text-lg text-gray-600",
+                        ),
                     ),
                 ),
                 class_name="flex flex-col items-center p-4 flex-1",
@@ -81,21 +102,33 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
             rx.el.div(
                 rx.el.span(
                     "VS",
-                    class_name="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "text-xs font-bold text-gray-500 bg-gray-800 px-2 py-1 rounded-full",
+                        "text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-full",
+                    ),
                 ),
                 class_name="flex items-center justify-center px-2",
             ),
             rx.el.div(
                 rx.el.span(
                     team_b["team_name"].to(str),
-                    class_name="font-semibold text-gray-800 text-sm truncate max-w-[120px]",
+                    class_name=rx.cond(
+                        ThemeState.is_dark,
+                        "font-semibold text-white text-sm truncate max-w-[120px]",
+                        "font-semibold text-gray-800 text-sm truncate max-w-[120px]",
+                    ),
                 ),
                 rx.el.span(
                     team_b["points"].to_string(),
                     class_name=rx.cond(
                         team_b["points"].to(float) > team_a["points"].to(float),
-                        "font-bold text-lg text-emerald-600",
-                        "font-semibold text-lg text-gray-600",
+                        "font-bold text-lg text-[#DC2626]",
+                        rx.cond(
+                            ThemeState.is_dark,
+                            "font-semibold text-lg text-gray-500",
+                            "font-semibold text-lg text-gray-600",
+                        ),
                     ),
                 ),
                 class_name="flex flex-col items-center p-4 flex-1",
@@ -109,7 +142,11 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
             ),
             class_name="absolute top-2 left-3",
         ),
-        class_name="relative bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden",
+        class_name=rx.cond(
+            ThemeState.is_dark,
+            "relative bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm hover:shadow-md transition-shadow overflow-hidden",
+            "relative bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden",
+        ),
     )
 
 

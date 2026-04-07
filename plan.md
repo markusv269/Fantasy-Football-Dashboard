@@ -1,24 +1,21 @@
-# Fantasy Football Community Hub — Feature Update
+# Stoned Lack — Brand Redesign + Dark Mode + Mobile
 
-## Phase 1: Drafts → Sleeper Draftboard & League Detail Modal ✅ (previously completed)
-- [x] Core layout, navigation, league overview
-- [x] Matchups, rosters, standings pages
-- [x] Community features & Supabase integration
-- [x] 2026 draft overview & player data resolution
+## Phase 1: Core Theme System + Layout Redesign ✅
+- [x] Create theme state with dark/light mode toggle, persist preference
+- [x] Redesign sidebar with Stoned Lack brand colors (red #DC2626, steel blue #5B7BA5)
+- [x] Add mobile hamburger menu / bottom navigation for small screens
+- [x] Redesign header with dark mode toggle button and mobile-responsive layout
+- [x] Update layout component with responsive breakpoints and dark mode CSS classes
 
-## Phase 2: Draft Clicks → Sleeper Draftboard + League Card Detail Modal ✅
-- [x] Make draft cards (upcoming + historical) open Sleeper draftboard in new tab: `https://sleeper.com/draft/nfl/{draft_id}`
-- [x] Build league detail modal/overlay when clicking a league card on Home/Leagues pages
-- [x] Modal shows: standings table (from Supabase rosters), recent matchups (from matchup_week_stats), league champion, roster positions
-- [x] Fetch league standings from Supabase `rosters` table (week=0 for season totals) + `managers` for display names
-- [x] Fetch recent matchups from `matchup_week_stats` + pair by matchup_id + resolve team names via `managers`
-- [x] Show league champion from `league_champion` table if available
+## Phase 2: Restyle All Pages — Home, Leagues, Matchups, Standings, Rosters ✅
+- [x] Restyle Home page: hero section, league cards, trending adds — brand colors + dark mode classes
+- [x] Restyle Leagues page: league cards, add-league form — brand colors + dark mode
+- [x] Restyle Matchups page: week selector, matchup cards — brand colors + dark mode
+- [x] Restyle Standings + Rosters pages: tables, roster detail — brand colors + dark mode
+- [x] Restyle league detail modal with brand colors + dark mode
 
-## Phase 3: Rebrand to "Stoned Lack" + Supabase Polls + News ✅
-- [x] Rename all branding from "FF Hub" / "Fantasy Football Hub" to "Stoned Lack" podcast branding
-- [x] Supabase-backed polls system: reads from `polls` table (poll, answers jsonb, stats jsonb), votes persist to DB
-- [x] News system reading from Supabase `news` table (header, text, created_at)
-- [x] Updated Community page: real polls from Supabase (with vote tracking), news feed section
-- [x] Wire community registration to existing `dynasty_waitinglist` table
-- [x] Migrated dynasty_leagues_2026.txt to Supabase leagues table (36 leagues inserted, file removed)
-- [x] Draft state reads 2026 league IDs from Supabase instead of txt file
+## Phase 3: Restyle Community, Drafts, Trending + Final Polish ✅
+- [x] Restyle Community page: polls, news, registration, YouTube — brand colors + dark mode
+- [x] Restyle Drafts page: stat cards, filter tabs, draft cards, historical table — brand colors + dark mode
+- [x] Restyle Trending page: trending adds/drops tables — brand colors + dark mode
+- [x] Final responsive and dark mode QA across all pages
