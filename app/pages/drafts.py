@@ -41,7 +41,7 @@ def draft_filter_tab(label: str) -> rx.Component:
 
 def upcoming_draft_card(draft: dict) -> rx.Component:
     is_scheduled = draft["start_time"].to(int) > 0
-    return rx.el.div(
+    return rx.el.a(
         rx.el.div(
             rx.el.div(
                 rx.el.h3(
@@ -123,10 +123,12 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
                 class_name="flex items-center",
             ),
         ),
+        href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
+        target="_blank",
         class_name=rx.cond(
             is_scheduled,
-            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow",
-            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow",
+            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
+            "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow block",
         ),
     )
 
@@ -185,6 +187,15 @@ def historical_draft_row(draft: dict) -> rx.Component:
                 class_name="text-sm text-gray-600 font-medium",
             ),
             class_name="p-4 whitespace-nowrap text-right",
+        ),
+        rx.el.td(
+            rx.el.a(
+                "View",
+                href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
+                target="_blank",
+                class_name="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors",
+            ),
+            class_name="p-4 whitespace-nowrap text-center",
         ),
         class_name="border-b border-gray-100 hover:bg-gray-50 transition-colors",
     )
@@ -319,6 +330,10 @@ def drafts_page() -> rx.Component:
                                 rx.el.th(
                                     "Completed",
                                     class_name="p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
+                                ),
+                                rx.el.th(
+                                    "Board",
+                                    class_name="p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
                                 ),
                                 class_name="bg-gray-50 border-b border-gray-200",
                             )

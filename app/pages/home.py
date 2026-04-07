@@ -1,6 +1,8 @@
 import reflex as rx
 from app.states.app_state import AppState
+from app.states.league_detail_state import LeagueDetailState
 from app.components.layout import layout
+from app.components.league_modal import league_detail_modal
 
 
 def league_card(league: dict) -> rx.Component:
@@ -66,7 +68,9 @@ def league_card(league: dict) -> rx.Component:
             ),
             class_name="flex justify-between items-center",
         ),
-        on_click=lambda: AppState.select_league(league["league_id"].to_string()),
+        on_click=lambda: LeagueDetailState.open_league_modal(
+            league["league_id"].to_string()
+        ),
         class_name="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer",
     )
 
@@ -203,5 +207,6 @@ def home_page() -> rx.Component:
                 ),
                 class_name="grid grid-cols-1 lg:grid-cols-3 gap-8",
             ),
+            league_detail_modal(),
         )
     )

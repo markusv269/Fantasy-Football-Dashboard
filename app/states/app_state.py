@@ -128,7 +128,6 @@ class AppState(rx.State):
     @rx.event
     def select_league(self, league_id: str):
         self.selected_league_id = league_id
-        return rx.redirect("/leagues")
 
     @rx.event
     def init_app(self):

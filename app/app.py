@@ -11,6 +11,7 @@ from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
 from app.states.community_state import CommunityState
 from app.states.draft_state import DraftState
+from app.states.league_detail_state import LeagueDetailState
 
 app = rx.App(
     theme=rx.theme(appearance="light"),
