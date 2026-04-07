@@ -80,11 +80,11 @@ def home_page() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 rx.el.h1(
-                    "Welcome to Fantasy Football Community Hub",
+                    "Willkommen bei Stoned Lack Fantasy",
                     class_name="text-3xl md:text-4xl font-bold text-gray-900 mb-3",
                 ),
                 rx.el.p(
-                    "Manage your leagues, track matchups, follow trends, and engage with the podcast community seamlessly.",
+                    "Verwalte deine Ligen, verfolge Matchups, entdecke Trends und werde Teil der Stoned Lack Community.",
                     class_name="text-lg text-gray-600 font-medium",
                 ),
                 class_name="mb-10 bg-white p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm",

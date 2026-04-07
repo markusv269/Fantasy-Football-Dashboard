@@ -14,9 +14,11 @@
 - [x] Fetch recent matchups from `matchup_week_stats` + pair by matchup_id + resolve team names via `managers`
 - [x] Show league champion from `league_champion` table if available
 
-## Phase 3: Rebrand to "Stoned Lack" + Supabase Polls + News
-- [ ] Rename all branding from "FF Hub" / "Fantasy Football Hub" to "Stoned Lack" podcast branding
-- [ ] Create Supabase-backed polls system: store polls/options/votes (requires user to create `polls`, `poll_options`, `poll_votes` tables — provide SQL + fallback to local state)
-- [ ] Build news system reading from Supabase (requires `news` table — provide SQL + fallback to local state with sample data)
-- [ ] Update Community page: real polls from Supabase (with vote tracking), news feed section
-- [ ] Wire community registration to existing `dynasty_waitinglist` and `user_registration` tables
+## Phase 3: Rebrand to "Stoned Lack" + Supabase Polls + News ✅
+- [x] Rename all branding from "FF Hub" / "Fantasy Football Hub" to "Stoned Lack" podcast branding
+- [x] Supabase-backed polls system: reads from `polls` table (poll, answers jsonb, stats jsonb), votes persist to DB
+- [x] News system reading from Supabase `news` table (header, text, created_at)
+- [x] Updated Community page: real polls from Supabase (with vote tracking), news feed section
+- [x] Wire community registration to existing `dynasty_waitinglist` table
+- [x] Migrated dynasty_leagues_2026.txt to Supabase leagues table (36 leagues inserted, file removed)
+- [x] Draft state reads 2026 league IDs from Supabase instead of txt file

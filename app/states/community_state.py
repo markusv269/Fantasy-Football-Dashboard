@@ -3,45 +3,15 @@ import time
 from app.sleeper_api import get_trending_players
 from app.player_cache import enrich_trending
 from app.supabase_client import get_supabase_client
+import logging
+from datetime import datetime
 
 
 class CommunityState(rx.State):
-    polls: list[dict[str, str | int | bool | list[dict[str, str | int]]]] = [
-        {
-            "id": "poll_1",
-            "question": "Who will be the top QB in 2025?",
-            "options": [
-                {"text": "Patrick Mahomes", "votes": 42},
-                {"text": "Josh Allen", "votes": 156},
-                {"text": "Lamar Jackson", "votes": 89},
-                {"text": "C.J. Stroud", "votes": 104},
-            ],
-            "total_votes": 391,
-            "is_active": True,
-        },
-        {
-            "id": "poll_2",
-            "question": "Which team improved the most this offseason?",
-            "options": [
-                {"text": "Bears", "votes": 210},
-                {"text": "Texans", "votes": 315},
-                {"text": "Commanders", "votes": 405},
-            ],
-            "total_votes": 930,
-            "is_active": True,
-        },
-        {
-            "id": "poll_3",
-            "question": "Favorite podcast segment?",
-            "options": [
-                {"text": "Waiver Wire Adds", "votes": 500},
-                {"text": "Start/Sit", "votes": 420},
-                {"text": "Mailbag", "votes": 280},
-            ],
-            "total_votes": 1200,
-            "is_active": False,
-        },
-    ]
+    polls: list[dict[str, str | int | bool | list[dict[str, str | int]]]] = []
+    news_items: list[dict[str, str | int]] = []
+    polls_loaded: bool = False
+    news_loaded: bool = False
     voted_polls: list[str] = []
     reg_team_name: str = ""
     reg_email: str = ""
@@ -101,6 +71,80 @@ class CommunityState(rx.State):
     trending_timeframe: str = "24h"
 
     @rx.event
+    def load_polls(self):
+        client = get_supabase_client()
+        if not client:
+            return
+        try:
+            polls_res = (
+                client.table("polls")
+                .select("*")
+                .order("created_at", desc=True)
+                .execute()
+            )
+            if polls_res and polls_res.data:
+                new_polls = []
+                for p in polls_res.data:
+                    answers = p.get("answers", [])
+                    stats = p.get("stats", [])
+                    options = []
+                    total = 0
+                    for i, ans in enumerate(answers):
+                        votes = stats[i] if i < len(stats) else 0
+                        options.append({"text": str(ans), "votes": int(votes)})
+                        total += int(votes)
+                    new_polls.append(
+                        {
+                            "id": str(p["id"]),
+                            "question": p.get("poll", ""),
+                            "options": options,
+                            "total_votes": total,
+                            "is_active": True,
+                        }
+                    )
+                self.polls = new_polls
+                self.polls_loaded = True
+        except Exception as e:
+            logging.exception(f"Error loading polls from Supabase: {e}")
+
+    @rx.event
+    def load_news(self):
+        client = get_supabase_client()
+        if not client:
+            return
+        try:
+            news_res = (
+                client.table("news")
+                .select("*")
+                .order("created_at", desc=True)
+                .execute()
+            )
+            if news_res and news_res.data:
+                new_items = []
+                for n in news_res.data:
+                    created = n.get("created_at", "")
+                    date_str = ""
+                    if created:
+                        try:
+                            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                            date_str = dt.strftime("%d. %B %Y")
+                        except Exception:
+                            logging.exception("Unexpected error")
+                            date_str = created[:10]
+                    new_items.append(
+                        {
+                            "id": str(n.get("id", "")),
+                            "title": n.get("header", ""),
+                            "content": n.get("text", ""),
+                            "date": date_str,
+                        }
+                    )
+                self.news_items = new_items
+                self.news_loaded = True
+        except Exception as e:
+            logging.exception(f"Error loading news from Supabase: {e}")
+
+    @rx.event
     def vote_poll(self, poll_id: str, option_index: int):
         if poll_id in self.voted_polls:
             return
@@ -111,6 +155,28 @@ class CommunityState(rx.State):
                 poll["total_votes"] += 1
                 self.voted_polls.append(poll_id)
                 break
+        client = get_supabase_client()
+        if client:
+            try:
+                poll_id_int = int(poll_id)
+                poll_res = (
+                    client.table("polls")
+                    .select("stats")
+                    .eq("id", poll_id_int)
+                    .limit(1)
+                    .execute()
+                )
+                if poll_res and poll_res.data:
+                    current_stats = poll_res.data[0].get("stats", [])
+                    if option_index < len(current_stats):
+                        current_stats[option_index] = (
+                            int(current_stats[option_index]) + 1
+                        )
+                        client.table("polls").update({"stats": current_stats}).eq(
+                            "id", poll_id_int
+                        ).execute()
+            except Exception as e:
+                logging.exception(f"Error updating poll vote in Supabase: {e}")
 
     @rx.event
     def submit_registration(self):
@@ -125,6 +191,19 @@ class CommunityState(rx.State):
         }
         self.registrations.append(new_reg)
         self.registration_submitted = True
+        client = get_supabase_client()
+        if client:
+            try:
+                client.table("dynasty_waitinglist").insert(
+                    {
+                        "sleeper_name": self.reg_sleeper_username or self.reg_team_name,
+                        "dynasty": self.reg_preferred_league == "Dynasty",
+                        "dynasty_idp": False,
+                        "dynasty_bb": self.reg_preferred_league == "Best Ball",
+                    }
+                ).execute()
+            except Exception as e:
+                logging.exception(f"Error inserting registration into Supabase: {e}")
         self.reg_team_name = ""
         self.reg_email = ""
         self.reg_sleeper_username = ""
@@ -144,6 +223,11 @@ class CommunityState(rx.State):
             self.trending_adds = enrich_trending(adds)
         if drops:
             self.trending_drops = enrich_trending(drops)
+
+    @rx.event
+    def init_community(self):
+        yield CommunityState.load_polls
+        yield CommunityState.load_news
 
     @rx.event
     def init_trending(self):

@@ -17,7 +17,7 @@ def sidebar() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 rx.icon("podcast", class_name="h-8 w-8 text-emerald-500"),
-                rx.el.span("FF Hub", class_name="text-xl font-bold text-white"),
+                rx.el.span("Stoned Lack", class_name="text-xl font-bold text-white"),
                 class_name="flex h-20 items-center gap-3 border-b border-gray-800 px-6",
             ),
             rx.el.nav(
@@ -42,7 +42,7 @@ def header() -> rx.Component:
     return rx.el.header(
         rx.el.div(
             rx.el.h2(
-                "Fantasy Football Hub",
+                "Stoned Lack Fantasy",
                 class_name="text-xl font-bold text-gray-900 hidden sm:block",
             ),
             rx.el.div(

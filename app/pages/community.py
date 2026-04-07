@@ -6,8 +6,8 @@ from app.components.layout import layout
 def poll_option_active(poll: dict, option: dict, index: int) -> rx.Component:
     return rx.el.button(
         rx.el.div(class_name="w-4 h-4 rounded-full border-2 border-gray-300 mr-3"),
-        rx.el.span(option["text"].to_string(), class_name="font-medium text-gray-700"),
-        on_click=CommunityState.vote_poll(poll["id"].to_string(), index),
+        rx.el.span(option["text"].to(str), class_name="font-medium text-gray-700"),
+        on_click=CommunityState.vote_poll(poll["id"].to(str), index),
         class_name="w-full flex items-center p-3 rounded-xl hover:bg-gray-50 border border-transparent hover:border-gray-200 transition-all mb-2 text-left",
     )
 
@@ -19,7 +19,7 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
     return rx.el.div(
         rx.el.div(
             rx.el.span(
-                option["text"].to_string(),
+                option["text"].to(str),
                 class_name="text-sm font-semibold text-gray-800 z-10 relative",
             ),
             rx.el.span(
@@ -40,14 +40,13 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
 
 
 def poll_card(poll: dict) -> rx.Component:
-    has_voted = CommunityState.voted_polls.contains(poll["id"].to_string())
+    has_voted = CommunityState.voted_polls.contains(poll["id"].to(str))
     is_closed = ~poll["is_active"].to(bool)
     show_results = has_voted | is_closed
     return rx.el.div(
         rx.el.div(
             rx.el.h3(
-                poll["question"].to_string(),
-                class_name="text-lg font-bold text-gray-900",
+                poll["question"].to(str), class_name="text-lg font-bold text-gray-900"
             ),
             rx.cond(
                 is_closed,
@@ -79,7 +78,7 @@ def poll_card(poll: dict) -> rx.Component:
         ),
         rx.el.div(
             rx.el.span(
-                f"{poll['total_votes'].to_string()} votes",
+                f"{poll['total_votes'].to(str)} votes",
                 class_name="text-sm text-gray-500 font-medium",
             ),
             rx.cond(
@@ -102,32 +101,29 @@ def podcast_card(ep: dict) -> rx.Component:
         rx.el.div(
             rx.el.div(
                 rx.el.span(
-                    f"Ep {ep['episode_number'].to_string()}",
+                    f"Ep {ep['episode_number'].to(str)}",
                     class_name="text-xs font-bold text-white bg-emerald-600 px-2 py-1 rounded-md",
                 ),
                 rx.el.span(
-                    ep["date"].to_string(),
-                    class_name="text-xs text-gray-500 font-medium",
+                    ep["date"].to(str), class_name="text-xs text-gray-500 font-medium"
                 ),
                 class_name="flex justify-between items-center mb-2",
             ),
-            rx.el.h4(
-                ep["title"].to_string(), class_name="font-bold text-gray-900 mb-1"
-            ),
+            rx.el.h4(ep["title"].to(str), class_name="font-bold text-gray-900 mb-1"),
             rx.el.p(
-                ep["description"].to_string(),
+                ep["description"].to(str),
                 class_name="text-sm text-gray-600 line-clamp-2 mb-3",
             ),
             rx.el.div(
                 rx.el.span(
                     rx.icon("clock", class_name="w-3 h-3 mr-1 inline"),
-                    ep["duration"].to_string(),
+                    ep["duration"].to(str),
                     class_name="text-xs text-gray-500 flex items-center",
                 ),
                 rx.el.a(
                     rx.icon("play", class_name="w-4 h-4 mr-1 inline"),
                     "Listen",
-                    href=ep["link"].to_string(),
+                    href=ep["link"].to(str),
                     class_name="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center transition-colors",
                 ),
                 class_name="flex justify-between items-center",
@@ -230,11 +226,30 @@ def registration_form() -> rx.Component:
         ),
         rx.el.div(
             rx.el.span(
-                f"{CommunityState.registrations.length().to_string()} Current Registrations",
+                f"{CommunityState.registrations.length().to(str)} Current Registrations",
                 class_name="text-sm font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full",
             ),
             class_name="mt-4 flex justify-center",
         ),
+    )
+
+
+def news_card(news: dict) -> rx.Component:
+    return rx.el.div(
+        rx.el.div(
+            rx.el.h3(
+                news["title"].to(str), class_name="text-lg font-bold text-gray-900 mb-2"
+            ),
+            rx.el.span(
+                news["date"].to(str),
+                class_name="text-xs text-gray-500 font-medium block mb-3",
+            ),
+            rx.el.p(
+                news["content"].to(str),
+                class_name="text-sm text-gray-600 line-clamp-3 leading-relaxed",
+            ),
+        ),
+        class_name="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-4 hover:border-emerald-200 transition-colors",
     )
 
 
@@ -243,59 +258,86 @@ def community_page() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 rx.el.h1(
-                    "Community Hub", class_name="text-3xl font-bold text-gray-900 mb-2"
+                    "Stoned Lack Community",
+                    class_name="text-3xl font-bold text-gray-900 mb-2",
                 ),
                 rx.el.p(
-                    "Engage with polls, sign up for new leagues, and catch the latest podcast episodes.",
+                    "Polls, News, Liga-Anmeldung und die neuesten Podcast-Folgen.",
                     class_name="text-gray-500 font-medium",
                 ),
                 class_name="mb-8",
             ),
             rx.el.div(
                 rx.el.div(
-                    rx.el.h2(
-                        rx.icon(
-                            "bar-chart-3",
-                            class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                    rx.el.div(
+                        rx.el.h2(
+                            rx.icon(
+                                "newspaper",
+                                class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                            ),
+                            "📰 Neuigkeiten",
+                            class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
                         ),
-                        "Community Polls",
-                        class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
-                    ),
-                    rx.foreach(
-                        CommunityState.polls.to(
-                            list[
-                                dict[str, str | int | bool | list[dict[str, str | int]]]
-                            ]
+                        rx.cond(
+                            CommunityState.news_items.length() > 0,
+                            rx.el.div(rx.foreach(CommunityState.news_items, news_card)),
+                            rx.el.p(
+                                "Keine Neuigkeiten vorhanden.",
+                                class_name="text-gray-500 italic",
+                            ),
                         ),
-                        poll_card,
+                        class_name="mb-8",
                     ),
-                    class_name="col-span-1",
+                    rx.el.div(
+                        rx.el.h2(
+                            rx.icon(
+                                "bar-chart-3",
+                                class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                            ),
+                            "📊 Community Polls",
+                            class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
+                        ),
+                        rx.foreach(
+                            CommunityState.polls.to(
+                                list[
+                                    dict[
+                                        str,
+                                        str | int | bool | list[dict[str, str | int]],
+                                    ]
+                                ]
+                            ),
+                            poll_card,
+                        ),
+                    ),
+                    class_name="col-span-1 lg:col-span-2",
                 ),
                 rx.el.div(
-                    rx.el.h2(
-                        rx.icon(
-                            "user-plus",
-                            class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                    rx.el.div(
+                        rx.el.h2(
+                            rx.icon(
+                                "user-plus",
+                                class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                            ),
+                            "Join a League",
+                            class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
                         ),
-                        "Join a League",
-                        class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
+                        registration_form(),
+                        class_name="mb-8",
                     ),
-                    registration_form(),
-                    class_name="col-span-1",
-                ),
-                rx.el.div(
-                    rx.el.h2(
-                        rx.icon(
-                            "mic", class_name="w-6 h-6 mr-2 text-emerald-600 inline"
+                    rx.el.div(
+                        rx.el.h2(
+                            rx.icon(
+                                "mic", class_name="w-6 h-6 mr-2 text-emerald-600 inline"
+                            ),
+                            "Stoned Lack Podcast",
+                            class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
                         ),
-                        "Latest Episodes",
-                        class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
-                    ),
-                    rx.foreach(CommunityState.episodes, podcast_card),
-                    rx.el.a(
-                        "View All Episodes",
-                        href="#",
-                        class_name="block w-full text-center p-3 text-emerald-600 font-bold hover:text-emerald-700 bg-emerald-50 rounded-xl transition-colors",
+                        rx.foreach(CommunityState.episodes, podcast_card),
+                        rx.el.a(
+                            "View All Episodes",
+                            href="#",
+                            class_name="block w-full text-center p-3 text-emerald-600 font-bold hover:text-emerald-700 bg-emerald-50 rounded-xl transition-colors",
+                        ),
                     ),
                     class_name="col-span-1",
                 ),

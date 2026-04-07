@@ -41,6 +41,6 @@ app.add_page(
     route="/rosters",
     on_load=[AppState.init_app, MatchupsState.init_standings],
 )
-app.add_page(community_page, route="/community")
+app.add_page(community_page, route="/community", on_load=CommunityState.init_community)
 app.add_page(trending_page, route="/trending", on_load=CommunityState.init_trending)
 app.add_page(drafts_page, route="/drafts", on_load=DraftState.init_drafts)
