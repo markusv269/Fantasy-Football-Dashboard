@@ -1,6 +1,4 @@
 import reflex as rx
-import os
-import re
 import logging
 from datetime import datetime
 from app.sleeper_api import get_league, get_league_drafts
@@ -20,24 +18,30 @@ class DraftState(rx.State):
     def init_drafts(self):
         self.is_loading = True
         try:
-            file_path = os.path.join("assets", "dynasty_leagues_2026.txt")
-            if os.path.exists(file_path):
-                with open(file_path, "r") as f:
-                    content = f.read()
-                dynasty_match = re.search(
-                    "dynasty_leagues_2026\\s*=\\s*\\[(.*?)\\]", content, re.DOTALL
+            client = get_supabase_client()
+            if client:
+                dynasty_res = (
+                    client.table("leagues")
+                    .select("league_id")
+                    .eq("league_season", 2026)
+                    .eq("league_type", "dynasty")
+                    .execute()
                 )
-                if dynasty_match:
-                    self.dynasty_league_ids_2026 = re.findall(
-                        '"(\\d+)"', dynasty_match.group(1)
-                    )
-                redraft_match = re.search(
-                    "redraft_leagues_2026\\s*=\\s*\\[(.*?)\\]", content, re.DOTALL
+                if dynasty_res and dynasty_res.data:
+                    self.dynasty_league_ids_2026 = [
+                        str(lg["league_id"]) for lg in dynasty_res.data
+                    ]
+                redraft_res = (
+                    client.table("leagues")
+                    .select("league_id")
+                    .eq("league_season", 2026)
+                    .eq("league_type", "redraft")
+                    .execute()
                 )
-                if redraft_match:
-                    self.redraft_league_ids_2026 = re.findall(
-                        '"(\\d+)"', redraft_match.group(1)
-                    )
+                if redraft_res and redraft_res.data:
+                    self.redraft_league_ids_2026 = [
+                        str(lg["league_id"]) for lg in redraft_res.data
+                    ]
             all_2026_ids = self.dynasty_league_ids_2026 + self.redraft_league_ids_2026
             upcoming = []
             for lid in all_2026_ids:
