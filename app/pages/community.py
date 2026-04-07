@@ -96,40 +96,43 @@ def poll_card(poll: dict) -> rx.Component:
     )
 
 
-def podcast_card(ep: dict) -> rx.Component:
-    return rx.el.div(
+def youtube_card(video: dict) -> rx.Component:
+    return rx.el.a(
         rx.el.div(
+            rx.image(
+                src=video["thumbnail"].to(str), class_name="w-full h-full object-cover"
+            ),
+            rx.cond(
+                video["is_short"].to(bool),
+                rx.el.span(
+                    "Short",
+                    class_name="absolute top-2 right-2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md",
+                ),
+            ),
+            class_name="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100",
+        ),
+        rx.el.div(
+            rx.el.h4(
+                video["title"].to(str),
+                class_name="font-bold text-sm text-gray-900 line-clamp-2 mb-1",
+            ),
             rx.el.div(
                 rx.el.span(
-                    f"Ep {ep['episode_number'].to(str)}",
-                    class_name="text-xs font-bold text-white bg-emerald-600 px-2 py-1 rounded-md",
+                    video["date_str"].to(str),
+                    class_name="text-xs text-gray-500 font-medium",
                 ),
                 rx.el.span(
-                    ep["date"].to(str), class_name="text-xs text-gray-500 font-medium"
-                ),
-                class_name="flex justify-between items-center mb-2",
-            ),
-            rx.el.h4(ep["title"].to(str), class_name="font-bold text-gray-900 mb-1"),
-            rx.el.p(
-                ep["description"].to(str),
-                class_name="text-sm text-gray-600 line-clamp-2 mb-3",
-            ),
-            rx.el.div(
-                rx.el.span(
-                    rx.icon("clock", class_name="w-3 h-3 mr-1 inline"),
-                    ep["duration"].to(str),
-                    class_name="text-xs text-gray-500 flex items-center",
-                ),
-                rx.el.a(
-                    rx.icon("play", class_name="w-4 h-4 mr-1 inline"),
-                    "Listen",
-                    href=ep["link"].to(str),
-                    class_name="text-sm font-bold text-emerald-600 hover:text-emerald-700 flex items-center transition-colors",
+                    rx.icon("eye", class_name="w-3 h-3 mr-1 inline"),
+                    f"{video['views'].to(str)} Views",
+                    class_name="text-xs text-gray-500 font-medium flex items-center",
                 ),
                 class_name="flex justify-between items-center",
             ),
+            class_name="mt-2",
         ),
-        class_name="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm mb-4 hover:border-emerald-200 transition-colors",
+        href=video["link"].to(str),
+        target="_blank",
+        class_name="block bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden p-3 mb-4",
     )
 
 
@@ -325,17 +328,58 @@ def community_page() -> rx.Component:
                         class_name="mb-8",
                     ),
                     rx.el.div(
-                        rx.el.h2(
-                            rx.icon(
-                                "mic", class_name="w-6 h-6 mr-2 text-emerald-600 inline"
+                        rx.el.div(
+                            rx.el.h2(
+                                rx.icon(
+                                    "circle_play",
+                                    class_name="w-6 h-6 mr-2 text-emerald-600 inline",
+                                ),
+                                "🎬 Stoned Lack YouTube",
+                                class_name="text-xl font-bold text-gray-800 flex items-center",
                             ),
-                            "Stoned Lack Podcast",
-                            class_name="text-xl font-bold text-gray-800 mb-4 flex items-center",
+                            rx.el.div(
+                                rx.el.button(
+                                    "All",
+                                    on_click=CommunityState.set_youtube_filter("All"),
+                                    class_name=rx.cond(
+                                        CommunityState.youtube_filter == "All",
+                                        "px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-md",
+                                        "px-3 py-1 text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-md transition-colors",
+                                    ),
+                                ),
+                                rx.el.button(
+                                    "Videos",
+                                    on_click=CommunityState.set_youtube_filter(
+                                        "Videos"
+                                    ),
+                                    class_name=rx.cond(
+                                        CommunityState.youtube_filter == "Videos",
+                                        "px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-md",
+                                        "px-3 py-1 text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-md transition-colors",
+                                    ),
+                                ),
+                                rx.el.button(
+                                    "Shorts",
+                                    on_click=CommunityState.set_youtube_filter(
+                                        "Shorts"
+                                    ),
+                                    class_name=rx.cond(
+                                        CommunityState.youtube_filter == "Shorts",
+                                        "px-3 py-1 text-xs font-bold bg-emerald-100 text-emerald-800 rounded-md",
+                                        "px-3 py-1 text-xs font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 rounded-md transition-colors",
+                                    ),
+                                ),
+                                class_name="flex items-center gap-2 mt-3",
+                            ),
+                            class_name="mb-4",
                         ),
-                        rx.foreach(CommunityState.episodes, podcast_card),
+                        rx.foreach(
+                            CommunityState.filtered_youtube_videos[:6], youtube_card
+                        ),
                         rx.el.a(
-                            "View All Episodes",
-                            href="#",
+                            "Alle Videos ansehen",
+                            href="https://www.youtube.com/channel/UCMD4pfyYl2hxHez34eqnfkQ",
+                            target="_blank",
                             class_name="block w-full text-center p-3 text-emerald-600 font-bold hover:text-emerald-700 bg-emerald-50 rounded-xl transition-colors",
                         ),
                     ),

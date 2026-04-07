@@ -19,53 +19,8 @@ class CommunityState(rx.State):
     reg_preferred_league: str = "Redraft"
     registration_submitted: bool = False
     registrations: list[dict[str, str]] = []
-    episodes: list[dict[str, str | int]] = [
-        {
-            "id": "ep_105",
-            "episode_number": 105,
-            "title": "Waiver Wire Gold: Week 10 Winners",
-            "description": "Breaking down the top adds for Week 10. Who to spend your FAAB on and who to avoid.",
-            "date": "Nov 12, 2024",
-            "duration": "45:20",
-            "link": "#",
-        },
-        {
-            "id": "ep_104",
-            "episode_number": 104,
-            "title": "Mid-Season Review & Predictions",
-            "description": "Halfway through the fantasy season. We look at the biggest surprises and disappointments.",
-            "date": "Nov 5, 2024",
-            "duration": "52:10",
-            "link": "#",
-        },
-        {
-            "id": "ep_103",
-            "episode_number": 103,
-            "title": "Trade Deadline Special",
-            "description": "Buy low, sell high! The best trade targets before your league's deadline hits.",
-            "date": "Oct 29, 2024",
-            "duration": "48:05",
-            "link": "#",
-        },
-        {
-            "id": "ep_102",
-            "episode_number": 102,
-            "title": "Injury Replacements & Stashes",
-            "description": "How to navigate the recent wave of injuries and which backups need to be rostered.",
-            "date": "Oct 22, 2024",
-            "duration": "41:30",
-            "link": "#",
-        },
-        {
-            "id": "ep_101",
-            "episode_number": 101,
-            "title": "Panic Meter: Which Stars Are Busts?",
-            "description": "Evaluating struggling early-round picks. Is it time to panic or hold steady?",
-            "date": "Oct 15, 2024",
-            "duration": "50:15",
-            "link": "#",
-        },
-    ]
+    youtube_videos: list[dict[str, str | int | bool]] = []
+    youtube_filter: str = "All"
     trending_adds: list[dict[str, str | int]] = []
     trending_drops: list[dict[str, str | int]] = []
     trending_timeframe: str = "24h"
@@ -225,9 +180,30 @@ class CommunityState(rx.State):
             self.trending_drops = enrich_trending(drops)
 
     @rx.event
+    def fetch_youtube_feed(self):
+        from app.youtube_feed import fetch_youtube_feed
+
+        videos = fetch_youtube_feed(limit=15)
+        if videos:
+            self.youtube_videos = videos
+
+    @rx.event
+    def set_youtube_filter(self, filter_type: str):
+        self.youtube_filter = filter_type
+
+    @rx.var
+    def filtered_youtube_videos(self) -> list[dict[str, str | int | bool]]:
+        if self.youtube_filter == "Videos":
+            return [v for v in self.youtube_videos if not v.get("is_short")]
+        elif self.youtube_filter == "Shorts":
+            return [v for v in self.youtube_videos if v.get("is_short")]
+        return self.youtube_videos
+
+    @rx.event
     def init_community(self):
         yield CommunityState.load_polls
         yield CommunityState.load_news
+        yield CommunityState.fetch_youtube_feed
 
     @rx.event
     def init_trending(self):
