@@ -13,6 +13,7 @@ nav_items = [
     {"icon": "file-text", "label": "Drafts", "href": "/drafts"},
     {"icon": "trending-up", "label": "Trending", "href": "/trending"},
     {"icon": "mic", "label": "Community", "href": "/community"},
+    {"icon": "clipboard-list", "label": "Warteliste", "href": "/waitinglist"},
 ]
 bottom_nav_items = [
     {"icon": "home", "label": "Home", "href": "/"},
@@ -283,6 +284,61 @@ def header() -> rx.Component:
                     rx.el.div(
                         class_name="animate-pulse bg-gray-200 h-6 w-40 rounded-md hidden sm:block"
                     ),
+                ),
+                rx.el.div(
+                    rx.el.a(
+                        rx.icon(
+                            "youtube",
+                            class_name=t(
+                                "w-5 h-5 text-gray-400 hover:text-[#DC2626]",
+                                "w-5 h-5 text-gray-500 hover:text-[#DC2626]",
+                            ),
+                        ),
+                        href="https://www.youtube.com/channel/UCMD4pfyYl2hxHez34eqnfkQ",
+                        target="_blank",
+                        class_name="p-1.5 rounded-lg transition-colors "
+                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
+                    ),
+                    rx.el.a(
+                        rx.icon(
+                            "message-circle",
+                            class_name=t(
+                                "w-5 h-5 text-gray-400 hover:text-[#5865F2]",
+                                "w-5 h-5 text-gray-500 hover:text-[#5865F2]",
+                            ),
+                        ),
+                        href="https://discord.gg/g367Tt9j",
+                        target="_blank",
+                        class_name="p-1.5 rounded-lg transition-colors "
+                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
+                    ),
+                    rx.el.a(
+                        rx.icon(
+                            "twitter",
+                            class_name=t(
+                                "w-5 h-5 text-gray-400 hover:text-white",
+                                "w-5 h-5 text-gray-500 hover:text-black",
+                            ),
+                        ),
+                        href="https://x.com/StonedLack",
+                        target="_blank",
+                        class_name="p-1.5 rounded-lg transition-colors "
+                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
+                    ),
+                    rx.el.a(
+                        rx.icon(
+                            "twitch",
+                            class_name=t(
+                                "w-5 h-5 text-gray-400 hover:text-[#9146FF]",
+                                "w-5 h-5 text-gray-500 hover:text-[#9146FF]",
+                            ),
+                        ),
+                        href="https://www.twitch.tv/stoned_lack/videos?filter=archives",
+                        target="_blank",
+                        class_name="p-1.5 rounded-lg transition-colors "
+                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
+                    ),
+                    class_name="hidden sm:flex items-center gap-1 ml-4",
                 ),
                 rx.el.button(
                     rx.icon(

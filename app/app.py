@@ -7,6 +7,7 @@ from app.pages.rosters import rosters_page
 from app.pages.community import community_page
 from app.pages.trending import trending_page
 from app.pages.drafts import drafts_page
+from app.pages.waitinglist import waitinglist_page
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
 from app.states.community_state import CommunityState
@@ -14,6 +15,7 @@ from app.states.draft_state import DraftState
 from app.states.league_detail_state import LeagueDetailState
 from app.states.theme_state import ThemeState
 from app.states.user_state import UserState
+from app.states.waitlist_state import WaitlistState
 
 app = rx.App(
     theme=rx.theme(appearance="light"),
@@ -48,3 +50,6 @@ app.add_page(
 app.add_page(community_page, route="/community", on_load=CommunityState.init_community)
 app.add_page(trending_page, route="/trending", on_load=CommunityState.init_trending)
 app.add_page(drafts_page, route="/drafts", on_load=DraftState.init_drafts)
+app.add_page(
+    waitinglist_page, route="/waitinglist", on_load=WaitlistState.init_waitlist
+)

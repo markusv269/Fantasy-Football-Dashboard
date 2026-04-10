@@ -21,13 +21,13 @@ def league_selector() -> rx.Component:
             ],
             class_name=rx.cond(
                 ThemeState.is_dark,
-                "appearance-none bg-[#1C2033] border border-gray-700 text-white text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 outline-none font-medium",
-                "appearance-none bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 outline-none font-medium",
+                "appearance-none bg-[#1C2033] border border-gray-700 text-white text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 pr-10 outline-none font-medium",
+                "appearance-none bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 pr-10 outline-none font-medium",
             ),
         ),
-        rx.icon(
-            "chevron-down",
-            class_name="absolute right-3 top-3 h-4 w-4 text-gray-500 pointer-events-none",
+        rx.el.div(
+            rx.icon("chevron-down", class_name="h-4 w-4 text-gray-500"),
+            class_name="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none",
         ),
         class_name="relative w-full md:w-64 mb-6 md:mb-0",
     )

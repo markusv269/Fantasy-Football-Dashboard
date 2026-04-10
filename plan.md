@@ -20,3 +20,10 @@
 - [x] Trending page: apply centralized theme tokens from app.theme
 - [x] League detail modal: apply centralized theme tokens from app.theme
 - [x] Final QA — all pages use centralized theme, no per-page rx.cond color logic
+
+## Phase 4: Dynasty Waitinglist Overhaul
+- [ ] Create WaitlistState with Sleeper username validation, user_id lookup, upsert to dynasty_waitinglist table
+- [ ] Create dedicated /waitinglist page with dynasty type checkboxes (Dynasty, Dynasty IDP, Dynasty Bestball), Discord name field, Sleeper name input with validation
+- [ ] Show current registrations count per type, success/update feedback
+- [ ] Update Community page to link to waitinglist page instead of inline form
+- [ ] Add waitinglist to sidebar navigation

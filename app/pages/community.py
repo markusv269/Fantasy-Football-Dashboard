@@ -186,131 +186,6 @@ def youtube_card(video: dict) -> rx.Component:
     )
 
 
-def registration_form() -> rx.Component:
-    return rx.el.div(
-        rx.cond(
-            CommunityState.registration_submitted,
-            rx.el.div(
-                rx.icon(
-                    "message_circle_check",
-                    class_name="w-16 h-16 text-emerald-500 mx-auto mb-4",
-                ),
-                rx.el.h3(
-                    "Registration Received!",
-                    class_name=t(
-                        "text-xl font-bold text-white text-center mb-2",
-                        "text-xl font-bold text-gray-900 text-center mb-2",
-                    ),
-                ),
-                rx.el.p(
-                    "We've added your details to the waitlist. Keep an eye on your email!",
-                    class_name=t(
-                        "text-center text-gray-400", "text-center text-gray-600"
-                    ),
-                ),
-                class_name=t(
-                    "bg-emerald-500/10 rounded-2xl p-8 border border-emerald-500/20 flex flex-col items-center justify-center",
-                    "bg-emerald-50 rounded-2xl p-8 border border-emerald-100 flex flex-col items-center justify-center",
-                ),
-            ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.label(
-                        "Team Name",
-                        class_name=t(
-                            "block text-sm font-bold text-gray-300 mb-1",
-                            "block text-sm font-bold text-gray-700 mb-1",
-                        ),
-                    ),
-                    rx.el.input(
-                        placeholder="The Gridiron Goats",
-                        on_change=CommunityState.set_reg_team_name,
-                        class_name=INPUT,
-                        default_value=CommunityState.reg_team_name,
-                    ),
-                    class_name="mb-4",
-                ),
-                rx.el.div(
-                    rx.el.label(
-                        "Email Address",
-                        class_name=t(
-                            "block text-sm font-bold text-gray-300 mb-1",
-                            "block text-sm font-bold text-gray-700 mb-1",
-                        ),
-                    ),
-                    rx.el.input(
-                        placeholder="coach@example.com",
-                        type="email",
-                        on_change=CommunityState.set_reg_email,
-                        class_name=INPUT,
-                        default_value=CommunityState.reg_email,
-                    ),
-                    class_name="mb-4",
-                ),
-                rx.el.div(
-                    rx.el.label(
-                        "Sleeper Username (Optional)",
-                        class_name=t(
-                            "block text-sm font-bold text-gray-300 mb-1",
-                            "block text-sm font-bold text-gray-700 mb-1",
-                        ),
-                    ),
-                    rx.el.input(
-                        placeholder="sleeper_user_123",
-                        on_change=CommunityState.set_reg_sleeper_username,
-                        class_name=INPUT,
-                        default_value=CommunityState.reg_sleeper_username,
-                    ),
-                    class_name="mb-4",
-                ),
-                rx.el.div(
-                    rx.el.label(
-                        "Preferred Format",
-                        class_name=t(
-                            "block text-sm font-bold text-gray-300 mb-1",
-                            "block text-sm font-bold text-gray-700 mb-1",
-                        ),
-                    ),
-                    rx.el.div(
-                        rx.el.select(
-                            rx.el.option("Redraft", value="Redraft"),
-                            rx.el.option("Dynasty", value="Dynasty"),
-                            rx.el.option("Keeper", value="Keeper"),
-                            rx.el.option("Best Ball", value="Best Ball"),
-                            value=CommunityState.reg_preferred_league,
-                            on_change=CommunityState.set_reg_preferred_league,
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
-                                "appearance-none bg-[#0F1119] border border-gray-700 text-white rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium",
-                                "appearance-none bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium",
-                            ),
-                        ),
-                        rx.icon(
-                            "chevron-down",
-                            class_name="absolute right-3 top-3 h-4 w-4 text-gray-500 pointer-events-none",
-                        ),
-                        class_name="relative",
-                    ),
-                    class_name="mb-6",
-                ),
-                rx.el.button(
-                    "Submit Registration",
-                    on_click=CommunityState.submit_registration,
-                    class_name=BTN_PRIMARY + " w-full",
-                ),
-                class_name=CARD + " p-6",
-            ),
-        ),
-        rx.el.div(
-            rx.el.span(
-                f"{CommunityState.registrations.length().to(str)} Current Registrations",
-                class_name="text-sm font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full",
-            ),
-            class_name="mt-4 flex justify-center",
-        ),
-    )
-
-
 def news_card(news: dict) -> rx.Component:
     return rx.el.div(
         rx.el.div(
@@ -422,7 +297,31 @@ def community_page() -> rx.Component:
                                 "text-xl font-bold text-gray-800 mb-4 flex items-center",
                             ),
                         ),
-                        registration_form(),
+                        rx.el.div(
+                            rx.el.div(
+                                rx.icon(
+                                    "clipboard-list",
+                                    class_name="w-12 h-12 text-emerald-500 mb-4",
+                                ),
+                                rx.el.h3(
+                                    "Dynasty Warteliste",
+                                    class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
+                                ),
+                                rx.el.p(
+                                    "Melde dich für die neuen Dynasty-Ligen an!",
+                                    class_name="text-sm mb-6 text-center "
+                                    + TEXT_SECONDARY,
+                                ),
+                                rx.el.a(
+                                    "Zur Warteliste →",
+                                    href="/waitinglist",
+                                    class_name=BTN_PRIMARY
+                                    + " w-full text-center block",
+                                ),
+                                class_name="flex flex-col items-center justify-center",
+                            ),
+                            class_name=CARD + " p-8",
+                        ),
                         class_name="mb-8",
                     ),
                     rx.el.div(
