@@ -29,6 +29,7 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
     votes = option["votes"].to(int)
     total = poll["total_votes"].to(int)
     pct = rx.cond(total > 0, votes * 100 / total, 0)
+    pct_x10 = rx.cond(total > 0, (votes * 1000 / total).to(int), 0)
     return rx.el.div(
         rx.el.div(
             rx.el.span(
@@ -39,7 +40,12 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
                 ),
             ),
             rx.el.span(
-                f"{pct.to(int)}%",
+                (pct_x10 // 10).to(str)
+                + ","
+                + (pct_x10 % 10).to(str)
+                + " % ("
+                + votes.to(str)
+                + " Stimmen)",
                 class_name=t(
                     "text-sm font-bold text-gray-400 z-10 relative",
                     "text-sm font-bold text-gray-600 z-10 relative",
@@ -281,8 +287,8 @@ def registration_form() -> rx.Component:
                             on_change=CommunityState.set_reg_preferred_league,
                             class_name=rx.cond(
                                 ThemeState.is_dark,
-                                "appearance-none bg-[#0F1119] border border-gray-700 text-white rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium appearance-none",
-                                "appearance-none bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium appearance-none",
+                                "appearance-none bg-[#0F1119] border border-gray-700 text-white rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium",
+                                "appearance-none bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block w-full px-4 py-2 outline-none font-medium",
                             ),
                         ),
                         rx.icon(
