@@ -48,6 +48,15 @@ class CommunityState(rx.State):
                         votes = stats[i] if i < len(stats) else 0
                         options.append({"text": str(ans), "votes": int(votes)})
                         total += int(votes)
+                    for opt in options:
+                        v = int(opt["votes"])
+                        if total > 0:
+                            pct_x10 = int(v * 1000 / total)
+                            whole = pct_x10 // 10
+                            frac = pct_x10 % 10
+                            opt["pct_str"] = f"{whole},{frac} % ({v} Stimmen)"
+                        else:
+                            opt["pct_str"] = f"0,0 % ({v} Stimmen)"
                     new_polls.append(
                         {
                             "id": str(p["id"]),
@@ -108,6 +117,16 @@ class CommunityState(rx.State):
                 options = poll["options"]
                 options[option_index]["votes"] += 1
                 poll["total_votes"] += 1
+                new_total = poll["total_votes"]
+                for opt in poll["options"]:
+                    v = int(opt["votes"])
+                    if new_total > 0:
+                        pct_x10 = int(v * 1000 / new_total)
+                        whole = pct_x10 // 10
+                        frac = pct_x10 % 10
+                        opt["pct_str"] = f"{whole},{frac} % ({v} Stimmen)"
+                    else:
+                        opt["pct_str"] = f"0,0 % ({v} Stimmen)"
                 self.voted_polls.append(poll_id)
                 break
         client = get_supabase_client()

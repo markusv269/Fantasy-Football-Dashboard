@@ -29,7 +29,6 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
     votes = option["votes"].to(int)
     total = poll["total_votes"].to(int)
     pct = rx.cond(total > 0, votes * 100 / total, 0)
-    pct_x10 = rx.cond(total > 0, (votes * 1000 / total).to(int), 0)
     return rx.el.div(
         rx.el.div(
             rx.el.span(
@@ -40,12 +39,7 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
                 ),
             ),
             rx.el.span(
-                (pct_x10 // 10).to(str)
-                + ","
-                + (pct_x10 % 10).to(str)
-                + " % ("
-                + votes.to(str)
-                + " Stimmen)",
+                option["pct_str"].to(str),
                 class_name=t(
                     "text-sm font-bold text-gray-400 z-10 relative",
                     "text-sm font-bold text-gray-600 z-10 relative",
