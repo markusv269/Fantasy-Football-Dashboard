@@ -1,7 +1,19 @@
 import reflex as rx
 from app.states.app_state import AppState
-from app.states.theme_state import ThemeState
+from app.states.user_state import UserState
 from app.states.league_detail_state import LeagueDetailState
+from app.theme import (
+    t,
+    CARD,
+    H1,
+    H2,
+    H3,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+    BTN_PRIMARY,
+    INPUT,
+    PAGE_BG,
+)
 from app.components.layout import layout
 from app.components.league_modal import league_detail_modal
 
@@ -16,24 +28,15 @@ def league_card(league: dict) -> rx.Component:
                     "/placeholder.svg",
                 ),
                 class_name="w-14 h-14 rounded-full object-cover border shadow-sm mr-4 "
-                + rx.cond(ThemeState.is_dark, "border-gray-700", "border-gray-100"),
+                + t("border-gray-700", "border-gray-100"),
             ),
             rx.el.div(
                 rx.el.h3(
-                    league["name"],
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "font-bold text-lg text-white",
-                        "font-bold text-lg text-gray-800",
-                    ),
+                    league["name"], class_name=TEXT_PRIMARY + " font-bold text-lg"
                 ),
                 rx.el.p(
                     f"{league['season']} Season",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-sm font-medium text-gray-400",
-                        "text-sm font-medium text-gray-500",
-                    ),
+                    class_name=TEXT_SECONDARY + " text-sm font-medium",
                 ),
             ),
             class_name="flex items-center mb-5",
@@ -75,11 +78,7 @@ def league_card(league: dict) -> rx.Component:
                 & (league["total_rosters"].to(str) != "0"),
                 rx.el.span(
                     f"{league['total_rosters']} Teams",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-sm font-semibold text-gray-400",
-                        "text-sm font-semibold text-gray-600",
-                    ),
+                    class_name=TEXT_SECONDARY + " text-sm font-semibold",
                 ),
                 rx.fragment(),
             ),
@@ -88,11 +87,7 @@ def league_card(league: dict) -> rx.Component:
         on_click=lambda: LeagueDetailState.open_league_modal(
             league["league_id"].to_string()
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
-            "bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm hover:shadow-md hover:border-[#DC2626] transition-all cursor-pointer",
-            "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-[#DC2626] transition-all cursor-pointer",
-        ),
+        class_name=CARD + " p-6 hover:border-[#DC2626] cursor-pointer transition-all",
     )
 
 
@@ -100,126 +95,101 @@ def home_page() -> rx.Component:
     return layout(
         rx.el.div(
             rx.el.div(
-                rx.el.h1(
-                    "Willkommen bei Stoned Lack Fantasy",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-3xl md:text-4xl font-bold text-white mb-3",
-                        "text-3xl md:text-4xl font-bold text-gray-900 mb-3",
-                    ),
-                ),
+                rx.el.h1("Willkommen bei Stoned Lack Fantasy", class_name=H1 + " mb-3"),
                 rx.el.p(
                     "Verwalte deine Ligen, verfolge Matchups, entdecke Trends und werde Teil der Stoned Lack Community.",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-lg text-gray-300 font-medium",
-                        "text-lg text-gray-600 font-medium",
+                    class_name=TEXT_SECONDARY + " text-lg font-medium",
+                ),
+                rx.cond(
+                    ~UserState.has_username,
+                    rx.el.div(
+                        rx.el.p(
+                            "Gib deinen Sleeper-Namen ein, um deine Ligen zu sehen:",
+                            class_name="font-bold mb-2 " + TEXT_PRIMARY,
+                        ),
+                        rx.el.div(
+                            rx.el.input(
+                                placeholder="Sleeper Username",
+                                on_change=UserState.set_username_input,
+                                class_name=INPUT,
+                            ),
+                            rx.el.button(
+                                "Los geht's",
+                                on_click=UserState.save_username,
+                                class_name=BTN_PRIMARY + " whitespace-nowrap px-8",
+                            ),
+                            class_name="flex gap-3",
+                        ),
+                        class_name="mt-6 p-6 rounded-2xl "
+                        + t(
+                            "bg-gray-800/50 border border-gray-700",
+                            "bg-gray-50 border border-gray-200",
+                        ),
                     ),
                 ),
-                class_name=rx.cond(
-                    ThemeState.is_dark,
-                    "mb-10 bg-[#1C2033] border-l-4 border-l-[#DC2626] p-8 md:p-10 rounded-3xl border border-gray-800 shadow-sm",
-                    "mb-10 bg-white border-l-4 border-l-[#DC2626] p-8 md:p-10 rounded-3xl border border-gray-200 shadow-sm",
-                ),
+                class_name="mb-10 border-l-4 border-l-[#DC2626] p-8 md:p-10 rounded-3xl shadow-sm "
+                + t("bg-[#1C2033] border-gray-800", "bg-white border-gray-200"),
             ),
             rx.el.div(
                 rx.el.div(
-                    rx.el.div(
-                        rx.el.h2(
-                            "Your Leagues",
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
-                                "text-2xl font-bold text-white mb-6",
-                                "text-2xl font-bold text-gray-800 mb-6",
-                            ),
-                        ),
-                        rx.cond(
-                            AppState.leagues_data.length() > 0,
+                    rx.cond(
+                        UserState.is_logged_in,
+                        rx.el.div(
+                            rx.el.h2("Meine Ligen", class_name=H2 + " mb-6"),
                             rx.el.div(
-                                rx.foreach(AppState.leagues_data, league_card),
+                                rx.foreach(
+                                    AppState.leagues_data,
+                                    lambda league: rx.cond(
+                                        UserState.user_league_ids.contains(
+                                            league["league_id"].to(str)
+                                        ),
+                                        league_card(league),
+                                        rx.fragment(),
+                                    ),
+                                ),
                                 class_name="grid grid-cols-1 md:grid-cols-2 gap-6",
                             ),
-                            rx.el.div(
-                                rx.icon(
-                                    "ghost", class_name="w-12 h-12 text-gray-400 mb-3"
-                                ),
-                                rx.el.p(
-                                    "No leagues configured yet.",
-                                    class_name="text-gray-500 font-medium",
-                                ),
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "p-12 border-2 border-dashed border-gray-700 rounded-3xl text-center flex flex-col items-center justify-center bg-[#161926]",
-                                    "p-12 border-2 border-dashed border-gray-300 rounded-3xl text-center flex flex-col items-center justify-center bg-gray-50/50",
+                            class_name="mb-10",
+                        ),
+                    ),
+                    rx.el.div(
+                        rx.el.h2("Alle Ligen", class_name=H2 + " mb-6"),
+                        rx.el.div(
+                            rx.foreach(
+                                AppState.leagues_data,
+                                lambda league: rx.cond(
+                                    ~UserState.user_league_ids.contains(
+                                        league["league_id"].to(str)
+                                    ),
+                                    league_card(league),
+                                    rx.fragment(),
                                 ),
                             ),
+                            class_name="grid grid-cols-1 md:grid-cols-2 gap-6",
                         ),
                     ),
                     class_name="col-span-1 lg:col-span-2 space-y-10",
                 ),
                 rx.el.div(
                     rx.el.div(
-                        rx.el.h3(
-                            "Add League",
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
-                                "text-lg font-bold text-white mb-4",
-                                "text-lg font-bold text-gray-800 mb-4",
-                            ),
-                        ),
                         rx.el.div(
-                            rx.el.input(
-                                placeholder="Sleeper League ID",
-                                on_change=AppState.set_new_league_id,
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "w-full px-4 py-3 bg-[#0F1119] text-white border border-gray-700 rounded-xl focus:ring-2 focus:ring-[#DC2626] outline-none mb-4 font-medium",
-                                    "w-full px-4 py-3 bg-white text-gray-900 border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#DC2626] outline-none mb-4 font-medium",
-                                ),
-                                default_value=AppState.new_league_id,
-                            ),
-                            rx.el.button(
-                                "Add League",
-                                on_click=AppState.add_league_by_id,
-                                class_name="w-full bg-[#DC2626] hover:bg-[#B91C1C] text-white font-bold py-3 rounded-xl transition-colors shadow-sm",
-                            ),
-                        ),
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
-                            "bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm mb-8",
-                            "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm mb-8",
-                        ),
-                    ),
-                    rx.el.div(
-                        rx.el.div(
-                            rx.el.h3(
-                                "Trending Adds",
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "text-lg font-bold text-white",
-                                    "text-lg font-bold text-gray-800",
-                                ),
-                            ),
+                            rx.el.h3("Trending Adds", class_name=H3),
                             rx.icon("flame", class_name="w-5 h-5 text-orange-500"),
                             class_name="flex justify-between items-center mb-4",
                         ),
                         rx.el.div(
                             rx.foreach(
                                 AppState.trending_adds,
-                                lambda t: rx.el.div(
+                                lambda t_player: rx.el.div(
                                     rx.el.div(
                                         rx.el.span(
-                                            t["full_name"].to(str),
-                                            class_name=rx.cond(
-                                                ThemeState.is_dark,
-                                                "font-bold text-gray-100 mr-2",
-                                                "font-bold text-gray-800 mr-2",
-                                            ),
+                                            t_player["full_name"].to(str),
+                                            class_name="font-bold mr-2 " + TEXT_PRIMARY,
                                         ),
                                         rx.el.span(
-                                            t["position"].to(str),
+                                            t_player["position"].to(str),
                                             class_name=rx.match(
-                                                t["position"].to(str),
+                                                t_player["position"].to(str),
                                                 (
                                                     "QB",
                                                     "text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1",
@@ -248,33 +218,24 @@ def home_page() -> rx.Component:
                                             ),
                                         ),
                                         rx.el.span(
-                                            t["team"].to(str),
-                                            class_name=rx.cond(
-                                                ThemeState.is_dark,
-                                                "text-xs font-semibold text-gray-400",
-                                                "text-xs font-semibold text-gray-500",
-                                            ),
+                                            t_player["team"].to(str),
+                                            class_name=TEXT_SECONDARY
+                                            + " text-xs font-semibold",
                                         ),
                                         class_name="flex items-center",
                                     ),
                                     rx.el.span(
-                                        f"+{t['count']}",
+                                        f"+{t_player['count']}",
                                         class_name="text-[#5B7BA5] text-xs font-bold bg-[#5B7BA5]/10 px-2.5 py-1 rounded-md",
                                     ),
-                                    class_name="flex justify-between items-center py-3 border-b border-gray-100 dark:border-gray-800 last:border-0",
+                                    class_name="flex justify-between items-center py-3 border-b last:border-0 "
+                                    + t("border-gray-800", "border-gray-100"),
                                 ),
                             ),
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
-                                "bg-[#161926] p-2 rounded-xl",
-                                "bg-white p-2 rounded-xl",
-                            ),
+                            class_name="p-2 rounded-xl "
+                            + t("bg-[#161926]", "bg-white"),
                         ),
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
-                            "bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm",
-                            "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm",
-                        ),
+                        class_name=CARD + " p-6",
                     ),
                     class_name="col-span-1",
                 ),

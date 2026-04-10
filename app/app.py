@@ -13,6 +13,7 @@ from app.states.community_state import CommunityState
 from app.states.draft_state import DraftState
 from app.states.league_detail_state import LeagueDetailState
 from app.states.theme_state import ThemeState
+from app.states.user_state import UserState
 
 app = rx.App(
     theme=rx.theme(appearance="light"),
@@ -25,8 +26,10 @@ app = rx.App(
         ),
     ],
 )
-app.add_page(home_page, route="/", on_load=AppState.init_app)
-app.add_page(leagues_page, route="/leagues", on_load=AppState.init_app)
+app.add_page(home_page, route="/", on_load=[AppState.init_app, UserState.init_user])
+app.add_page(
+    leagues_page, route="/leagues", on_load=[AppState.init_app, UserState.init_user]
+)
 app.add_page(
     matchups_page,
     route="/matchups",

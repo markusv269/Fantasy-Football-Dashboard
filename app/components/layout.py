@@ -1,6 +1,8 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.theme_state import ThemeState
+from app.states.user_state import UserState
+from app.theme import t, PAGE_BG, INPUT, BTN_PRIMARY, H2
 
 nav_items = [
     {"icon": "home", "label": "Home", "href": "/"},
@@ -28,14 +30,12 @@ def sidebar() -> rx.Component:
                 rx.icon("podcast", class_name="h-8 w-8 text-[#DC2626]"),
                 rx.el.span(
                     "Stoned Lack",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
+                    class_name=t(
                         "text-xl font-bold text-white",
                         "text-xl font-bold text-gray-900",
                     ),
                 ),
-                class_name=rx.cond(
-                    ThemeState.is_dark,
+                class_name=t(
                     "flex h-20 items-center gap-3 border-b border-gray-800 px-6",
                     "flex h-20 items-center gap-3 border-b border-gray-200 px-6",
                 ),
@@ -47,8 +47,7 @@ def sidebar() -> rx.Component:
                         rx.icon(item["icon"], class_name="h-5 w-5 mr-3"),
                         rx.el.span(item["label"]),
                         href=item["href"],
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
+                        class_name=t(
                             "flex items-center px-4 py-3 text-gray-300 hover:bg-gray-800 hover:text-[#DC2626] rounded-lg transition-colors font-medium mb-1",
                             "flex items-center px-4 py-3 text-gray-600 hover:bg-gray-100 hover:text-[#DC2626] rounded-lg transition-colors font-medium mb-1",
                         ),
@@ -57,6 +56,47 @@ def sidebar() -> rx.Component:
                 class_name="flex flex-col p-4 flex-1",
             ),
             rx.el.div(
+                rx.cond(
+                    UserState.is_logged_in,
+                    rx.el.div(
+                        rx.cond(
+                            UserState.sleeper_avatar != "",
+                            rx.image(
+                                src=f"https://sleepercdn.com/avatars/{UserState.sleeper_avatar}",
+                                class_name="w-8 h-8 rounded-full",
+                            ),
+                            rx.icon("user", class_name="w-8 h-8 text-gray-400"),
+                        ),
+                        rx.el.div(
+                            rx.el.span(
+                                UserState.sleeper_display_name,
+                                class_name=t(
+                                    "font-bold text-sm text-gray-200",
+                                    "font-bold text-sm text-gray-800",
+                                ),
+                            ),
+                            rx.el.button(
+                                "×",
+                                on_click=UserState.clear_username,
+                                class_name="text-gray-400 hover:text-red-500 ml-2",
+                            ),
+                        ),
+                        class_name="flex items-center gap-3 px-4 py-3 mb-2",
+                    ),
+                    rx.el.div(
+                        rx.el.input(
+                            placeholder="Sleeper Username",
+                            on_change=UserState.set_username_input,
+                            class_name=INPUT,
+                        ),
+                        rx.el.button(
+                            "Login",
+                            on_click=UserState.save_username,
+                            class_name=BTN_PRIMARY + " text-sm px-4 py-2 mt-2 w-full",
+                        ),
+                        class_name="px-4 py-3 mb-2",
+                    ),
+                ),
                 rx.el.button(
                     rx.icon(
                         rx.cond(ThemeState.is_dark, "sun", "moon"),
@@ -64,19 +104,17 @@ def sidebar() -> rx.Component:
                     ),
                     rx.el.span(rx.cond(ThemeState.is_dark, "Light Mode", "Dark Mode")),
                     on_click=ThemeState.toggle_color_mode,
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
+                    class_name=t(
                         "flex items-center w-full px-4 py-3 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors font-medium",
                         "flex items-center w-full px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors font-medium",
                     ),
                 ),
                 class_name="p-4 mt-auto border-t "
-                + rx.cond(ThemeState.is_dark, "border-gray-800", "border-gray-200"),
+                + t("border-gray-800", "border-gray-200"),
             ),
             class_name="flex-1 flex flex-col overflow-auto",
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
+        class_name=t(
             "flex flex-col border-r border-gray-800 bg-[#161926] w-64 h-screen shrink-0 hidden md:flex",
             "flex flex-col border-r border-gray-200 bg-white w-64 h-screen shrink-0 hidden md:flex",
         ),
@@ -94,8 +132,7 @@ def mobile_bottom_nav() -> rx.Component:
                         rx.icon(item["icon"], class_name="h-6 w-6 mb-1"),
                         rx.el.span(item["label"], class_name="text-[10px] font-medium"),
                         on_click=ThemeState.toggle_mobile_sidebar,
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
+                        class_name=t(
                             "flex flex-col items-center justify-center w-full py-2 text-gray-400 hover:text-[#DC2626]",
                             "flex flex-col items-center justify-center w-full py-2 text-gray-500 hover:text-[#DC2626]",
                         ),
@@ -104,8 +141,7 @@ def mobile_bottom_nav() -> rx.Component:
                         rx.icon(item["icon"], class_name="h-6 w-6 mb-1"),
                         rx.el.span(item["label"], class_name="text-[10px] font-medium"),
                         href=item["href"],
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
+                        class_name=t(
                             "flex flex-col items-center justify-center w-full py-2 text-gray-400 hover:text-[#DC2626]",
                             "flex flex-col items-center justify-center w-full py-2 text-gray-500 hover:text-[#DC2626]",
                         ),
@@ -114,8 +150,7 @@ def mobile_bottom_nav() -> rx.Component:
             ),
             class_name="flex justify-around items-center h-full max-w-md mx-auto",
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
+        class_name=t(
             "fixed bottom-0 left-0 right-0 z-40 bg-[#161926] border-t border-gray-800 pb-safe md:hidden h-16",
             "fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 pb-safe md:hidden h-16",
         ),
@@ -137,23 +172,17 @@ def mobile_drawer() -> rx.Component:
                 rx.el.div(
                     rx.el.h3(
                         "More Options",
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
+                        class_name=t(
                             "text-lg font-bold text-white",
                             "text-lg font-bold text-gray-900",
                         ),
                     ),
                     rx.el.button(
-                        rx.icon(
-                            "x",
-                            class_name=rx.cond(
-                                ThemeState.is_dark, "text-gray-400", "text-gray-600"
-                            ),
-                        ),
+                        rx.icon("x", class_name=t("text-gray-400", "text-gray-600")),
                         on_click=ThemeState.close_mobile_sidebar,
                     ),
                     class_name="flex justify-between items-center p-4 border-b "
-                    + rx.cond(ThemeState.is_dark, "border-gray-800", "border-gray-200"),
+                    + t("border-gray-800", "border-gray-200"),
                 ),
                 rx.el.nav(
                     rx.foreach(
@@ -163,8 +192,7 @@ def mobile_drawer() -> rx.Component:
                             rx.el.span(item["label"]),
                             href=item["href"],
                             on_click=ThemeState.close_mobile_sidebar,
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
+                            class_name=t(
                                 "flex items-center px-4 py-4 text-gray-300 border-b border-gray-800",
                                 "flex items-center px-4 py-4 text-gray-700 border-b border-gray-100",
                             ),
@@ -186,8 +214,7 @@ def mobile_drawer() -> rx.Component:
                             )
                         ),
                         on_click=ThemeState.toggle_color_mode,
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
+                        class_name=t(
                             "flex items-center w-full px-4 py-4 text-gray-300",
                             "flex items-center w-full px-4 py-4 text-gray-700",
                         ),
@@ -197,13 +224,11 @@ def mobile_drawer() -> rx.Component:
             ),
             class_name=rx.cond(
                 ThemeState.mobile_sidebar_open,
-                rx.cond(
-                    ThemeState.is_dark,
+                t(
                     "fixed bottom-0 left-0 right-0 z-50 bg-[#161926] rounded-t-2xl transform transition-transform duration-300 translate-y-0 md:hidden flex flex-col max-h-[80vh]",
                     "fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl transform transition-transform duration-300 translate-y-0 md:hidden flex flex-col max-h-[80vh]",
                 ),
-                rx.cond(
-                    ThemeState.is_dark,
+                t(
                     "fixed bottom-0 left-0 right-0 z-50 bg-[#161926] rounded-t-2xl transform transition-transform duration-300 translate-y-full md:hidden flex flex-col max-h-[80vh]",
                     "fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl transform transition-transform duration-300 translate-y-full md:hidden flex flex-col max-h-[80vh]",
                 ),
@@ -217,19 +242,13 @@ def header() -> rx.Component:
         rx.el.div(
             rx.el.div(
                 rx.el.button(
-                    rx.icon(
-                        "menu",
-                        class_name=rx.cond(
-                            ThemeState.is_dark, "text-white", "text-gray-900"
-                        ),
-                    ),
+                    rx.icon("menu", class_name=t("text-white", "text-gray-900")),
                     on_click=ThemeState.toggle_mobile_sidebar,
                     class_name="md:hidden mr-4",
                 ),
                 rx.el.h2(
                     "Stoned Lack Fantasy",
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
+                    class_name=t(
                         "text-xl font-bold text-white",
                         "text-xl font-bold text-gray-900",
                     ),
@@ -242,8 +261,7 @@ def header() -> rx.Component:
                     rx.el.div(
                         rx.el.span(
                             f"{AppState.nfl_state['season']} Season",
-                            class_name=rx.cond(
-                                ThemeState.is_dark,
+                            class_name=t(
                                 "text-sm font-semibold text-gray-300",
                                 "text-sm font-semibold text-gray-700",
                             ),
@@ -269,19 +287,14 @@ def header() -> rx.Component:
                 rx.el.button(
                     rx.icon(
                         rx.cond(ThemeState.is_dark, "sun", "moon"),
-                        class_name=rx.cond(
-                            ThemeState.is_dark,
-                            "w-5 h-5 text-gray-400",
-                            "w-5 h-5 text-gray-600",
-                        ),
+                        class_name=t("w-5 h-5 text-gray-400", "w-5 h-5 text-gray-600"),
                     ),
                     on_click=ThemeState.toggle_color_mode,
                     class_name="p-2 rounded-full hover:bg-gray-200/50 transition-colors md:hidden ml-2",
                 ),
                 class_name="flex items-center gap-4 ml-auto",
             ),
-            class_name=rx.cond(
-                ThemeState.is_dark,
+            class_name=t(
                 "flex items-center justify-between h-20 px-6 sm:px-10 bg-[#161926] border-b border-gray-800",
                 "flex items-center justify-between h-20 px-6 sm:px-10 bg-white border-b border-gray-200",
             ),
@@ -301,14 +314,12 @@ def layout(content: rx.Component) -> rx.Component:
             ),
             mobile_bottom_nav(),
             mobile_drawer(),
-            class_name=rx.cond(
-                ThemeState.is_dark,
+            class_name=t(
                 "flex-1 flex flex-col bg-[#0F1119] h-screen",
                 "flex-1 flex flex-col bg-[#F8F9FC] h-screen",
             ),
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
+        class_name=t(
             "flex h-screen w-screen font-['Inter'] text-[#F3F4F6] overflow-hidden",
             "flex h-screen w-screen font-['Inter'] text-gray-900 overflow-hidden",
         ),

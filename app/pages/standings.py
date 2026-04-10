@@ -2,6 +2,18 @@ import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
 from app.states.theme_state import ThemeState
+from app.states.user_state import UserState
+from app.theme import (
+    t,
+    H1,
+    TEXT_SECONDARY,
+    TEXT_PRIMARY,
+    EMPTY_STATE,
+    TABLE_CONTAINER,
+    TABLE_HEADER_ROW,
+    TABLE_HEADER_CELL,
+    TABLE_ROW,
+)
 from app.components.layout import layout
 from app.pages.matchups import league_selector
 
@@ -25,67 +37,39 @@ def standings_row(team: dict) -> rx.Component:
                         3,
                         "w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center",
                     ),
-                    rx.cond(
-                        ThemeState.is_dark,
-                        "w-8 h-8 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center",
-                        "w-8 h-8 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center",
-                    ),
+                    "w-8 h-8 rounded-full font-bold flex items-center justify-center "
+                    + t("bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"),
                 ),
             ),
             class_name="p-4",
         ),
         rx.el.td(
             rx.el.div(
-                rx.el.div(
-                    team["team_name"],
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "font-bold text-white",
-                        "font-bold text-gray-900",
-                    ),
-                ),
+                rx.el.div(team["team_name"], class_name="font-bold " + TEXT_PRIMARY),
                 rx.el.div(
                     team["owner_name"],
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-xs text-gray-400 font-medium",
-                        "text-xs text-gray-500 font-medium",
-                    ),
+                    class_name="text-xs font-medium " + TEXT_SECONDARY,
                 ),
             ),
             class_name="p-4",
         ),
         rx.el.td(
             team["wins"],
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-4 font-semibold text-gray-300 text-center",
-                "p-4 font-semibold text-gray-700 text-center",
-            ),
+            class_name="p-4 font-semibold text-center "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
             team["losses"],
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-4 font-semibold text-gray-300 text-center",
-                "p-4 font-semibold text-gray-700 text-center",
-            ),
+            class_name="p-4 font-semibold text-center "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
             team["ties"],
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-4 font-semibold text-gray-300 text-center",
-                "p-4 font-semibold text-gray-700 text-center",
-            ),
+            class_name="p-4 font-semibold text-center "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
-            team["win_pct"],
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-4 font-medium text-gray-500 text-center",
-                "p-4 font-medium text-gray-500 text-center",
-            ),
+            team["win_pct"], class_name="p-4 font-medium text-center " + TEXT_SECONDARY
         ),
         rx.el.td(
             team["fpts"], class_name="p-4 font-semibold text-[#DC2626] text-right"
@@ -94,11 +78,7 @@ def standings_row(team: dict) -> rx.Component:
             team["fpts_against"], class_name="p-4 font-medium text-[#5B7BA5] text-right"
         ),
         on_click=MatchupsState.view_roster(team["roster_id"].to(int)),
-        class_name=rx.cond(
-            ThemeState.is_dark,
-            "border-b border-gray-800 hover:bg-[#161926] cursor-pointer transition-colors",
-            "border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors",
-        ),
+        class_name=TABLE_ROW + " cursor-pointer",
     )
 
 
@@ -106,12 +86,10 @@ def standings_page() -> rx.Component:
     return layout(
         rx.el.div(
             rx.el.div(
-                rx.el.h1(
-                    "Standings", class_name="text-3xl font-bold text-gray-900 mb-2"
-                ),
+                rx.el.h1("Standings", class_name=H1 + " mb-2"),
                 rx.el.p(
                     "League rankings, records, and points.",
-                    class_name="text-gray-500 font-medium",
+                    class_name=TEXT_SECONDARY + " font-medium",
                 ),
                 class_name="mb-8",
             ),
@@ -122,12 +100,12 @@ def standings_page() -> rx.Component:
                     rx.icon("list-ordered", class_name="w-12 h-12 text-gray-300 mb-4"),
                     rx.el.h3(
                         "No League Selected",
-                        class_name="text-xl font-bold text-gray-700 mb-2",
+                        class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
                     ),
                     rx.el.p(
-                        "Select a league to view standings.", class_name="text-gray-500"
+                        "Select a league to view standings.", class_name=TEXT_SECONDARY
                     ),
-                    class_name="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-200 border-dashed",
+                    class_name=EMPTY_STATE,
                 ),
                 rx.el.div(
                     rx.el.div(
@@ -136,73 +114,43 @@ def standings_page() -> rx.Component:
                                 rx.el.tr(
                                     rx.el.th(
                                         "Rank",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL + " p-4 text-left",
                                     ),
                                     rx.el.th(
                                         "Team",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL + " p-4 text-left",
                                     ),
                                     rx.el.th(
                                         "W",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-center",
                                     ),
                                     rx.el.th(
                                         "L",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-center",
                                     ),
                                     rx.el.th(
                                         "T",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-center",
                                     ),
                                     rx.el.th(
                                         "Pct",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-center",
                                     ),
                                     rx.el.th(
                                         "PF",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-right",
                                     ),
                                     rx.el.th(
                                         "PA",
-                                        class_name=rx.cond(
-                                            ThemeState.is_dark,
-                                            "p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                            "p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                        ),
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-right",
                                     ),
-                                    class_name=rx.cond(
-                                        ThemeState.is_dark,
-                                        "bg-[#161926] border-b border-gray-800",
-                                        "bg-gray-50 border-b border-gray-200",
-                                    ),
+                                    class_name=TABLE_HEADER_ROW,
                                 )
                             ),
                             rx.el.tbody(
@@ -212,11 +160,7 @@ def standings_page() -> rx.Component:
                         ),
                         class_name="overflow-x-auto",
                     ),
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm overflow-hidden",
-                        "bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden",
-                    ),
+                    class_name=TABLE_CONTAINER,
                 ),
             ),
         )

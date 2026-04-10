@@ -11,7 +11,6 @@ class AppState(rx.State):
     leagues_data: list[dict[str, str | int | dict | list | None]] = []
     selected_league_id: str = ""
     trending_adds: list[dict[str, str | int]] = []
-    new_league_id: str = ""
     is_loading: bool = False
     search_query: str = ""
     filter_type: str = "All"
@@ -33,43 +32,6 @@ class AppState(rx.State):
         trending = get_trending_players(limit=5)
         if trending:
             self.trending_adds = enrich_trending(trending)
-
-    @rx.event
-    def add_league_by_id(self):
-        if not self.new_league_id or self.new_league_id in self.configured_league_ids:
-            return
-        league = get_league(self.new_league_id)
-        if league and league.get("league_id"):
-            client = get_supabase_client()
-            if client:
-                try:
-                    client.table("leagues").insert(
-                        {
-                            "league_id": league.get("league_id"),
-                            "league_name": league.get(
-                                "name", f"League {league.get('league_id')}"
-                            ),
-                            "league_season": int(league.get("season", 2024)),
-                            "league_type": league.get("status", "redraft"),
-                            "roster_positions": league.get("roster_positions", []),
-                        }
-                    ).execute()
-                except Exception as e:
-                    logging.exception(f"Failed to insert league into Supabase: {e}")
-            self.new_league_id = ""
-            yield AppState.fetch_all_leagues_data
-
-    @rx.event
-    def remove_league(self, league_id: str):
-        client = get_supabase_client()
-        if client:
-            try:
-                client.table("leagues").delete().eq("league_id", league_id).execute()
-            except Exception as e:
-                logging.exception(f"Failed to delete league from Supabase: {e}")
-        if self.selected_league_id == league_id:
-            self.selected_league_id = ""
-        yield AppState.fetch_all_leagues_data
 
     def _normalize_league(self, lg: dict, live_data: dict | None = None) -> dict:
         """Normalize a Supabase league row to the shape the UI expects."""

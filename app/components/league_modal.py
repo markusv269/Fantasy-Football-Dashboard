@@ -1,6 +1,7 @@
 import reflex as rx
 from app.states.league_detail_state import LeagueDetailState
 from app.states.theme_state import ThemeState
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY, TABLE_HEADER_ROW, TABLE_ROW
 
 
 def standing_row(team: dict) -> rx.Component:
@@ -22,11 +23,8 @@ def standing_row(team: dict) -> rx.Component:
                         3,
                         "w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center",
                     ),
-                    rx.cond(
-                        ThemeState.is_dark,
-                        "w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-bold flex items-center justify-center",
-                        "w-6 h-6 rounded-full bg-gray-50 text-gray-600 font-bold flex items-center justify-center",
-                    ),
+                    "w-6 h-6 rounded-full font-bold flex items-center justify-center "
+                    + t("bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"),
                 ),
             ),
             class_name="p-3",
@@ -35,46 +33,29 @@ def standing_row(team: dict) -> rx.Component:
             rx.el.div(
                 rx.el.span(
                     team["team_name"].to(str),
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "font-bold text-white block",
-                        "font-bold text-gray-900 block",
-                    ),
+                    class_name="font-bold block " + TEXT_PRIMARY,
                 ),
                 rx.el.span(
                     team["display_name"].to(str),
-                    class_name=rx.cond(
-                        ThemeState.is_dark,
-                        "text-xs text-gray-400 font-medium",
-                        "text-xs text-gray-500 font-medium",
-                    ),
+                    class_name="text-xs font-medium " + TEXT_SECONDARY,
                 ),
             ),
             class_name="p-3",
         ),
         rx.el.td(
             team["wins"].to(str),
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-3 text-center font-medium text-gray-300",
-                "p-3 text-center font-medium text-gray-700",
-            ),
+            class_name="p-3 text-center font-medium "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
             team["losses"].to(str),
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-3 text-center font-medium text-gray-300",
-                "p-3 text-center font-medium text-gray-700",
-            ),
+            class_name="p-3 text-center font-medium "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
             team["ties"].to(str),
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "p-3 text-center font-medium text-gray-300",
-                "p-3 text-center font-medium text-gray-700",
-            ),
+            class_name="p-3 text-center font-medium "
+            + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
             team["fpts_for"].to(str),
@@ -84,11 +65,7 @@ def standing_row(team: dict) -> rx.Component:
             team["fpts_against"].to(str),
             class_name="p-3 text-right font-medium text-red-500",
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
-            "border-b border-gray-800 hover:bg-[#161926]",
-            "border-b border-gray-100 hover:bg-gray-50",
-        ),
+        class_name=TABLE_ROW,
     )
 
 
@@ -99,22 +76,15 @@ def matchup_card(matchup: dict) -> rx.Component:
         rx.el.div(
             rx.el.span(
                 matchup["team_a_name"].to(str),
-                class_name=rx.cond(
-                    ThemeState.is_dark,
-                    "font-medium truncate max-w-[100px] text-sm text-gray-300",
-                    "font-medium truncate max-w-[100px] text-sm text-gray-700",
-                ),
+                class_name="font-medium truncate max-w-[100px] text-sm "
+                + TEXT_SECONDARY,
             ),
             rx.el.span(
                 matchup["team_a_points"].to(str),
                 class_name=rx.cond(
                     a_pts > b_pts,
                     "font-bold text-emerald-500",
-                    rx.cond(
-                        ThemeState.is_dark,
-                        "font-medium text-gray-500",
-                        "font-medium text-gray-600",
-                    ),
+                    "font-medium " + TEXT_SECONDARY,
                 ),
             ),
             class_name="flex justify-between items-center mb-1",
@@ -122,31 +92,21 @@ def matchup_card(matchup: dict) -> rx.Component:
         rx.el.div(
             rx.el.span(
                 matchup["team_b_name"].to(str),
-                class_name=rx.cond(
-                    ThemeState.is_dark,
-                    "font-medium truncate max-w-[100px] text-sm text-gray-300",
-                    "font-medium truncate max-w-[100px] text-sm text-gray-700",
-                ),
+                class_name="font-medium truncate max-w-[100px] text-sm "
+                + TEXT_SECONDARY,
             ),
             rx.el.span(
                 matchup["team_b_points"].to(str),
                 class_name=rx.cond(
                     b_pts > a_pts,
                     "font-bold text-emerald-500",
-                    rx.cond(
-                        ThemeState.is_dark,
-                        "font-medium text-gray-500",
-                        "font-medium text-gray-600",
-                    ),
+                    "font-medium " + TEXT_SECONDARY,
                 ),
             ),
             class_name="flex justify-between items-center",
         ),
-        class_name=rx.cond(
-            ThemeState.is_dark,
-            "bg-[#161926] border border-gray-700 p-3 rounded-xl",
-            "bg-gray-50 border border-gray-200 p-3 rounded-xl",
-        ),
+        class_name="border p-3 rounded-xl "
+        + t("bg-[#161926] border-gray-700", "bg-gray-50 border-gray-200"),
     )
 
 
@@ -171,11 +131,7 @@ def league_detail_modal() -> rx.Component:
                             rx.el.div(
                                 rx.radix.primitives.dialog.title(
                                     LeagueDetailState.modal_league_name,
-                                    class_name=rx.cond(
-                                        ThemeState.is_dark,
-                                        "text-2xl font-bold text-white",
-                                        "text-2xl font-bold text-gray-900",
-                                    ),
+                                    class_name="text-2xl font-bold " + TEXT_PRIMARY,
                                 ),
                                 rx.el.div(
                                     rx.el.span(
@@ -193,11 +149,8 @@ def league_detail_modal() -> rx.Component:
                                 rx.el.button(
                                     rx.icon("x", class_name="w-5 h-5 text-gray-500"),
                                     on_click=LeagueDetailState.close_league_modal,
-                                    class_name=rx.cond(
-                                        ThemeState.is_dark,
-                                        "p-2 hover:bg-gray-800 rounded-full transition-colors",
-                                        "p-2 hover:bg-gray-100 rounded-full transition-colors",
-                                    ),
+                                    class_name="p-2 rounded-full transition-colors "
+                                    + t("hover:bg-gray-800", "hover:bg-gray-100"),
                                 )
                             ),
                             class_name="flex justify-between items-start mb-6",
@@ -222,11 +175,8 @@ def league_detail_modal() -> rx.Component:
                         rx.el.div(
                             rx.el.h3(
                                 "Standings",
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "text-lg font-bold text-gray-200 mb-3",
-                                    "text-lg font-bold text-gray-800 mb-3",
-                                ),
+                                class_name="text-lg font-bold mb-3 "
+                                + t("text-gray-200", "text-gray-800"),
                             ),
                             rx.el.div(
                                 rx.el.table(
@@ -234,65 +184,40 @@ def league_detail_modal() -> rx.Component:
                                         rx.el.tr(
                                             rx.el.th(
                                                 "Rank",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-left text-xs font-bold text-gray-400",
-                                                    "p-2 text-left text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-left text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "Team",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-left text-xs font-bold text-gray-400",
-                                                    "p-2 text-left text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-left text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "W",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-center text-xs font-bold text-gray-400",
-                                                    "p-2 text-center text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-center text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "L",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-center text-xs font-bold text-gray-400",
-                                                    "p-2 text-center text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-center text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "T",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-center text-xs font-bold text-gray-400",
-                                                    "p-2 text-center text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-center text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "PF",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-right text-xs font-bold text-gray-400",
-                                                    "p-2 text-right text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-right text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
                                             rx.el.th(
                                                 "PA",
-                                                class_name=rx.cond(
-                                                    ThemeState.is_dark,
-                                                    "p-2 text-right text-xs font-bold text-gray-400",
-                                                    "p-2 text-right text-xs font-bold text-gray-500",
-                                                ),
+                                                class_name="p-2 text-right text-xs font-bold "
+                                                + TEXT_SECONDARY,
                                             ),
-                                            class_name=rx.cond(
-                                                ThemeState.is_dark,
-                                                "bg-[#161926]",
-                                                "bg-gray-50",
-                                            ),
+                                            class_name=TABLE_HEADER_ROW,
                                         )
                                     ),
                                     rx.el.tbody(
@@ -303,22 +228,16 @@ def league_detail_modal() -> rx.Component:
                                     ),
                                     class_name="w-full table-auto",
                                 ),
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "overflow-x-auto border border-gray-800 rounded-xl",
-                                    "overflow-x-auto border border-gray-200 rounded-xl",
-                                ),
+                                class_name="overflow-x-auto border rounded-xl "
+                                + t("border-gray-800", "border-gray-200"),
                             ),
                             class_name="mb-6",
                         ),
                         rx.el.div(
                             rx.el.h3(
                                 "Recent Matchups",
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "text-lg font-bold text-gray-200 mb-3",
-                                    "text-lg font-bold text-gray-800 mb-3",
-                                ),
+                                class_name="text-lg font-bold mb-3 "
+                                + t("text-gray-200", "text-gray-800"),
                             ),
                             rx.cond(
                                 LeagueDetailState.modal_recent_matchups.length() > 0,
@@ -331,11 +250,7 @@ def league_detail_modal() -> rx.Component:
                                 ),
                                 rx.el.p(
                                     "No matchup data available.",
-                                    class_name=rx.cond(
-                                        ThemeState.is_dark,
-                                        "text-gray-500 text-sm italic",
-                                        "text-gray-500 text-sm italic",
-                                    ),
+                                    class_name="text-sm italic " + TEXT_SECONDARY,
                                 ),
                             ),
                             class_name="mb-6",
@@ -343,11 +258,8 @@ def league_detail_modal() -> rx.Component:
                         rx.el.div(
                             rx.el.h3(
                                 "Roster Settings",
-                                class_name=rx.cond(
-                                    ThemeState.is_dark,
-                                    "text-lg font-bold text-gray-200 mb-3",
-                                    "text-lg font-bold text-gray-800 mb-3",
-                                ),
+                                class_name="text-lg font-bold mb-3 "
+                                + t("text-gray-200", "text-gray-800"),
                             ),
                             rx.cond(
                                 LeagueDetailState.modal_roster_positions.length() > 0,
@@ -356,10 +268,10 @@ def league_detail_modal() -> rx.Component:
                                         LeagueDetailState.modal_roster_positions,
                                         lambda pos: rx.el.span(
                                             pos,
-                                            class_name=rx.cond(
-                                                ThemeState.is_dark,
-                                                "px-2 py-1 bg-gray-800 text-gray-300 text-xs font-bold rounded-md",
-                                                "px-2 py-1 bg-gray-100 text-gray-700 text-xs font-bold rounded-md",
+                                            class_name="px-2 py-1 text-xs font-bold rounded-md "
+                                            + t(
+                                                "bg-gray-800 text-gray-300",
+                                                "bg-gray-100 text-gray-700",
                                             ),
                                         ),
                                     ),
@@ -367,17 +279,14 @@ def league_detail_modal() -> rx.Component:
                                 ),
                                 rx.el.p(
                                     "No roster info.",
-                                    class_name="text-gray-500 text-sm",
+                                    class_name="text-sm " + TEXT_SECONDARY,
                                 ),
                             ),
                         ),
                     ),
                 ),
-                class_name=rx.cond(
-                    ThemeState.is_dark,
-                    "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#1C2033] rounded-2xl shadow-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 text-white",
-                    "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 text-gray-900",
-                ),
+                class_name="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 "
+                + t("bg-[#1C2033] text-white", "bg-white text-gray-900"),
             ),
         ),
         open=LeagueDetailState.show_modal,
