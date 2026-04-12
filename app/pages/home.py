@@ -1,4 +1,5 @@
 import reflex as rx
+import json
 from app.states.app_state import AppState
 from app.states.user_state import UserState
 from app.states.league_detail_state import LeagueDetailState
@@ -23,7 +24,7 @@ def league_card(league: dict) -> rx.Component:
         rx.el.div(
             rx.image(
                 src=rx.cond(
-                    league["avatar"] != "",
+                    league["avatar"] != None,
                     f"https://sleepercdn.com/avatars/{league['avatar']}",
                     "/placeholder.svg",
                 ),
@@ -95,9 +96,9 @@ def home_page() -> rx.Component:
     return layout(
         rx.el.div(
             rx.el.div(
-                rx.el.h1("Willkommen bei Stoned Lack Fantasy", class_name=H1 + " mb-3"),
+                rx.el.h1("Willkommen bei Stoned Lack Sleeper Ligen", class_name=H1 + " mb-3"),
                 rx.el.p(
-                    "Verwalte deine Ligen, verfolge Matchups, entdecke Trends und werde Teil der Stoned Lack Community.",
+                    "Das ist dein Zugang zu allen Ligen der Stoned Lack Army: verfolge Matchups, entdecke Trends und werde Teil der Stoned Lack Community.",
                     class_name=TEXT_SECONDARY + " text-lg font-medium",
                 ),
                 rx.cond(

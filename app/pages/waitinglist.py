@@ -289,7 +289,7 @@ def registration_form() -> rx.Component:
                                 + TEXT_PRIMARY,
                             ),
                             rx.el.p(
-                                "Für die Kommunikation in der Liga.",
+                                "Für weitere Kommunikation.",
                                 class_name="text-xs mb-2 " + TEXT_SECONDARY,
                             ),
                             rx.el.input(
