@@ -58,13 +58,13 @@ class LeagueDetailState(rx.State):
         roster_pos = []
 
         try:
-            # A. Höchste Woche finden
-            max_res = client.table("rosters").select("week").eq("league_id", league_id).order("week", desc=True).limit(1).execute()
-            latest_week = max_res.data[0].get("week", 0) if (max_res and max_res.data) else 0
-
+            max_res = client.table("rosters").select("week").in_("league_id", [league_id]).order("week", desc=True).limit(1).execute()
+            print(league_id, max_res.data)
+            latest_week = max_res.data[0].get("week", 1) if (max_res and max_res.data) else 1
+            print("Latest Week:", latest_week)
             # B. Standings & Manager
-            standings_res = client.table("rosters").select("*").eq("league_id", league_id).eq("week", latest_week).order("wins", desc=True).order("fpts_for", desc=True).execute()
-            managers_res = client.table("managers").select("*").eq("league_id", league_id).execute()
+            standings_res = client.table("rosters").select("*").in_("league_id", [league_id]).eq("week", latest_week).order("wins", desc=True).order("fpts_for", desc=True).execute()
+            managers_res = client.table("managers").select("*").in_("league_id", [league_id]).execute()
             mgr_map = {m.get("roster_id"): m for m in (managers_res.data if managers_res else [])}
 
             if standings_res and standings_res.data:
@@ -83,7 +83,7 @@ class LeagueDetailState(rx.State):
                     })
 
             # C. Matchups
-            matchups_res = client.table("matchup_week_stats").select("*").eq("league_id", league_id).eq("week", latest_week).execute()
+            matchups_res = client.table("matchup_week_stats").select("*").in_("league_id", [league_id]).eq("week", latest_week).execute()
             if matchups_res and matchups_res.data:
                 pairs = {}
                 for m in matchups_res.data:
@@ -105,11 +105,11 @@ class LeagueDetailState(rx.State):
                         })
 
             # D. Champion & Roster Positions
-            champ_res = client.table("league_champion").select("*").eq("league_id", league_id).limit(1).execute()
+            champ_res = client.table("league_champion").select("*").in_("league_id", [league_id]).limit(1).execute()
             if champ_res and champ_res.data:
                 champion_data = champ_res.data[0]
 
-            leagues_res = client.table("leagues").select("roster_positions").eq("league_id", league_id).limit(1).execute()
+            leagues_res = client.table("leagues").select("roster_positions").in_("league_id", [league_id]).limit(1).execute()
             if leagues_res and leagues_res.data:
                 roster_pos = leagues_res.data[0].get("roster_positions", [])
 
