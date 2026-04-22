@@ -1,5 +1,5 @@
 import reflex as rx
-from typing import Any
+from typing import Any, Optional, Union
 from app.supabase_client import get_supabase_client
 import logging
 
@@ -11,7 +11,7 @@ class LeagueDetailState(rx.State):
     modal_league_season: str = ""
     modal_standings: list[dict[str, str | int | float]] = []
     modal_recent_matchups: list[dict[str, str | int | float | bool | list[str]]] = []
-    modal_champion: dict[str, str] = {}
+    modal_champion: dict[str, Optional[Union[str, int, float]]] = {}
     modal_roster_positions: list[str] = []
     modal_loading: bool = False
 
@@ -59,9 +59,7 @@ class LeagueDetailState(rx.State):
 
         try:
             max_res = client.table("rosters").select("week").in_("league_id", [league_id]).order("week", desc=True).limit(1).execute()
-            print(league_id, max_res.data)
             latest_week = max_res.data[0].get("week", 1) if (max_res and max_res.data) else 1
-            print("Latest Week:", latest_week)
             # B. Standings & Manager
             standings_res = client.table("rosters").select("*").in_("league_id", [league_id]).eq("week", latest_week).order("wins", desc=True).order("fpts_for", desc=True).execute()
             managers_res = client.table("managers").select("*").in_("league_id", [league_id]).execute()

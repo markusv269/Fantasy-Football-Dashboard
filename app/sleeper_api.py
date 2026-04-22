@@ -6,6 +6,8 @@ BASE_URL = "https://api.sleeper.app/v1"
 
 def _get(path: str):
     """Helper method to fetch JSON data from Sleeper API."""
+    full_url = f"{BASE_URL}{path}"
+    print(f"DEBUG: Requesting URL: {full_url}")  # Add this
     try:
         r = requests.get(f"{BASE_URL}{path}", timeout=10)
         if r.status_code == 404:
@@ -40,6 +42,7 @@ def get_league_users(league_id: str):
 
 def get_matchups(league_id: str, week: int):
     """Fetch matchups for a specific league and week."""
+    print(f"DEBUG: Entering get_league_users with league_id: '{league_id}' (Type: {type(league_id)})")
     return _get(f"/league/{league_id}/matchups/{week}")
 
 

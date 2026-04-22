@@ -35,7 +35,8 @@ class AppState(rx.State):
 
     def _normalize_league(self, lg: dict, live_data: dict | None = None) -> dict:
         """Normalize a Supabase league row to the shape the UI expects."""
-        league_id = str(lg.get("league_id", ""))
+        raw_id = str(lg.get("league_id", ""))
+        league_id = raw_id.strip('"').strip()
         name = lg.get("league_name", f"League {league_id}")
         season = str(lg.get("league_season", ""))
         status = lg.get("league_type", "unknown")
@@ -89,7 +90,7 @@ class AppState(rx.State):
 
     @rx.event
     def select_league(self, league_id: str):
-        self.selected_league_id = league_id
+        self.selected_league_id = league_id.strip('"')  # Remove extra quotes if present
 
     @rx.event
     def init_app(self):
