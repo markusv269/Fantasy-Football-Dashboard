@@ -40,7 +40,7 @@ class AppState(rx.State):
         name = lg.get("league_name", f"League {league_id}")
         season = str(lg.get("league_season", ""))
         status = lg.get("league_type", "unknown")
-        avatar = ""
+        avatar = lg.get("avatar", "") or ""
         total_rosters = ""
         if live_data:
             name = live_data.get("name", name)
@@ -67,7 +67,8 @@ class AppState(rx.State):
                 result = client.table("leagues").select("*").execute()
                 if result and result.data:
                     raw_leagues = result.data
-                    use_live = len(raw_leagues) <= 10
+                    use_live = len(raw_leagues) <= 10 # Nur bei 10 oder weniger Ligen Live-Daten abrufen, um Performance zu schonen
+                    # use_live = True  # Immer Live-Daten verwenden, um die Genauigkeit zu gewährleisten
                     normalized = []
                     for lg in raw_leagues:
                         live_data = None

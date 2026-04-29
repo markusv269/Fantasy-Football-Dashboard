@@ -20,13 +20,14 @@ from app.components.league_modal import league_detail_modal
 
 
 def league_card(league: dict) -> rx.Component:
+    # print(league["avatar"])
     return rx.el.div(
         rx.el.div(
             rx.image(
                 src=rx.cond(
-                    league["avatar"] != None,
-                    f"https://sleepercdn.com/avatars/{league['avatar']}",
-                    "/placeholder.svg",
+                    (league["avatar"] != None) & (league["avatar"] != "") & (league["avatar"] != "null"),
+                    f"https://sleepercdn.com/avatars/thumbs/{league['avatar']}",
+                    "https://sleepercdn.com/images/v2/icons/league/nfl/purple.png",
                 ),
                 class_name="w-14 h-14 rounded-full object-cover border shadow-sm mr-4 "
                 + t("border-gray-700", "border-gray-100"),
