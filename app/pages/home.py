@@ -20,76 +20,74 @@ from app.components.league_modal import league_detail_modal
 
 
 def league_card(league: dict) -> rx.Component:
-    # print(league["avatar"])
-    return rx.el.div(
-        rx.el.div(
+    # Hilfsvariable für die Avatar-URL Logik
+    avatar_url = rx.cond(
+        (league["avatar"] != None) & (league["avatar"] != "") & (league["avatar"] != "null"),
+        f"https://sleepercdn.com/avatars/thumbs/{league['avatar']}",
+        "https://sleepercdn.com/images/v2/icons/league/nfl/purple.png",
+    )
+
+    # Die gemeinsamen Klassen als Variable (normaler Python String)
+    base_badge_style = " px-3 py-1 rounded-full text-xs font-bold uppercase"
+
+    status_style = rx.match(
+        league["status"],
+        ("in_season", "bg-emerald-100 text-emerald-800" + base_badge_style),
+        ("complete", "bg-gray-100 text-gray-700" + base_badge_style),
+        ("drafting", "bg-blue-100 text-blue-800" + base_badge_style),
+        ("pre_draft", "bg-yellow-100 text-yellow-800" + base_badge_style),
+        ("redraft", "bg-indigo-100 text-indigo-800" + base_badge_style),
+        ("dynasty", "bg-purple-100 text-purple-800" + base_badge_style),
+        "bg-gray-100 text-gray-700" + base_badge_style, 
+    )
+
+    return rx.box(
+        # Header Bereich (Avatar + Name/Season)
+        rx.hstack(
             rx.image(
-                src=rx.cond(
-                    (league["avatar"] != None) & (league["avatar"] != "") & (league["avatar"] != "null"),
-                    f"https://sleepercdn.com/avatars/thumbs/{league['avatar']}",
-                    "https://sleepercdn.com/images/v2/icons/league/nfl/purple.png",
-                ),
-                class_name="w-14 h-14 rounded-full object-cover border shadow-sm mr-4 "
-                + t("border-gray-700", "border-gray-100"),
+                src=avatar_url,
+                class_name=f"w-14 h-14 rounded-full object-cover border shadow-sm {t('border-gray-700', 'border-gray-100')}",
             ),
-            rx.el.div(
-                rx.el.h3(
-                    league["name"], class_name=TEXT_PRIMARY + " font-bold text-lg"
+            rx.vstack(
+                rx.heading(
+                    league["name"],
+                    size="4", # entspricht text-lg/xl
+                    class_name=f"{TEXT_PRIMARY} font-bold",
                 ),
-                rx.el.p(
+                rx.text(
                     f"{league['season']} Season",
-                    class_name=TEXT_SECONDARY + " text-sm font-medium",
+                    class_name=f"{TEXT_SECONDARY} text-sm font-medium",
                 ),
+                align_items="start",
+                spacing="0",
             ),
-            class_name="flex items-center mb-5",
+            align="center",
+            margin_bottom="1.25rem", # mb-5
         ),
-        rx.el.div(
-            rx.el.span(
+
+        # Footer Bereich (Status + Team-Anzahl)
+        rx.flex(
+            rx.text(
                 league["status"],
-                class_name=rx.match(
-                    league["status"],
-                    (
-                        "in_season",
-                        "bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    (
-                        "complete",
-                        "bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    (
-                        "drafting",
-                        "bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    (
-                        "pre_draft",
-                        "bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    (
-                        "redraft",
-                        "bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    (
-                        "dynasty",
-                        "bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                    ),
-                    "bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold uppercase",
-                ),
+                class_name=status_style,
             ),
             rx.cond(
-                (league["total_rosters"].to(str) != "")
-                & (league["total_rosters"].to(str) != "0"),
-                rx.el.span(
+                (league["total_rosters"].to(str) != "") & (league["total_rosters"].to(str) != "0"),
+                rx.text(
                     f"{league['total_rosters']} Teams",
-                    class_name=TEXT_SECONDARY + " text-sm font-semibold",
+                    class_name=f"{TEXT_SECONDARY} text-sm font-semibold",
                 ),
-                rx.fragment(),
             ),
-            class_name="flex justify-between items-center",
+            justify="between",
+            align="center",
+            width="100%",
         ),
+        
+        # Card Wrapper Styling
         on_click=lambda: LeagueDetailState.open_league_modal(
             league["league_id"].to_string()
         ),
-        class_name=CARD + " p-6 hover:border-[#DC2626] cursor-pointer transition-all",
+        class_name=f"{CARD} p-6 hover:border-[#DC2626] cursor-pointer transition-all",
     )
 
 
