@@ -1,6 +1,7 @@
 import reflex as rx
 import requests
 import logging
+from datetime import datetime
 from app.supabase_client import get_supabase_client
 
 
@@ -24,6 +25,18 @@ class WaitlistState(rx.State):
     total_bb: int = 0
     total_registrations: int = 0
     all_entries: list[dict[str, str | bool]] = []
+
+    @rx.var
+    def dynasty_entries(self) -> list[dict[str, str | bool]]:
+        return [e for e in self.all_entries if e.get("dynasty")]
+
+    @rx.var
+    def dynasty_idp_entries(self) -> list[dict[str, str | bool]]:
+        return [e for e in self.all_entries if e.get("dynasty_idp")]
+
+    @rx.var
+    def dynasty_bb_entries(self) -> list[dict[str, str | bool]]:
+        return [e for e in self.all_entries if e.get("dynasty_bb")]
 
     @rx.event
     def set_sleeper_name_input(self, val: str):
@@ -56,7 +69,9 @@ class WaitlistState(rx.State):
                 self.username_error = "Bitte gib einen Namen ein."
                 self.is_resolving = False
                 return
-            r = requests.get(f"https://api.sleeper.app/v1/user/{name}", timeout=10)
+            r = requests.get(
+                f"https://api.sleeper.app/v1/user/{name}", timeout=10
+            )
             if r.status_code == 200 and r.json():
                 data = r.json()
                 self.resolved_user_id = str(data.get("user_id", ""))
@@ -76,8 +91,12 @@ class WaitlistState(rx.State):
                         entry = res.data[0]
                         self.existing_entry = entry
                         self.dynasty_checked = bool(entry.get("dynasty", False))
-                        self.dynasty_idp_checked = bool(entry.get("dynasty_idp", False))
-                        self.dynasty_bb_checked = bool(entry.get("dynasty_bb", False))
+                        self.dynasty_idp_checked = bool(
+                            entry.get("dynasty_idp", False)
+                        )
+                        self.dynasty_bb_checked = bool(
+                            entry.get("dynasty_bb", False)
+                        )
                         self.discord_input = entry.get("discord") or ""
                     else:
                         self.existing_entry = {}
@@ -102,9 +121,13 @@ class WaitlistState(rx.State):
     @rx.event
     def submit_waitlist(self):
         if not (
-            self.dynasty_checked or self.dynasty_idp_checked or self.dynasty_bb_checked
+            self.dynasty_checked
+            or self.dynasty_idp_checked
+            or self.dynasty_bb_checked
         ):
-            return rx.toast("Bitte wähle mindestens eine Liga-Art aus.", duration=3000)
+            return rx.toast(
+                "Bitte wähle mindestens eine Liga-Art aus.", duration=3000
+            )
         if not self.username_valid:
             return rx.toast(
                 "Bitte überprüfe zuerst deinen Sleeper-Namen.", duration=3000
@@ -158,25 +181,50 @@ class WaitlistState(rx.State):
         client = get_supabase_client()
         if client:
             try:
-                res = client.table("dynasty_waitinglist").select("*").execute()
+                res = (
+                    client.table("dynasty_waitinglist")
+                    .select("*")
+                    .order("created_at", desc=False)
+                    .execute()
+                )
                 if res and res.data:
                     data = res.data
                     self.total_registrations = len(data)
-                    self.total_dynasty = sum((1 for d in data if d.get("dynasty")))
-                    self.total_idp = sum((1 for d in data if d.get("dynasty_idp")))
-                    self.total_bb = sum((1 for d in data if d.get("dynasty_bb")))
+                    self.total_dynasty = sum(
+                        (1 for d in data if d.get("dynasty"))
+                    )
+                    self.total_idp = sum(
+                        (1 for d in data if d.get("dynasty_idp"))
+                    )
+                    self.total_bb = sum(
+                        (1 for d in data if d.get("dynasty_bb"))
+                    )
                     entries = []
                     for d in data:
+                        created = str(d.get("created_at") or "")
+                        display = ""
+                        if created:
+                            try:
+                                dt = datetime.fromisoformat(
+                                    created.replace("Z", "+00:00")
+                                )
+                                display = dt.strftime("%d.%m.%Y %H:%M")
+                            except Exception:
+                                logging.exception("Failed to parse created_at")
+                                display = created[:10]
                         entries.append(
                             {
                                 "sleeper_name": str(d.get("sleeper_name", "")),
                                 "dynasty": bool(d.get("dynasty", False)),
-                                "dynasty_idp": bool(d.get("dynasty_idp", False)),
+                                "dynasty_idp": bool(
+                                    d.get("dynasty_idp", False)
+                                ),
                                 "dynasty_bb": bool(d.get("dynasty_bb", False)),
                                 "discord": str(d.get("discord") or ""),
+                                "created_at": created,
+                                "created_at_display": display,
                             }
                         )
-                    entries.sort(key=lambda x: str(x["sleeper_name"]).lower())
                     self.all_entries = entries
                 else:
                     self.total_registrations = 0

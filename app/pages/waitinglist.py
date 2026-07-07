@@ -50,38 +50,21 @@ def stats_card(
     )
 
 
-def waitlist_row(entry: dict) -> rx.Component:
+def waitlist_row(entry: dict, index: int) -> rx.Component:
     return rx.el.tr(
+        rx.el.td(
+            rx.el.span(
+                (index + 1).to_string(),
+                class_name="font-bold " + TEXT_SECONDARY,
+            ),
+            class_name="p-4 whitespace-nowrap w-12 text-center",
+        ),
         rx.el.td(
             rx.el.span(
                 entry["sleeper_name"].to(str),
                 class_name="font-bold " + TEXT_PRIMARY,
             ),
             class_name="p-4 whitespace-nowrap",
-        ),
-        rx.el.td(
-            rx.cond(
-                entry["dynasty"].to(bool),
-                rx.icon("check", class_name="w-5 h-5 text-emerald-500"),
-                rx.el.span("—", class_name=TEXT_SECONDARY),
-            ),
-            class_name="p-4 text-center",
-        ),
-        rx.el.td(
-            rx.cond(
-                entry["dynasty_idp"].to(bool),
-                rx.icon("check", class_name="w-5 h-5 text-blue-500"),
-                rx.el.span("—", class_name=TEXT_SECONDARY),
-            ),
-            class_name="p-4 text-center",
-        ),
-        rx.el.td(
-            rx.cond(
-                entry["dynasty_bb"].to(bool),
-                rx.icon("check", class_name="w-5 h-5 text-orange-500"),
-                rx.el.span("—", class_name=TEXT_SECONDARY),
-            ),
-            class_name="p-4 text-center",
         ),
         rx.el.td(
             rx.cond(
@@ -94,7 +77,82 @@ def waitlist_row(entry: dict) -> rx.Component:
             ),
             class_name="p-4",
         ),
+        rx.el.td(
+            rx.el.span(
+                entry["created_at_display"].to(str),
+                class_name="text-sm " + TEXT_SECONDARY,
+            ),
+            class_name="p-4 whitespace-nowrap",
+        ),
         class_name=TABLE_ROW,
+    )
+
+
+def waitlist_section(
+    title: str,
+    icon_name: str,
+    icon_color: str,
+    badge_class: str,
+    count: rx.Var,
+    entries: rx.Var,
+) -> rx.Component:
+    return rx.el.div(
+        rx.el.div(
+            rx.el.h2(
+                rx.icon(
+                    icon_name, class_name=f"w-6 h-6 mr-2 {icon_color} inline"
+                ),
+                title,
+                class_name=H2 + " flex items-center",
+            ),
+            rx.el.span(
+                count.to_string(),
+                class_name=f"{badge_class} text-sm font-bold px-3 py-1 rounded-full",
+            ),
+            class_name="flex items-center justify-between p-6 pb-4",
+        ),
+        rx.cond(
+            entries.length() > 0,
+            rx.el.div(
+                rx.el.table(
+                    rx.el.thead(
+                        rx.el.tr(
+                            rx.el.th(
+                                "#",
+                                class_name=TABLE_HEADER_CELL
+                                + " p-4 text-center w-12",
+                            ),
+                            rx.el.th(
+                                "Sleeper Name",
+                                class_name=TABLE_HEADER_CELL + " p-4 text-left",
+                            ),
+                            rx.el.th(
+                                "Discord",
+                                class_name=TABLE_HEADER_CELL + " p-4 text-left",
+                            ),
+                            rx.el.th(
+                                "Angemeldet am",
+                                class_name=TABLE_HEADER_CELL + " p-4 text-left",
+                            ),
+                            class_name=TABLE_HEADER_ROW,
+                        )
+                    ),
+                    rx.el.tbody(
+                        rx.foreach(entries, waitlist_row),
+                    ),
+                    class_name="w-full table-auto",
+                ),
+                class_name="overflow-x-auto w-full pb-4",
+            ),
+            rx.el.div(
+                rx.el.p(
+                    "Noch keine Anmeldungen für dieses Format.",
+                    class_name="text-sm italic " + TEXT_SECONDARY,
+                ),
+                class_name="px-6 pb-6",
+            ),
+        ),
+        class_name=CARD + " overflow-hidden",
     )
 
 
@@ -382,79 +440,31 @@ def waitinglist_page() -> rx.Component:
             rx.el.div(
                 rx.el.div(registration_form(), class_name="col-span-1"),
                 rx.el.div(
-                    rx.el.div(
-                        rx.el.h2(
-                            rx.icon(
-                                "list",
-                                class_name="w-6 h-6 mr-2 text-emerald-500 inline",
-                            ),
-                            "Aktuelle Anmeldungen",
-                            class_name=H2 + " mb-6 flex items-center p-6 pb-0",
-                        ),
-                        rx.cond(
-                            WaitlistState.all_entries.length() > 0,
-                            rx.el.div(
-                                rx.el.table(
-                                    rx.el.thead(
-                                        rx.el.tr(
-                                            rx.el.th(
-                                                "Sleeper Name",
-                                                class_name=TABLE_HEADER_CELL
-                                                + " p-4 text-left",
-                                            ),
-                                            rx.el.th(
-                                                "Dynasty",
-                                                class_name=TABLE_HEADER_CELL
-                                                + " p-4 text-center",
-                                            ),
-                                            rx.el.th(
-                                                "IDP",
-                                                class_name=TABLE_HEADER_CELL
-                                                + " p-4 text-center",
-                                            ),
-                                            rx.el.th(
-                                                "Bestball",
-                                                class_name=TABLE_HEADER_CELL
-                                                + " p-4 text-center",
-                                            ),
-                                            rx.el.th(
-                                                "Discord",
-                                                class_name=TABLE_HEADER_CELL
-                                                + " p-4 text-left",
-                                            ),
-                                            class_name=TABLE_HEADER_ROW,
-                                        )
-                                    ),
-                                    rx.el.tbody(
-                                        rx.foreach(
-                                            WaitlistState.all_entries,
-                                            waitlist_row,
-                                        )
-                                    ),
-                                    class_name="w-full table-auto",
-                                ),
-                                class_name="overflow-x-auto w-full pb-4",
-                            ),
-                            rx.el.div(
-                                rx.icon(
-                                    "clipboard-x",
-                                    class_name="w-12 h-12 text-gray-300 mb-4",
-                                ),
-                                rx.el.h3(
-                                    "Keine Anmeldungen",
-                                    class_name="text-xl font-bold mb-2 "
-                                    + TEXT_PRIMARY,
-                                ),
-                                rx.el.p(
-                                    "Bisher hat sich noch niemand eingetragen.",
-                                    class_name=TEXT_SECONDARY,
-                                ),
-                                class_name=EMPTY_STATE + " m-6",
-                            ),
-                        ),
-                        class_name=CARD + " overflow-hidden",
+                    waitlist_section(
+                        "Dynasty Warteliste",
+                        "crown",
+                        "text-purple-500",
+                        "bg-purple-100 text-purple-700",
+                        WaitlistState.total_dynasty,
+                        WaitlistState.dynasty_entries,
                     ),
-                    class_name="col-span-1",
+                    waitlist_section(
+                        "Dynasty IDP Warteliste",
+                        "shield",
+                        "text-blue-500",
+                        "bg-blue-100 text-blue-700",
+                        WaitlistState.total_idp,
+                        WaitlistState.dynasty_idp_entries,
+                    ),
+                    waitlist_section(
+                        "Dynasty Bestball Warteliste",
+                        "target",
+                        "text-orange-500",
+                        "bg-orange-100 text-orange-700",
+                        WaitlistState.total_bb,
+                        WaitlistState.dynasty_bb_entries,
+                    ),
+                    class_name="col-span-1 flex flex-col gap-6",
                 ),
                 class_name="grid grid-cols-1 xl:grid-cols-2 gap-8",
             ),
