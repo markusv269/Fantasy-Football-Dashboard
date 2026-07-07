@@ -2,7 +2,7 @@ import reflex as rx
 from app.states.app_state import AppState
 from app.states.theme_state import ThemeState
 from app.states.user_state import UserState
-from app.theme import t, PAGE_BG, INPUT, BTN_PRIMARY, H2
+from app.theme import t
 
 nav_items = [
     {"icon": "house", "label": "Home", "href": "/"},
@@ -394,131 +394,6 @@ def header_std() -> rx.Component:
             "bg-[#161926] border-b border-gray-800",
             "bg-white border-b border-gray-200",
         ),
-    )
-
-
-def header() -> rx.Component:
-    return rx.el.header(
-        rx.el.div(
-            rx.el.div(
-                rx.el.button(
-                    rx.icon(
-                        "menu", class_name=t("text-white", "text-gray-900")
-                    ),
-                    on_click=ThemeState.toggle_mobile_sidebar,
-                    class_name="md:hidden mr-4",
-                ),
-                rx.el.h2(
-                    "Stoned Lack Fantasy",
-                    class_name=t(
-                        "text-xl font-bold text-white",
-                        "text-xl font-bold text-gray-900",
-                    ),
-                ),
-                class_name="flex items-center",
-            ),
-            rx.el.div(
-                rx.cond(
-                    AppState.nfl_state.contains("season"),
-                    rx.el.div(
-                        rx.el.span(
-                            f"{AppState.nfl_state['season']} Season",
-                            class_name=t(
-                                "text-sm font-semibold text-gray-300",
-                                "text-sm font-semibold text-gray-700",
-                            ),
-                        ),
-                        rx.el.span(
-                            rx.cond(
-                                AppState.nfl_state["season_type"] == "off",
-                                "Offseason",
-                                rx.cond(
-                                    AppState.nfl_state["week"].to(int) == 0,
-                                    "Pre-Season",
-                                    f"Week {AppState.nfl_state['week']}",
-                                ),
-                            ),
-                            class_name="ml-3 px-3 py-1 bg-[#5B7BA5]/20 text-[#5B7BA5] rounded-md text-xs font-bold shadow-sm",
-                        ),
-                        class_name="hidden sm:flex items-center",
-                    ),
-                    rx.el.div(
-                        class_name="animate-pulse bg-gray-200 h-6 w-40 rounded-md hidden sm:block"
-                    ),
-                ),
-                rx.el.div(
-                    rx.el.a(
-                        rx.icon(
-                            "video",
-                            class_name=t(
-                                "w-5 h-5 text-gray-400 hover:text-[#DC2626]",
-                                "w-5 h-5 text-gray-500 hover:text-[#DC2626]",
-                            ),
-                        ),
-                        href="https://www.youtube.com/channel/UCMD4pfyYl2hxHez34eqnfkQ",
-                        target="_blank",
-                        class_name="p-1.5 rounded-lg transition-colors "
-                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
-                    ),
-                    rx.el.a(
-                        rx.icon(
-                            "message-circle",
-                            class_name=t(
-                                "w-5 h-5 text-gray-400 hover:text-[#5865F2]",
-                                "w-5 h-5 text-gray-500 hover:text-[#5865F2]",
-                            ),
-                        ),
-                        href="https://discord.gg/g367Tt9j",
-                        target="_blank",
-                        class_name="p-1.5 rounded-lg transition-colors "
-                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
-                    ),
-                    rx.el.a(
-                        rx.icon(
-                            "wifi",
-                            class_name=t(
-                                "w-5 h-5 text-gray-400 hover:text-white",
-                                "w-5 h-5 text-gray-500 hover:text-black",
-                            ),
-                        ),
-                        href="https://x.com/StonedLack",
-                        target="_blank",
-                        class_name="p-1.5 rounded-lg transition-colors "
-                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
-                    ),
-                    rx.el.a(
-                        rx.icon(
-                            "webcam",
-                            class_name=t(
-                                "w-5 h-5 text-gray-400 hover:text-[#9146FF]",
-                                "w-5 h-5 text-gray-500 hover:text-[#9146FF]",
-                            ),
-                        ),
-                        href="https://www.twitch.tv/stoned_lack/videos?filter=archives",
-                        target="_blank",
-                        class_name="p-1.5 rounded-lg transition-colors "
-                        + t("hover:bg-gray-800", "hover:bg-gray-100"),
-                    ),
-                    class_name="hidden sm:flex items-center gap-1 ml-4",
-                ),
-                rx.el.button(
-                    rx.icon(
-                        rx.cond(ThemeState.is_dark, "sun", "moon"),
-                        class_name=t(
-                            "w-5 h-5 text-gray-400", "w-5 h-5 text-gray-600"
-                        ),
-                    ),
-                    on_click=ThemeState.toggle_color_mode,
-                    class_name="p-2 rounded-full hover:bg-gray-200/50 transition-colors md:hidden ml-2",
-                ),
-                class_name="flex items-center gap-4 ml-auto",
-            ),
-            class_name=t(
-                "flex items-center justify-between h-20 px-6 sm:px-10 bg-[#161926] border-b border-gray-800",
-                "flex items-center justify-between h-20 px-6 sm:px-10 bg-white border-b border-gray-200",
-            ),
-        ),
-        class_name="shrink-0",
     )
 
 

@@ -1,307 +1,328 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
-from app.states.theme_state import ThemeState
-from app.theme import t, CARD, TEXT_PRIMARY, TEXT_SECONDARY, H1, EMPTY_STATE
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
 from app.pages.matchups import league_selector
 
 
-def roster_card(roster: rx.Var) -> rx.Component:
-    roster_settings = roster["settings"].to(dict)
-    return rx.el.div(
-        rx.el.div(
-            rx.el.h3(
-                roster["team_name"].to(str),
-                class_name="font-bold text-lg truncate " + TEXT_PRIMARY,
-            ),
-            rx.el.p(
-                roster["owner_name"].to(str),
-                class_name="text-sm font-medium truncate " + TEXT_SECONDARY,
-            ),
-            class_name="mb-4",
+def _position_badge(pos: rx.Var) -> rx.Component:
+    return rx.badge(
+        pos.to(str),
+        color_scheme=rx.match(
+            pos.to(str),
+            ("QB", "red"),
+            ("RB", "blue"),
+            ("WR", "green"),
+            ("TE", "orange"),
+            ("K", "gray"),
+            ("DEF", "purple"),
+            "gray",
         ),
-        rx.el.div(
-            rx.el.div(
-                rx.el.span(
-                    "W-L-T",
-                    class_name="text-xs text-gray-400 font-bold uppercase block",
-                ),
-                rx.el.span(
-                    f"{roster_settings['wins']}-{roster_settings['losses']}-{roster_settings['ties']}",
-                    class_name="font-semibold "
-                    + t("text-gray-300", "text-gray-700"),
-                ),
+        variant="soft",
+        size="1",
+    )
+
+
+def _player_row(p: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.text(
+            p["full_name"].to(str),
+            size="2",
+            weight="bold",
+            class_name=TEXT_PRIMARY,
+        ),
+        rx.spacer(),
+        rx.hstack(
+            _position_badge(p["position"]),
+            rx.text(
+                p["team"].to(str),
+                size="1",
+                weight="medium",
+                class_name=TEXT_SECONDARY,
             ),
-            rx.el.div(
-                rx.el.span(
-                    "PF",
-                    class_name="text-xs text-gray-400 font-bold uppercase block",
+            spacing="2",
+            align="center",
+        ),
+        width="100%",
+        align="center",
+        padding="12px",
+        class_name="border-b last:border-0 "
+        + t(
+            "border-gray-800 hover:bg-[#161926]",
+            "border-gray-100 hover:bg-gray-50",
+        ),
+    )
+
+
+def roster_card(roster: rx.Var) -> rx.Component:
+    settings = roster["settings"].to(dict)
+    return rx.card(
+        rx.vstack(
+            rx.vstack(
+                rx.heading(
+                    roster["team_name"].to(str),
+                    size="4",
+                    weight="bold",
+                    class_name="truncate " + TEXT_PRIMARY,
                 ),
-                rx.el.span(
-                    roster_settings["fpts"].to_string(),
-                    class_name="font-semibold text-[#DC2626]",
+                rx.text(
+                    roster["owner_name"].to(str),
+                    size="1",
+                    class_name="truncate " + TEXT_SECONDARY,
                 ),
+                spacing="1",
+                align="start",
+                width="100%",
             ),
-            class_name="flex justify-between items-center p-3 rounded-xl "
-            + t("bg-[#161926]", "bg-gray-50"),
+            rx.hstack(
+                rx.vstack(
+                    rx.text(
+                        "W-L-T",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase " + TEXT_SECONDARY,
+                    ),
+                    rx.text(
+                        f"{settings['wins']}-{settings['losses']}-{settings['ties']}",
+                        size="2",
+                        weight="bold",
+                        class_name=TEXT_PRIMARY,
+                    ),
+                    spacing="0",
+                    align="start",
+                ),
+                rx.spacer(),
+                rx.vstack(
+                    rx.text(
+                        "PF",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase " + TEXT_SECONDARY,
+                    ),
+                    rx.text(
+                        settings["fpts"].to_string(),
+                        size="2",
+                        weight="bold",
+                        class_name="text-[#DC2626]",
+                    ),
+                    spacing="0",
+                    align="end",
+                ),
+                width="100%",
+                padding="12px",
+                border_radius="8px",
+                class_name=t("bg-[#161926]", "bg-gray-50"),
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
         ),
         on_click=MatchupsState.view_roster(roster["roster_id"].to(int)),
-        class_name=CARD
-        + " p-5 hover:shadow-md cursor-pointer transition-all hover:border-[#DC2626]",
+        size="2",
+        class_name="cursor-pointer hover:border-[#DC2626] transition-all "
+        + t("bg-[#1C2033] border-gray-800", "bg-white border-gray-200"),
     )
 
 
 def roster_detail() -> rx.Component:
     roster = MatchupsState.selected_roster
-    roster_settings = roster["settings"].to(dict)
-    return rx.el.div(
-        rx.el.button(
-            rx.icon("arrow-left", class_name="w-4 h-4 mr-2"),
+    settings = roster["settings"].to(dict)
+    return rx.vstack(
+        rx.button(
+            rx.icon("arrow-left", size=16),
             "Back to Rosters",
             on_click=MatchupsState.clear_selected_roster,
-            class_name="flex items-center text-sm font-medium hover:text-[#DC2626] transition-colors mb-6 "
-            + TEXT_SECONDARY,
+            variant="ghost",
+            color_scheme="gray",
+            size="2",
         ),
-        rx.el.div(
-            rx.el.div(
-                rx.el.h2(
-                    roster["team_name"].to(str),
-                    class_name="text-2xl font-bold " + TEXT_PRIMARY,
+        rx.card(
+            rx.hstack(
+                rx.vstack(
+                    rx.heading(
+                        roster["team_name"].to(str),
+                        size="6",
+                        weight="bold",
+                    ),
+                    rx.text(
+                        roster["owner_name"].to(str),
+                        size="2",
+                        color_scheme="gray",
+                    ),
+                    spacing="1",
+                    align="start",
                 ),
-                rx.el.p(
-                    roster["owner_name"].to(str),
-                    class_name="font-medium " + TEXT_SECONDARY,
+                rx.spacer(),
+                rx.hstack(
+                    rx.vstack(
+                        rx.text(
+                            "Record",
+                            size="1",
+                            weight="bold",
+                            class_name="uppercase " + TEXT_SECONDARY,
+                        ),
+                        rx.text(
+                            f"{settings['wins']}-{settings['losses']}-{settings['ties']}",
+                            size="4",
+                            weight="bold",
+                            class_name=TEXT_PRIMARY,
+                        ),
+                        spacing="0",
+                        align="center",
+                    ),
+                    rx.divider(orientation="vertical", size="4"),
+                    rx.vstack(
+                        rx.text(
+                            "Waiver",
+                            size="1",
+                            weight="bold",
+                            class_name="uppercase " + TEXT_SECONDARY,
+                        ),
+                        rx.text(
+                            f"${settings['waiver_budget_used']}",
+                            size="4",
+                            weight="bold",
+                            class_name=TEXT_PRIMARY,
+                        ),
+                        spacing="0",
+                        align="center",
+                    ),
+                    spacing="4",
+                    align="center",
+                    padding="12px 16px",
+                    border_radius="12px",
+                    class_name=t("bg-[#161926]", "bg-gray-50"),
                 ),
+                width="100%",
+                align="center",
+                wrap="wrap",
             ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.span(
-                        "Record",
-                        class_name="text-xs text-gray-400 font-bold uppercase block",
-                    ),
-                    rx.el.span(
-                        f"{roster_settings['wins']}-{roster_settings['losses']}-{roster_settings['ties']}",
-                        class_name="text-lg font-bold "
-                        + t("text-gray-200", "text-gray-800"),
-                    ),
-                    class_name="text-center px-4 border-r "
-                    + t("border-gray-700", "border-gray-200"),
-                ),
-                rx.el.div(
-                    rx.el.span(
-                        "Waiver",
-                        class_name="text-xs text-gray-400 font-bold uppercase block",
-                    ),
-                    rx.el.span(
-                        f"${roster_settings['waiver_budget_used']}",
-                        class_name="text-lg font-bold "
-                        + t("text-gray-200", "text-gray-800"),
-                    ),
-                    class_name="text-center px-4",
-                ),
-                class_name="flex items-center rounded-xl py-2 "
-                + t("bg-[#161926]", "bg-gray-50"),
-            ),
-            class_name=CARD
-            + " flex justify-between items-center p-6 mb-6 shadow-sm",
+            size="3",
+            width="100%",
         ),
-        rx.el.div(
-            rx.el.div(
-                rx.el.h3(
-                    "Starters",
-                    class_name="font-bold mb-4 flex items-center gap-2 "
-                    + t("text-gray-200", "text-gray-800"),
-                ),
-                rx.el.div(
+        rx.grid(
+            rx.vstack(
+                rx.heading("Starters", size="4", weight="bold"),
+                rx.box(
                     rx.foreach(
                         roster["starters"].to(list[dict[str, str]]),
-                        lambda p: rx.el.div(
-                            rx.el.span(
-                                p["full_name"],
-                                class_name="font-bold text-sm " + TEXT_PRIMARY,
-                            ),
-                            rx.el.div(
-                                rx.el.span(
-                                    p["position"],
-                                    class_name=rx.match(
-                                        p["position"],
-                                        (
-                                            "QB",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1",
-                                        ),
-                                        (
-                                            "RB",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 mr-1",
-                                        ),
-                                        (
-                                            "WR",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 mr-1",
-                                        ),
-                                        (
-                                            "TE",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 mr-1",
-                                        ),
-                                        (
-                                            "K",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 mr-1",
-                                        ),
-                                        (
-                                            "DEF",
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 mr-1",
-                                        ),
-                                        "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 mr-1",
-                                    ),
-                                ),
-                                rx.el.span(
-                                    p["team"],
-                                    class_name="text-xs font-semibold "
-                                    + TEXT_SECONDARY,
-                                ),
-                                class_name="flex items-center",
-                            ),
-                            class_name="flex justify-between items-center p-3 border-b last:border-0 "
-                            + t(
-                                "border-gray-800 hover:bg-[#161926]",
-                                "border-gray-100 hover:bg-gray-50",
-                            ),
-                        ),
+                        _player_row,
                     ),
-                    class_name="rounded-xl overflow-hidden shadow-sm border "
+                    width="100%",
+                    border_radius="12px",
+                    class_name="border overflow-hidden "
                     + t(
                         "bg-[#1C2033] border-gray-800",
                         "bg-white border-gray-200",
                     ),
                 ),
-                class_name="flex-1",
+                spacing="3",
+                width="100%",
+                align="stretch",
             ),
-            rx.el.div(
-                rx.el.h3(
-                    "Reserve / IR",
-                    class_name="font-bold mb-4 flex items-center gap-2 "
-                    + t("text-gray-200", "text-gray-800"),
-                ),
+            rx.vstack(
+                rx.heading("Reserve / IR", size="4", weight="bold"),
                 rx.cond(
                     roster["reserve"].to(list[dict[str, str]]).length() > 0,
-                    rx.el.div(
+                    rx.box(
                         rx.foreach(
                             roster["reserve"].to(list[dict[str, str]]),
-                            lambda p: rx.el.div(
-                                rx.el.span(
-                                    p["full_name"],
-                                    class_name="font-bold text-sm "
-                                    + TEXT_PRIMARY,
-                                ),
-                                rx.el.div(
-                                    rx.el.span(
-                                        p["position"],
-                                        class_name=rx.match(
-                                            p["position"],
-                                            (
-                                                "QB",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1",
-                                            ),
-                                            (
-                                                "RB",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 mr-1",
-                                            ),
-                                            (
-                                                "WR",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 mr-1",
-                                            ),
-                                            (
-                                                "TE",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 mr-1",
-                                            ),
-                                            (
-                                                "K",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 mr-1",
-                                            ),
-                                            (
-                                                "DEF",
-                                                "text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 mr-1",
-                                            ),
-                                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 mr-1",
-                                        ),
-                                    ),
-                                    rx.el.span(
-                                        p["team"],
-                                        class_name="text-xs font-semibold "
-                                        + TEXT_SECONDARY,
-                                    ),
-                                    class_name="flex items-center",
-                                ),
-                                class_name="flex justify-between items-center p-3 border-b last:border-0 "
-                                + t(
-                                    "border-gray-800 hover:bg-[#161926]",
-                                    "border-gray-100 hover:bg-gray-50",
-                                ),
-                            ),
+                            _player_row,
                         ),
-                        class_name="rounded-xl overflow-hidden shadow-sm border "
+                        width="100%",
+                        border_radius="12px",
+                        class_name="border overflow-hidden "
                         + t(
                             "bg-[#1C2033] border-gray-800",
                             "bg-white border-gray-200",
                         ),
                     ),
-                    rx.el.p(
-                        "No players on reserve/IR.",
-                        class_name="text-sm italic p-4 rounded-xl border border-dashed "
-                        + t(
-                            "text-gray-500 bg-[#161926] border-gray-800",
-                            "text-gray-500 bg-gray-50 border-gray-200",
+                    rx.card(
+                        rx.text(
+                            "No players on reserve/IR.",
+                            size="2",
+                            color_scheme="gray",
+                            class_name="italic",
                         ),
+                        class_name="border-dashed",
+                        width="100%",
                     ),
                 ),
-                class_name="flex-1",
+                spacing="3",
+                width="100%",
+                align="stretch",
             ),
-            class_name="grid grid-cols-1 md:grid-cols-2 gap-6",
+            columns=rx.breakpoints(initial="1", md="2"),
+            spacing="4",
+            width="100%",
         ),
+        spacing="4",
+        width="100%",
+        align="stretch",
     )
 
 
 def rosters_page() -> rx.Component:
     return layout(
-        rx.box(
-            rx.el.div(
-                rx.el.h1("Rosters", class_name=H1 + " mb-2"),
-                rx.el.p(
+        rx.vstack(
+            rx.vstack(
+                rx.heading("Rosters", size="7", weight="bold"),
+                rx.text(
                     "Explore team rosters and player details.",
-                    class_name=TEXT_SECONDARY + " font-medium",
+                    size="2",
+                    color_scheme="gray",
                 ),
-                class_name="mb-8",
+                spacing="1",
+                align="start",
+                width="100%",
             ),
             rx.cond(
                 MatchupsState.selected_roster.contains("roster_id"),
                 roster_detail(),
-                rx.el.div(
-                    rx.el.div(league_selector(), class_name="mb-8"),
+                rx.vstack(
+                    league_selector(),
                     rx.cond(
                         AppState.selected_league_id == "",
-                        rx.el.div(
-                            rx.icon(
-                                "users",
-                                class_name="w-12 h-12 text-gray-300 mb-4",
+                        rx.card(
+                            rx.vstack(
+                                rx.icon("users", size=40, color="gray"),
+                                rx.heading(
+                                    "No League Selected",
+                                    size="4",
+                                    weight="bold",
+                                ),
+                                rx.text(
+                                    "Select a league to view rosters.",
+                                    size="2",
+                                    color_scheme="gray",
+                                ),
+                                spacing="2",
+                                align="center",
+                                padding="48px",
+                                width="100%",
                             ),
-                            rx.el.h3(
-                                "No League Selected",
-                                class_name="text-xl font-bold mb-2 "
-                                + TEXT_PRIMARY,
-                            ),
-                            rx.el.p(
-                                "Select a league to view rosters.",
-                                class_name=TEXT_SECONDARY,
-                            ),
-                            class_name=EMPTY_STATE,
+                            class_name="border-dashed",
+                            width="100%",
                         ),
-                        rx.el.div(
+                        rx.grid(
                             rx.foreach(
                                 MatchupsState.standings_data, roster_card
                             ),
-                            class_name="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6",
+                            columns=rx.breakpoints(
+                                initial="1", md="2", lg="3", xl="4"
+                            ),
+                            spacing="4",
+                            width="100%",
                         ),
                     ),
+                    spacing="4",
+                    width="100%",
+                    align="stretch",
                 ),
             ),
+            spacing="6",
+            width="100%",
+            align="stretch",
         )
     )

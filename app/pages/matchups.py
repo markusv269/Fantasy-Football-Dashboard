@@ -4,7 +4,6 @@ from app.states.matchups_state import MatchupsState
 from app.states.theme_state import ThemeState
 from app.theme import (
     t,
-    SELECT,
     H1,
     TEXT_SECONDARY,
     TEXT_PRIMARY,
@@ -15,13 +14,16 @@ from app.components.layout import layout
 
 
 def league_selector() -> rx.Component:
-    return rx.el.div(
-        rx.el.select(
-            rx.el.option("Select a League", value="", disabled=True),
-            rx.foreach(
-                AppState.leagues_data,
-                lambda lg: rx.el.option(
-                    lg["name"], value=lg["league_id"].to_string()
+    return rx.box(
+        rx.select.root(
+            rx.select.trigger(placeholder="Select a League", width="100%"),
+            rx.select.content(
+                rx.foreach(
+                    AppState.leagues_data,
+                    lambda lg: rx.select.item(
+                        lg["name"].to(str),
+                        value=lg["league_id"].to_string(),
+                    ),
                 ),
             ),
             value=AppState.selected_league_id,
@@ -29,53 +31,53 @@ def league_selector() -> rx.Component:
                 AppState.select_league(val),
                 MatchupsState.init_matchups(),
             ],
-            class_name=rx.cond(
-                ThemeState.is_dark,
-                "appearance-none bg-[#1C2033] border border-gray-700 text-white text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 pr-10 outline-none font-medium",
-                "appearance-none bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-[#DC2626] focus:border-[#DC2626] block w-full p-2.5 pr-10 outline-none font-medium",
-            ),
+            size="3",
         ),
-        rx.el.div(
-            rx.icon("chevron-down", class_name="h-4 w-4 text-gray-500"),
-            class_name="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none",
-        ),
-        class_name="relative w-full md:w-64 mb-6 md:mb-0",
+        class_name="w-full md:w-64",
     )
 
 
 def week_selector() -> rx.Component:
-    return rx.el.div(
-        rx.el.button(
-            rx.icon("chevron-left", class_name="w-4 h-4"),
+    return rx.hstack(
+        rx.button(
+            rx.icon("chevron-left", size=16),
             on_click=MatchupsState.change_week(MatchupsState.selected_week - 1),
-            class_name="p-2 text-gray-500 hover:text-[#DC2626] transition-colors",
+            variant="ghost",
+            color_scheme="gray",
+            size="2",
         ),
-        rx.el.div(
+        rx.hstack(
             rx.foreach(
                 rx.Var.range(1, 19),
-                lambda w: rx.el.button(
-                    w,
+                lambda w: rx.button(
+                    w.to_string(),
                     on_click=MatchupsState.change_week(w),
-                    class_name=rx.cond(
-                        w == MatchupsState.selected_week,
-                        "w-8 h-8 rounded-full bg-[#DC2626]/20 text-[#DC2626] font-bold text-sm flex items-center justify-center",
-                        "w-8 h-8 rounded-full font-medium text-sm flex items-center justify-center transition-colors "
-                        + t(
-                            "text-gray-400 hover:bg-gray-800",
-                            "text-gray-600 hover:bg-gray-100",
-                        ),
+                    variant=rx.cond(
+                        w == MatchupsState.selected_week, "solid", "ghost"
                     ),
+                    color_scheme=rx.cond(
+                        w == MatchupsState.selected_week, "red", "gray"
+                    ),
+                    size="1",
+                    class_name="min-w-[32px]",
                 ),
             ),
-            class_name="flex gap-1 overflow-x-auto no-scrollbar mx-2",
+            spacing="1",
+            overflow_x="auto",
+            class_name="no-scrollbar",
         ),
-        rx.el.button(
-            rx.icon("chevron-right", class_name="w-4 h-4"),
+        rx.button(
+            rx.icon("chevron-right", size=16),
             on_click=MatchupsState.change_week(MatchupsState.selected_week + 1),
-            class_name="p-2 text-gray-500 hover:text-[#DC2626] transition-colors",
+            variant="ghost",
+            color_scheme="gray",
+            size="2",
         ),
-        class_name="flex items-center rounded-full px-2 py-1 shadow-sm w-full md:w-auto overflow-hidden "
-        + t(
+        spacing="2",
+        align="center",
+        padding="8px 12px",
+        border_radius="9999px",
+        class_name=t(
             "bg-[#1C2033] border border-gray-800",
             "bg-white border border-gray-200",
         ),
@@ -85,118 +87,150 @@ def week_selector() -> rx.Component:
 def matchup_card(matchup: rx.Var) -> rx.Component:
     team_a = matchup["team_a"].to(dict)
     team_b = matchup["team_b"].to(dict)
-    return rx.el.div(
-        rx.el.div(
-            rx.el.div(
-                rx.el.span(
-                    team_a["team_name"].to(str),
-                    class_name="font-semibold text-sm truncate max-w-[120px] "
-                    + TEXT_PRIMARY,
-                ),
-                rx.el.span(
-                    team_a["points"].to_string(),
-                    class_name=rx.cond(
-                        team_a["points"].to(float) > team_b["points"].to(float),
-                        "font-bold text-lg text-[#DC2626]",
-                        "font-semibold text-lg " + TEXT_SECONDARY,
-                    ),
-                ),
-                class_name="flex flex-col items-center p-4 flex-1",
-            ),
-            rx.el.div(
-                rx.el.span(
-                    "VS",
-                    class_name="text-xs font-bold px-2 py-1 rounded-full "
-                    + t(
-                        "text-gray-500 bg-gray-800", "text-gray-400 bg-gray-100"
-                    ),
-                ),
-                class_name="flex items-center justify-center px-2",
-            ),
-            rx.el.div(
-                rx.el.span(
-                    team_b["team_name"].to(str),
-                    class_name="font-semibold text-sm truncate max-w-[120px] "
-                    + TEXT_PRIMARY,
-                ),
-                rx.el.span(
-                    team_b["points"].to_string(),
-                    class_name=rx.cond(
-                        team_b["points"].to(float) > team_a["points"].to(float),
-                        "font-bold text-lg text-[#DC2626]",
-                        "font-semibold text-lg " + TEXT_SECONDARY,
-                    ),
-                ),
-                class_name="flex flex-col items-center p-4 flex-1",
-            ),
-            class_name="flex justify-between items-center w-full",
-        ),
-        rx.el.div(
-            rx.el.span(
+    return rx.card(
+        rx.vstack(
+            rx.badge(
                 f"Matchup {matchup['matchup_id']}",
-                class_name="text-[10px] uppercase font-bold text-gray-400",
+                color_scheme="gray",
+                variant="soft",
+                size="1",
             ),
-            class_name="absolute top-2 left-3",
+            rx.hstack(
+                rx.vstack(
+                    rx.text(
+                        team_a["team_name"].to(str),
+                        size="2",
+                        weight="bold",
+                        class_name="truncate max-w-[120px] " + TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        team_a["points"].to_string(),
+                        size="5",
+                        weight="bold",
+                        class_name=rx.cond(
+                            team_a["points"].to(float)
+                            > team_b["points"].to(float),
+                            "text-[#DC2626]",
+                            TEXT_SECONDARY,
+                        ),
+                    ),
+                    spacing="1",
+                    align="center",
+                    flex="1",
+                ),
+                rx.badge("VS", color_scheme="gray", variant="soft", size="2"),
+                rx.vstack(
+                    rx.text(
+                        team_b["team_name"].to(str),
+                        size="2",
+                        weight="bold",
+                        class_name="truncate max-w-[120px] " + TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        team_b["points"].to_string(),
+                        size="5",
+                        weight="bold",
+                        class_name=rx.cond(
+                            team_b["points"].to(float)
+                            > team_a["points"].to(float),
+                            "text-[#DC2626]",
+                            TEXT_SECONDARY,
+                        ),
+                    ),
+                    spacing="1",
+                    align="center",
+                    flex="1",
+                ),
+                spacing="3",
+                align="center",
+                width="100%",
+                justify="between",
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
         ),
-        class_name=CARD
-        + " relative shadow-sm hover:shadow-md transition-shadow overflow-hidden",
+        size="2",
+        width="100%",
+        class_name="hover:shadow-md transition-shadow",
     )
 
 
 def matchups_page() -> rx.Component:
     return layout(
-        rx.box(
-            rx.el.div(
-                rx.el.h1("Matchups", class_name=H1 + " mb-2"),
-                rx.el.p(
+        rx.vstack(
+            rx.vstack(
+                rx.heading("Matchups", size="7", weight="bold"),
+                rx.text(
                     "View weekly scores and head-to-head results.",
-                    class_name=TEXT_SECONDARY + " font-medium",
+                    size="2",
+                    color_scheme="gray",
                 ),
-                class_name="mb-8",
+                spacing="1",
+                align="start",
+                width="100%",
             ),
-            rx.el.div(
+            rx.flex(
                 league_selector(),
                 week_selector(),
-                class_name="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4",
+                direction=rx.breakpoints(
+                    initial="column", sm="column", md="row"
+                ),
+                justify="between",
+                align="center",
+                gap="4",
+                width="100%",
             ),
             rx.cond(
                 AppState.selected_league_id == "",
-                rx.el.div(
-                    rx.icon(
-                        "trophy", class_name="w-12 h-12 text-gray-300 mb-4"
+                rx.card(
+                    rx.vstack(
+                        rx.icon("trophy", size=40, color="gray"),
+                        rx.heading(
+                            "No League Selected", size="4", weight="bold"
+                        ),
+                        rx.text(
+                            "Select a league to view matchups.",
+                            size="2",
+                            color_scheme="gray",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="48px",
+                        width="100%",
                     ),
-                    rx.el.h3(
-                        "No League Selected",
-                        class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
-                    ),
-                    rx.el.p(
-                        "Select a league to view matchups.",
-                        class_name=TEXT_SECONDARY,
-                    ),
-                    class_name=EMPTY_STATE,
+                    class_name="border-dashed",
+                    width="100%",
                 ),
                 rx.cond(
                     MatchupsState.paired_matchups.length() > 0,
-                    rx.el.div(
+                    rx.grid(
                         rx.foreach(MatchupsState.paired_matchups, matchup_card),
-                        class_name="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6",
+                        columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                        spacing="4",
+                        width="100%",
                     ),
-                    rx.el.div(
-                        rx.icon(
-                            "calendar-x",
-                            class_name="w-12 h-12 text-gray-300 mb-4",
+                    rx.card(
+                        rx.vstack(
+                            rx.icon("calendar-x", size=40, color="gray"),
+                            rx.heading("No Matchups", size="4", weight="bold"),
+                            rx.text(
+                                "No matchups available for this week.",
+                                size="2",
+                                color_scheme="gray",
+                            ),
+                            spacing="2",
+                            align="center",
+                            padding="48px",
+                            width="100%",
                         ),
-                        rx.el.h3(
-                            "No Matchups",
-                            class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
-                        ),
-                        rx.el.p(
-                            "No matchups available for this week.",
-                            class_name=TEXT_SECONDARY,
-                        ),
-                        class_name=EMPTY_STATE,
+                        class_name="border-dashed",
+                        width="100%",
                     ),
                 ),
             ),
+            spacing="6",
+            width="100%",
+            align="stretch",
         )
     )

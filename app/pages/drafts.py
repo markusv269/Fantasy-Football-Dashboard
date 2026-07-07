@@ -1,439 +1,354 @@
 import reflex as rx
 from app.states.draft_state import DraftState
-from app.states.theme_state import ThemeState
-from app.theme import (
-    t,
-    CARD,
-    H1,
-    H2,
-    TEXT_PRIMARY,
-    TEXT_SECONDARY,
-    BTN_PRIMARY,
-    BADGE_SUBTLE,
-    TABLE_CONTAINER,
-    TABLE_HEADER_ROW,
-    TABLE_HEADER_CELL,
-    TABLE_ROW,
-    EMPTY_STATE,
-)
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
 
 
 def stat_card(
-    title: str, value: rx.Var, icon_name: str, color_class: str
+    title: str, value: rx.Var, icon_name: str, color: str
 ) -> rx.Component:
-    return rx.el.div(
-        rx.el.div(
-            rx.el.div(
-                rx.el.h3(
+    return rx.card(
+        rx.hstack(
+            rx.vstack(
+                rx.text(
                     title,
-                    class_name=t(
-                        "text-sm font-bold text-gray-400 uppercase tracking-wide",
-                        "text-sm font-bold text-gray-500 uppercase tracking-wide",
-                    ),
+                    size="1",
+                    weight="bold",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
                 ),
-                rx.el.span(
-                    value,
-                    class_name=t(
-                        "text-3xl font-bold text-white mt-1 block",
-                        "text-3xl font-bold text-gray-900 mt-1 block",
-                    ),
-                ),
+                rx.heading(value, size="7", weight="bold"),
+                spacing="1",
+                align="start",
             ),
-            rx.el.div(
-                rx.icon(icon_name, class_name=f"w-8 h-8 {color_class}"),
-                class_name=f"p-3 rounded-xl {color_class.replace('text-', 'bg-').replace('500', '100').replace('600', '100')}",
-            ),
-            class_name="flex justify-between items-start",
+            rx.spacer(),
+            rx.icon(icon_name, size=32, color=color),
+            width="100%",
+            align="center",
         ),
-        class_name=t(
-            "bg-[#1C2033] p-6 rounded-2xl border border-gray-800 shadow-sm",
-            "bg-white p-6 rounded-2xl border border-gray-200 shadow-sm",
-        ),
+        size="3",
+        width="100%",
     )
 
 
 def draft_filter_tab(label: str) -> rx.Component:
-    return rx.el.button(
+    return rx.button(
         label,
         on_click=DraftState.set_draft_filter(label),
-        class_name=rx.cond(
-            DraftState.draft_filter == label,
-            "px-4 py-2 rounded-full text-sm font-bold bg-[#DC2626]/20 text-[#DC2626] transition-colors shadow-sm",
-            t(
-                "px-4 py-2 rounded-full text-sm font-semibold bg-[#1C2033] text-gray-400 border border-gray-800 hover:bg-gray-800 transition-colors",
-                "px-4 py-2 rounded-full text-sm font-semibold bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors",
-            ),
-        ),
+        variant=rx.cond(DraftState.draft_filter == label, "solid", "soft"),
+        color_scheme=rx.cond(DraftState.draft_filter == label, "red", "gray"),
+        size="2",
+        radius="full",
     )
 
 
 def upcoming_draft_card(draft: dict) -> rx.Component:
     is_scheduled = draft["start_time"].to(int) > 0
-    return rx.el.a(
-        rx.el.div(
-            rx.el.div(
-                rx.el.h3(
+    return rx.link(
+        rx.card(
+            rx.vstack(
+                rx.heading(
                     draft["league_name"].to(str),
-                    class_name=t(
-                        "font-bold text-lg text-white line-clamp-1",
-                        "font-bold text-lg text-gray-900 line-clamp-1",
-                    ),
+                    size="4",
+                    weight="bold",
+                    class_name="line-clamp-1",
                 ),
-                rx.el.div(
-                    rx.el.span(
+                rx.hstack(
+                    rx.badge(
                         draft["status"].to(str).upper(),
-                        class_name=rx.match(
+                        color_scheme=rx.match(
                             draft["status"].to(str),
-                            (
-                                "pre_draft",
-                                "bg-yellow-100 text-yellow-800 px-2 py-1 rounded-md text-xs font-bold",
-                            ),
-                            (
-                                "drafting",
-                                "bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md text-xs font-bold animate-pulse",
-                            ),
-                            (
-                                "paused",
-                                "bg-orange-100 text-orange-800 px-2 py-1 rounded-md text-xs font-bold",
-                            ),
-                            "bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-bold",
+                            ("pre_draft", "yellow"),
+                            ("drafting", "green"),
+                            ("paused", "orange"),
+                            "gray",
                         ),
+                        variant="soft",
                     ),
-                    rx.el.span(
+                    rx.badge(
                         draft["draft_type"].to(str).title(),
-                        class_name=rx.cond(
+                        color_scheme=rx.cond(
                             draft["draft_type"].to(str) == "linear",
-                            "bg-blue-100 text-blue-700 px-2 py-1 rounded-md text-xs font-bold ml-2",
-                            "bg-purple-100 text-purple-700 px-2 py-1 rounded-md text-xs font-bold ml-2",
+                            "blue",
+                            "purple",
                         ),
+                        variant="soft",
                     ),
                     rx.cond(
                         draft["is_idp"].to(bool),
-                        rx.el.span(
-                            "IDP",
-                            class_name="bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-bold ml-2",
-                        ),
+                        rx.badge("IDP", color_scheme="red", variant="soft"),
                     ),
                     rx.cond(
                         draft["is_bestball"].to(bool),
-                        rx.el.span(
-                            "BB",
-                            class_name="bg-orange-100 text-orange-700 px-2 py-1 rounded-md text-xs font-bold ml-2",
+                        rx.badge("BB", color_scheme="orange", variant="soft"),
+                    ),
+                    spacing="2",
+                    align="center",
+                    wrap="wrap",
+                ),
+                rx.hstack(
+                    rx.icon(
+                        rx.cond(is_scheduled, "calendar", "clock"),
+                        size=16,
+                        color="gray",
+                    ),
+                    rx.text(
+                        rx.cond(
+                            is_scheduled,
+                            draft["start_date_str"].to(str),
+                            "TBD",
+                        ),
+                        size="2",
+                        weight="medium",
+                        class_name=rx.cond(
+                            is_scheduled,
+                            TEXT_PRIMARY,
+                            "italic " + TEXT_SECONDARY,
                         ),
                     ),
-                    class_name="flex items-center mt-2",
+                    spacing="2",
+                    align="center",
                 ),
-                class_name="flex-1",
-            )
-        ),
-        rx.el.div(
-            rx.el.div(
-                rx.icon(
-                    rx.cond(is_scheduled, "calendar", "clock"),
-                    class_name="w-4 h-4 mr-2 text-gray-400",
-                ),
-                rx.el.span(
-                    rx.cond(
-                        is_scheduled, draft["start_date_str"].to(str), "TBD"
+                rx.hstack(
+                    rx.badge(
+                        f"{draft['rounds'].to(str)} Rounds",
+                        color_scheme="gray",
+                        variant="soft",
                     ),
-                    class_name=rx.cond(
-                        is_scheduled,
-                        t(
-                            "text-sm font-semibold text-gray-300",
-                            "text-sm font-semibold text-gray-700",
-                        ),
-                        t(
-                            "text-sm font-bold text-gray-500 italic",
-                            "text-sm font-bold text-gray-500 italic",
-                        ),
+                    rx.badge(
+                        f"{draft['teams'].to(str)} Teams",
+                        color_scheme="gray",
+                        variant="soft",
                     ),
+                    spacing="2",
+                    align="center",
                 ),
-                class_name="flex items-center mt-4 mb-4",
+                spacing="3",
+                align="stretch",
+                width="100%",
             ),
-            rx.el.div(
-                rx.el.span(
-                    f"{draft['rounds'].to(str)} Rounds",
-                    class_name=BADGE_SUBTLE + " mr-2",
-                ),
-                rx.el.span(
-                    f"{draft['teams'].to(str)} Teams", class_name=BADGE_SUBTLE
-                ),
-                class_name="flex items-center",
+            size="3",
+            width="100%",
+            class_name=rx.cond(
+                is_scheduled,
+                "border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow",
+                "border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow",
             ),
         ),
         href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
-        target="_blank",
-        class_name=rx.cond(
-            is_scheduled,
-            t(
-                "bg-[#1C2033] p-5 rounded-2xl shadow-sm border border-gray-800 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
-                "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-emerald-400 hover:shadow-md transition-shadow block",
-            ),
-            t(
-                "bg-[#1C2033] p-5 rounded-2xl shadow-sm border border-gray-800 border-l-4 border-l-gray-600 border-dashed hover:shadow-md transition-shadow block",
-                "bg-white p-5 rounded-2xl shadow-sm border border-gray-200 border-l-4 border-l-gray-300 border-dashed hover:shadow-md transition-shadow block",
-            ),
-        ),
+        is_external=True,
+        underline="none",
+        width="100%",
     )
 
 
 def historical_draft_row(draft: dict) -> rx.Component:
-    return rx.el.tr(
-        rx.el.td(
-            rx.el.div(
-                rx.el.span(
+    return rx.table.row(
+        rx.table.cell(
+            rx.vstack(
+                rx.text(
                     draft["league_name"].to(str),
-                    class_name=t(
-                        "font-bold text-white block",
-                        "font-bold text-gray-900 block",
-                    ),
+                    size="2",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
                 ),
-                rx.el.span(
+                rx.text(
                     f"Season {draft['season'].to(str)}",
-                    class_name=t(
-                        "text-xs text-gray-400 font-medium",
-                        "text-xs text-gray-500 font-medium",
-                    ),
+                    size="1",
+                    class_name=TEXT_SECONDARY,
                 ),
+                spacing="0",
+                align="start",
             ),
-            class_name="p-4 whitespace-nowrap",
         ),
-        rx.el.td(
-            rx.el.span(
+        rx.table.cell(
+            rx.badge(
                 draft["draft_type"].to(str),
-                class_name=rx.match(
+                color_scheme=rx.match(
                     draft["draft_type"].to(str),
-                    (
-                        "Linear",
-                        "bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md text-xs font-bold",
-                    ),
-                    (
-                        "Snake",
-                        "bg-purple-100 text-purple-700 px-2.5 py-1 rounded-md text-xs font-bold",
-                    ),
-                    (
-                        "Auction",
-                        "bg-orange-100 text-orange-700 px-2.5 py-1 rounded-md text-xs font-bold",
-                    ),
-                    "bg-gray-100 text-gray-700 px-2.5 py-1 rounded-md text-xs font-bold",
+                    ("Linear", "blue"),
+                    ("Snake", "purple"),
+                    ("Auction", "orange"),
+                    "gray",
                 ),
+                variant="soft",
             ),
-            class_name="p-4 whitespace-nowrap",
         ),
-        rx.el.td(
+        rx.table.cell(
             rx.cond(
                 draft["league_type"].to(str) != "",
-                rx.el.span(
+                rx.badge(
                     draft["league_type"].to(str).title(),
-                    class_name=t(
-                        "bg-gray-800 border border-gray-700 text-gray-300 text-xs font-bold px-2 py-1 rounded-md",
-                        "bg-gray-50 border border-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded-md",
-                    ),
+                    color_scheme="gray",
+                    variant="soft",
                 ),
-                rx.el.span(""),
+                rx.text(""),
             ),
-            class_name="p-4 whitespace-nowrap",
         ),
-        rx.el.td(
-            rx.el.span(
+        rx.table.cell(
+            rx.text(
                 draft["start_date_str"].to(str),
-                class_name=t(
-                    "text-sm text-gray-300 font-medium",
-                    "text-sm text-gray-600 font-medium",
+                size="2",
+                weight="medium",
+                class_name=TEXT_SECONDARY,
+            ),
+        ),
+        rx.table.cell(
+            rx.link(
+                rx.button(
+                    "View",
+                    size="1",
+                    variant="soft",
+                    color_scheme="green",
                 ),
-            ),
-            class_name="p-4 whitespace-nowrap text-right",
-        ),
-        rx.el.td(
-            rx.el.a(
-                "View",
                 href=f"https://sleeper.com/draft/nfl/{draft['draft_id'].to(str)}",
-                target="_blank",
-                class_name="text-xs font-bold text-emerald-500 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors",
+                is_external=True,
+                underline="none",
             ),
-            class_name="p-4 whitespace-nowrap text-center",
         ),
-        class_name=TABLE_ROW,
     )
 
 
 def drafts_page() -> rx.Component:
     return layout(
-        rx.box(
-            rx.el.div(
-                rx.el.h1(
-                    rx.icon(
-                        "calendar-days",
-                        class_name="w-8 h-8 mr-3 text-emerald-600 inline",
-                    ),
-                    "Draft Center",
-                    class_name=H1 + " flex items-center",
+        rx.vstack(
+            rx.vstack(
+                rx.hstack(
+                    rx.icon("calendar-days", size=28, color="#10B981"),
+                    rx.heading("Draft Center", size="7", weight="bold"),
+                    spacing="2",
+                    align="center",
                 ),
-                rx.el.p(
+                rx.text(
                     "Overview of all upcoming 2026 drafts and past 2025 results.",
-                    class_name=t(
-                        "text-gray-400 font-medium", "text-gray-500 font-medium"
-                    ),
+                    size="3",
+                    color_scheme="gray",
                 ),
-                class_name="mb-8",
+                spacing="1",
+                align="start",
+                width="100%",
             ),
-            rx.el.div(
+            rx.grid(
                 stat_card(
                     "Total 2026 Drafts",
                     DraftState.upcoming_drafts.length().to_string(),
                     "list",
-                    "text-emerald-600",
+                    "#10B981",
                 ),
                 stat_card(
                     "Scheduled",
                     DraftState.scheduled_count.to_string(),
                     "calendar-check",
-                    "text-blue-500",
+                    "#3B82F6",
                 ),
                 stat_card(
                     "Unscheduled",
                     DraftState.unscheduled_count.to_string(),
                     "clock",
-                    "text-amber-500",
+                    "#F59E0B",
                 ),
                 stat_card(
                     "Completed 2025",
                     DraftState.historical_drafts.length().to_string(),
                     "circle-check",
-                    "text-gray-500",
+                    "#6B7280",
                 ),
-                class_name="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10",
+                columns=rx.breakpoints(initial="1", sm="2", lg="4"),
+                spacing="4",
+                width="100%",
             ),
-            rx.el.div(
-                rx.el.div(
+            rx.card(
+                rx.hstack(
                     draft_filter_tab("All"),
                     draft_filter_tab("Scheduled"),
                     draft_filter_tab("Unscheduled"),
                     draft_filter_tab("Dynasty"),
                     draft_filter_tab("Redraft"),
                     draft_filter_tab("IDP"),
-                    class_name="flex flex-wrap gap-3",
+                    spacing="2",
+                    wrap="wrap",
                 ),
-                class_name=t(
-                    "mb-8 bg-[#1C2033] p-4 rounded-2xl border border-gray-800 shadow-sm",
-                    "mb-8 bg-white p-4 rounded-2xl border border-gray-200 shadow-sm",
-                ),
+                size="2",
+                width="100%",
             ),
-            rx.el.div(
-                rx.el.h2(
-                    "Upcoming Drafts (2026)",
-                    class_name=t(
-                        "text-2xl font-bold text-white mb-2",
-                        "text-2xl font-bold text-gray-800 mb-2",
-                    ),
-                ),
-                rx.el.p(
+            rx.vstack(
+                rx.heading("Upcoming Drafts (2026)", size="6", weight="bold"),
+                rx.text(
                     "2026 Season — Dynasty & Redraft Rookie Drafts",
-                    class_name=t(
-                        "text-sm text-gray-400 font-medium mb-6",
-                        "text-sm text-gray-500 font-medium mb-6",
-                    ),
+                    size="2",
+                    color_scheme="gray",
                 ),
                 rx.cond(
                     DraftState.is_loading,
-                    rx.el.div(
-                        rx.icon(
-                            "loader",
-                            class_name="w-8 h-8 animate-spin text-emerald-500 mx-auto",
-                        ),
-                        class_name="py-20 flex justify-center",
+                    rx.center(
+                        rx.spinner(size="3"),
+                        padding_y="80px",
+                        width="100%",
                     ),
                     rx.cond(
                         DraftState.filtered_upcoming.length() > 0,
-                        rx.el.div(
+                        rx.grid(
                             rx.foreach(
                                 DraftState.filtered_upcoming,
                                 upcoming_draft_card,
                             ),
-                            class_name="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6",
+                            columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                            spacing="4",
+                            width="100%",
                         ),
-                        rx.el.div(
-                            rx.icon(
-                                "ghost",
-                                class_name="w-12 h-12 text-gray-300 mb-4",
-                            ),
-                            rx.el.h3(
-                                "No Drafts Found",
-                                class_name=t(
-                                    "text-lg font-bold text-gray-300",
-                                    "text-lg font-bold text-gray-700",
+                        rx.card(
+                            rx.vstack(
+                                rx.icon("ghost", size=40, color="gray"),
+                                rx.heading(
+                                    "No Drafts Found",
+                                    size="4",
+                                    weight="bold",
                                 ),
+                                spacing="2",
+                                align="center",
+                                padding="48px",
+                                width="100%",
                             ),
-                            class_name=EMPTY_STATE,
+                            class_name="border-dashed",
+                            width="100%",
                         ),
                     ),
                 ),
-                class_name="mb-12",
+                spacing="3",
+                width="100%",
+                align="stretch",
             ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.h2(
-                        "Completed Drafts (2025)",
-                        class_name=t(
-                            "text-2xl font-bold text-gray-200 mb-2",
-                            "text-2xl font-bold text-gray-800 mb-2",
-                        ),
+            rx.vstack(
+                rx.hstack(
+                    rx.heading(
+                        "Completed Drafts (2025)", size="6", weight="bold"
                     ),
-                    rx.el.button(
+                    rx.spacer(),
+                    rx.button(
                         rx.cond(
                             DraftState.show_all_historical,
                             "Show Less",
                             "Show All",
                         ),
                         on_click=DraftState.toggle_historical,
-                        class_name="text-sm font-bold text-emerald-600 hover:text-emerald-700",
+                        variant="ghost",
+                        color_scheme="green",
+                        size="2",
                     ),
-                    class_name="flex justify-between items-center mb-6",
+                    width="100%",
+                    align="center",
                 ),
-                rx.el.div(
-                    rx.el.table(
-                        rx.el.thead(
-                            rx.el.tr(
-                                rx.el.th(
-                                    "League",
-                                    class_name=t(
-                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                    ),
-                                ),
-                                rx.el.th(
-                                    "Type",
-                                    class_name=t(
-                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                    ),
-                                ),
-                                rx.el.th(
-                                    "Format",
-                                    class_name=t(
-                                        "p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                        "p-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                    ),
-                                ),
-                                rx.el.th(
-                                    "Completed",
-                                    class_name=t(
-                                        "p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                        "p-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                    ),
-                                ),
-                                rx.el.th(
-                                    "Board",
-                                    class_name=t(
-                                        "p-4 text-center text-xs font-bold text-gray-400 uppercase tracking-wider",
-                                        "p-4 text-center text-xs font-bold text-gray-500 uppercase tracking-wider",
-                                    ),
-                                ),
-                                class_name=TABLE_HEADER_ROW,
-                            )
+                rx.box(
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.table.column_header_cell("League"),
+                                rx.table.column_header_cell("Type"),
+                                rx.table.column_header_cell("Format"),
+                                rx.table.column_header_cell("Completed"),
+                                rx.table.column_header_cell("Board"),
+                            ),
                         ),
-                        rx.el.tbody(
+                        rx.table.body(
                             rx.foreach(
                                 rx.cond(
                                     DraftState.show_all_historical,
@@ -443,10 +358,21 @@ def drafts_page() -> rx.Component:
                                 historical_draft_row,
                             )
                         ),
-                        class_name="min-w-full table-auto",
+                        variant="surface",
+                        size="2",
                     ),
-                    class_name=TABLE_CONTAINER,
+                    width="100%",
+                    overflow_x="auto",
+                    border_radius="12px",
+                    class_name="border "
+                    + t("border-gray-800", "border-gray-200"),
                 ),
+                spacing="3",
+                width="100%",
+                align="stretch",
             ),
+            spacing="6",
+            width="100%",
+            align="stretch",
         )
     )

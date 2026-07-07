@@ -42,7 +42,6 @@ def get_league_users(league_id: str):
 
 def get_matchups(league_id: str, week: int):
     """Fetch matchups for a specific league and week."""
-    print(f"DEBUG: Entering get_league_users with league_id: '{league_id}' (Type: {type(league_id)})")
     return _get(f"/league/{league_id}/matchups/{week}")
 
 

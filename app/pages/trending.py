@@ -1,244 +1,189 @@
 import reflex as rx
 from app.states.community_state import CommunityState
-from app.states.theme_state import ThemeState
-from app.theme import t, CARD, H1, TEXT_PRIMARY, TEXT_SECONDARY
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
 
 
+def _pos_color(pos: rx.Var) -> rx.Var:
+    return rx.match(
+        pos.to(str),
+        ("QB", "red"),
+        ("RB", "blue"),
+        ("WR", "green"),
+        ("TE", "orange"),
+        ("K", "gray"),
+        ("DEF", "purple"),
+        "gray",
+    )
+
+
 def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
-    return rx.el.tr(
-        rx.el.td(
-            rx.el.span(
-                index + 1,
-                class_name=t(
-                    "text-gray-400 font-bold", "text-gray-500 font-bold"
-                ),
-            ),
-            class_name=t(
-                "p-3 w-12 text-center border-b border-gray-800",
-                "p-3 w-12 text-center border-b border-gray-100",
+    return rx.table.row(
+        rx.table.cell(
+            rx.text(
+                (index + 1).to_string(),
+                size="2",
+                weight="bold",
+                class_name=TEXT_SECONDARY,
+                align="center",
             ),
         ),
-        rx.el.td(
-            rx.el.div(
-                rx.el.span(
+        rx.table.cell(
+            rx.hstack(
+                rx.text(
                     player["full_name"].to(str),
-                    class_name=t(
-                        "font-bold text-white mr-2",
-                        "font-bold text-gray-900 mr-2",
-                    ),
+                    size="2",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
                 ),
-                rx.el.span(
+                rx.badge(
                     player["position"].to(str),
-                    class_name=rx.match(
-                        player["position"].to(str),
-                        (
-                            "QB",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700 mr-1",
-                        ),
-                        (
-                            "RB",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 mr-1",
-                        ),
-                        (
-                            "WR",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 mr-1",
-                        ),
-                        (
-                            "TE",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 mr-1",
-                        ),
-                        (
-                            "K",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 mr-1",
-                        ),
-                        (
-                            "DEF",
-                            "text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 mr-1",
-                        ),
-                        "text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 mr-1",
-                    ),
+                    color_scheme=_pos_color(player["position"]),
+                    variant="soft",
+                    size="1",
                 ),
-                rx.el.span(
+                rx.text(
                     player["team"].to(str),
-                    class_name=t(
-                        "text-xs font-semibold text-gray-400",
-                        "text-xs font-semibold text-gray-500",
-                    ),
+                    size="1",
+                    weight="medium",
+                    class_name=TEXT_SECONDARY,
                 ),
-                class_name="flex items-center",
-            ),
-            class_name=t(
-                "p-3 border-b border-gray-800", "p-3 border-b border-gray-100"
+                spacing="2",
+                align="center",
             ),
         ),
-        rx.el.td(
-            rx.el.div(
-                rx.el.span(
+        rx.table.cell(
+            rx.hstack(
+                rx.text(
                     player["count"].to_string(),
-                    class_name=t(
-                        "font-bold text-gray-200 mr-2",
-                        "font-bold text-gray-700 mr-2",
-                    ),
+                    size="2",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
                 ),
                 rx.cond(
                     is_add,
-                    rx.icon(
-                        "trending-up", class_name="w-4 h-4 text-emerald-500"
-                    ),
-                    rx.icon("trending-down", class_name="w-4 h-4 text-red-500"),
+                    rx.icon("trending-up", size=16, color="#10B981"),
+                    rx.icon("trending-down", size=16, color="#EF4444"),
                 ),
-                class_name="flex items-center justify-end",
-            ),
-            class_name=t(
-                "p-3 border-b border-gray-800 text-right",
-                "p-3 border-b border-gray-100 text-right",
+                spacing="2",
+                align="center",
+                justify="end",
             ),
         ),
-        class_name=t(
-            "hover:bg-[#161926] transition-colors",
-            "hover:bg-gray-50 transition-colors",
+    )
+
+
+def _timeframe_btn(label: str, value: str) -> rx.Component:
+    return rx.button(
+        label,
+        on_click=CommunityState.change_trending_timeframe(value),
+        variant=rx.cond(
+            CommunityState.trending_timeframe == value, "solid", "soft"
         ),
+        color_scheme=rx.cond(
+            CommunityState.trending_timeframe == value, "red", "gray"
+        ),
+        size="2",
+    )
+
+
+def _trending_section(
+    title: str, icon: str, color: str, entries: rx.Var, is_add: bool
+) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon(icon, size=20, color=color),
+                rx.heading(title, size="4", weight="bold"),
+                spacing="2",
+                align="center",
+                padding="16px",
+                width="100%",
+                class_name="border-b "
+                + t("border-gray-800", "border-gray-200"),
+            ),
+            rx.box(
+                rx.table.root(
+                    rx.table.body(
+                        rx.foreach(
+                            entries,
+                            lambda p, i: trending_player_row(p, i, is_add),
+                        )
+                    ),
+                    variant="ghost",
+                    size="1",
+                ),
+                width="100%",
+                overflow_x="auto",
+                padding="8px",
+            ),
+            spacing="0",
+            width="100%",
+            align="stretch",
+        ),
+        size="1",
+        width="100%",
     )
 
 
 def trending_page() -> rx.Component:
     return layout(
-        rx.box(
-            rx.el.div(
-                rx.el.div(
-                    rx.el.h1(
-                        rx.icon(
-                            "flame",
-                            class_name="w-8 h-8 mr-3 text-orange-500 inline",
-                        ),
-                        "Trending Players",
-                        class_name=t(
-                            "text-3xl font-bold text-white mb-2 flex items-center",
-                            "text-3xl font-bold text-gray-900 mb-2 flex items-center",
-                        ),
+        rx.vstack(
+            rx.flex(
+                rx.vstack(
+                    rx.hstack(
+                        rx.icon("flame", size=28, color="#F59E0B"),
+                        rx.heading("Trending Players", size="7", weight="bold"),
+                        spacing="2",
+                        align="center",
                     ),
-                    rx.el.p(
+                    rx.text(
                         "The most added and dropped players across Sleeper leagues.",
-                        class_name=t(
-                            "text-gray-400 font-medium",
-                            "text-gray-500 font-medium",
-                        ),
+                        size="3",
+                        color_scheme="gray",
                     ),
+                    spacing="1",
+                    align="start",
                 ),
-                rx.el.div(
-                    rx.el.button(
-                        "24 Hours",
-                        on_click=CommunityState.change_trending_timeframe(
-                            "24h"
-                        ),
-                        class_name=rx.cond(
-                            CommunityState.trending_timeframe == "24h",
-                            "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-l-lg transition-colors",
-                            t(
-                                "px-4 py-2 text-sm font-bold bg-[#1C2033] text-gray-400 border border-gray-800 rounded-l-lg hover:bg-gray-800 transition-colors",
-                                "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 rounded-l-lg hover:bg-gray-50 transition-colors",
-                            ),
-                        ),
-                    ),
-                    rx.el.button(
-                        "48 Hours",
-                        on_click=CommunityState.change_trending_timeframe(
-                            "48h"
-                        ),
-                        class_name=rx.cond(
-                            CommunityState.trending_timeframe == "48h",
-                            "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-r-lg transition-colors",
-                            t(
-                                "px-4 py-2 text-sm font-bold bg-[#1C2033] text-gray-400 border border-gray-800 border-l-0 rounded-r-lg hover:bg-gray-800 transition-colors",
-                                "px-4 py-2 text-sm font-bold bg-white text-gray-600 border border-gray-200 border-l-0 rounded-r-lg hover:bg-gray-50 transition-colors",
-                            ),
-                        ),
-                    ),
-                    class_name="flex mt-4 md:mt-0 shadow-sm rounded-lg",
+                rx.spacer(),
+                rx.hstack(
+                    _timeframe_btn("24 Hours", "24h"),
+                    _timeframe_btn("48 Hours", "48h"),
+                    spacing="2",
                 ),
-                class_name="flex flex-col md:flex-row md:justify-between md:items-end mb-8",
+                direction=rx.breakpoints(initial="column", md="row"),
+                gap="4",
+                align="center",
+                width="100%",
+                wrap="wrap",
             ),
-            rx.el.div(
-                rx.el.div(
-                    rx.el.div(
-                        rx.el.h2(
-                            rx.icon(
-                                "arrow-up-right",
-                                class_name="w-5 h-5 mr-2 text-emerald-500 inline",
-                            ),
-                            "Hot Adds",
-                            class_name=t(
-                                "text-lg font-bold text-white flex items-center",
-                                "text-lg font-bold text-gray-800 flex items-center",
-                            ),
-                        ),
-                        class_name=t(
-                            "p-4 border-b border-gray-800 bg-[#DC2626]/10 rounded-t-2xl",
-                            "p-4 border-b border-gray-200 bg-emerald-50 rounded-t-2xl",
-                        ),
-                    ),
-                    rx.el.div(
-                        rx.el.table(
-                            rx.el.tbody(
-                                rx.foreach(
-                                    CommunityState.trending_adds,
-                                    lambda player, idx: trending_player_row(
-                                        player, idx, True
-                                    ),
-                                )
-                            ),
-                            class_name="w-full table-auto",
-                        ),
-                        class_name="overflow-x-auto p-2",
-                    ),
-                    class_name=t(
-                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm",
-                        "bg-white rounded-2xl border border-gray-200 shadow-sm",
-                    ),
+            rx.grid(
+                _trending_section(
+                    "Hot Adds",
+                    "arrow-up-right",
+                    "#10B981",
+                    CommunityState.trending_adds,
+                    True,
                 ),
-                rx.el.div(
-                    rx.el.div(
-                        rx.el.h2(
-                            rx.icon(
-                                "arrow-down-right",
-                                class_name="w-5 h-5 mr-2 text-red-500 inline",
-                            ),
-                            "Trending Drops",
-                            class_name=t(
-                                "text-lg font-bold text-white flex items-center",
-                                "text-lg font-bold text-gray-800 flex items-center",
-                            ),
-                        ),
-                        class_name=t(
-                            "p-4 border-b border-gray-800 bg-red-900/20 rounded-t-2xl",
-                            "p-4 border-b border-gray-200 bg-red-50 rounded-t-2xl",
-                        ),
-                    ),
-                    rx.el.div(
-                        rx.el.table(
-                            rx.el.tbody(
-                                rx.foreach(
-                                    CommunityState.trending_drops,
-                                    lambda player, idx: trending_player_row(
-                                        player, idx, False
-                                    ),
-                                )
-                            ),
-                            class_name="w-full table-auto",
-                        ),
-                        class_name="overflow-x-auto p-2",
-                    ),
-                    class_name=t(
-                        "bg-[#1C2033] rounded-2xl border border-gray-800 shadow-sm",
-                        "bg-white rounded-2xl border border-gray-200 shadow-sm",
-                    ),
+                _trending_section(
+                    "Trending Drops",
+                    "arrow-down-right",
+                    "#EF4444",
+                    CommunityState.trending_drops,
+                    False,
                 ),
-                class_name="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6",
+                columns=rx.breakpoints(initial="1", md="2"),
+                spacing="6",
+                width="100%",
             ),
-            rx.el.p(
+            rx.text(
                 "* Players sorted by Sleeper trending activity across all leagues.",
-                class_name="text-xs text-gray-500 text-center italic mt-6",
+                size="1",
+                color_scheme="gray",
+                class_name="italic text-center",
             ),
+            spacing="6",
+            width="100%",
+            align="stretch",
         )
     )

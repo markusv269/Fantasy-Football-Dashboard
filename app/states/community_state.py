@@ -90,7 +90,9 @@ class CommunityState(rx.State):
                     date_str = ""
                     if created:
                         try:
-                            dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+                            dt = datetime.fromisoformat(
+                                created.replace("Z", "+00:00")
+                            )
                             date_str = dt.strftime("%d. %B %Y")
                         except Exception:
                             logging.exception("Unexpected error")
@@ -110,16 +112,28 @@ class CommunityState(rx.State):
 
     @rx.event
     def vote_poll(self, poll_id: str, option_index: int):
-        if poll_id in self.voted_polls:
+        pid = str(poll_id)
+        if pid in self.voted_polls:
             return
+        updated_polls = []
+        found = False
+        success = False
         for poll in self.polls:
-            if poll["id"] == poll_id:
-                options = poll["options"]
-                options[option_index]["votes"] += 1
-                poll["total_votes"] += 1
-                new_total = poll["total_votes"]
-                for opt in poll["options"]:
-                    v = int(opt["votes"])
+            if str(poll.get("id", "")) == pid and (not found):
+                options = list(poll.get("options", []))
+                if option_index < 0 or option_index >= len(options):
+                    updated_polls.append(dict(poll))
+                    continue
+                found = True
+                new_options = []
+                for i, opt in enumerate(options):
+                    new_opt = dict(opt)
+                    if i == option_index:
+                        new_opt["votes"] = int(new_opt.get("votes", 0)) + 1
+                    new_options.append(new_opt)
+                new_total = int(poll.get("total_votes", 0)) + 1
+                for opt in new_options:
+                    v = int(opt.get("votes", 0))
                     if new_total > 0:
                         pct_x10 = int(v * 1000 / new_total)
                         whole = pct_x10 // 10
@@ -127,35 +141,45 @@ class CommunityState(rx.State):
                         opt["pct_str"] = f"{whole},{frac} % ({v} Stimmen)"
                     else:
                         opt["pct_str"] = f"0,0 % ({v} Stimmen)"
-                self.voted_polls.append(poll_id)
-                break
-        client = get_supabase_client()
-        if client:
+                new_poll = dict(poll)
+                new_poll["options"] = new_options
+                new_poll["total_votes"] = new_total
+                updated_polls.append(new_poll)
+                success = True
+            else:
+                updated_polls.append(dict(poll))
+        if success:
+            self.polls = updated_polls
+            self.voted_polls = self.voted_polls + [pid]
             try:
-                poll_id_int = int(poll_id)
-                poll_res = (
-                    client.table("polls")
-                    .select("stats")
-                    .eq("id", poll_id_int)
-                    .limit(1)
-                    .execute()
-                )
-                if poll_res and poll_res.data:
-                    current_stats = poll_res.data[0].get("stats", [])
-                    if option_index < len(current_stats):
-                        current_stats[option_index] = (
-                            int(current_stats[option_index]) + 1
-                        )
-                        client.table("polls").update({"stats": current_stats}).eq(
-                            "id", poll_id_int
-                        ).execute()
+                client = get_supabase_client()
+                if client:
+                    poll_id_int = int(pid)
+                    poll_res = (
+                        client.table("polls")
+                        .select("stats")
+                        .eq("id", poll_id_int)
+                        .limit(1)
+                        .execute()
+                    )
+                    if poll_res and poll_res.data:
+                        current_stats = poll_res.data[0].get("stats", [])
+                        if option_index < len(current_stats):
+                            current_stats[option_index] = (
+                                int(current_stats[option_index]) + 1
+                            )
+                            client.table("polls").update(
+                                {"stats": current_stats}
+                            ).eq("id", poll_id_int).execute()
             except Exception as e:
                 logging.exception(f"Error updating poll vote in Supabase: {e}")
 
     @rx.event
     def submit_registration(self):
         if not self.reg_team_name or not self.reg_email:
-            return rx.toast("Please fill in team name and email.", duration=3000)
+            return rx.toast(
+                "Please fill in team name and email.", duration=3000
+            )
         new_reg = {
             "team_name": self.reg_team_name,
             "email": self.reg_email,
@@ -170,14 +194,17 @@ class CommunityState(rx.State):
             try:
                 client.table("dynasty_waitinglist").insert(
                     {
-                        "sleeper_name": self.reg_sleeper_username or self.reg_team_name,
+                        "sleeper_name": self.reg_sleeper_username
+                        or self.reg_team_name,
                         "dynasty": self.reg_preferred_league == "Dynasty",
                         "dynasty_idp": False,
                         "dynasty_bb": self.reg_preferred_league == "Best Ball",
                     }
                 ).execute()
             except Exception as e:
-                logging.exception(f"Error inserting registration into Supabase: {e}")
+                logging.exception(
+                    f"Error inserting registration into Supabase: {e}"
+                )
         self.reg_team_name = ""
         self.reg_email = ""
         self.reg_sleeper_username = ""
@@ -191,8 +218,12 @@ class CommunityState(rx.State):
     @rx.event
     def fetch_trending(self):
         hours = 24 if self.trending_timeframe == "24h" else 48
-        adds = get_trending_players(trend_type="add", lookback_hours=hours, limit=25)
-        drops = get_trending_players(trend_type="drop", lookback_hours=hours, limit=25)
+        adds = get_trending_players(
+            trend_type="add", lookback_hours=hours, limit=25
+        )
+        drops = get_trending_players(
+            trend_type="drop", lookback_hours=hours, limit=25
+        )
         if adds:
             self.trending_adds = enrich_trending(adds)
         if drops:

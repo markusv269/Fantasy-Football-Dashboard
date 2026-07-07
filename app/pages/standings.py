@@ -1,182 +1,165 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
-from app.states.theme_state import ThemeState
-from app.states.user_state import UserState
-from app.theme import (
-    t,
-    H1,
-    TEXT_SECONDARY,
-    TEXT_PRIMARY,
-    EMPTY_STATE,
-    TABLE_CONTAINER,
-    TABLE_HEADER_ROW,
-    TABLE_HEADER_CELL,
-    TABLE_ROW,
-)
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
 from app.pages.matchups import league_selector
 
 
+def _rank_badge(rank: rx.Var) -> rx.Component:
+    return rx.box(
+        rx.text(rank.to(str), size="2", weight="bold"),
+        class_name=rx.match(
+            rank.to(int),
+            (
+                1,
+                "w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center",
+            ),
+            (
+                2,
+                "w-8 h-8 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center",
+            ),
+            (
+                3,
+                "w-8 h-8 rounded-full bg-orange-100 text-orange-700 flex items-center justify-center",
+            ),
+            "w-8 h-8 rounded-full flex items-center justify-center "
+            + t("bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"),
+        ),
+    )
+
+
 def standings_row(team: dict) -> rx.Component:
-    return rx.el.tr(
-        rx.el.td(
-            rx.el.span(
-                team["rank"],
-                class_name=rx.match(
-                    team["rank"].to(int),
-                    (
-                        1,
-                        "w-8 h-8 rounded-full bg-yellow-100 text-yellow-700 font-bold flex items-center justify-center",
-                    ),
-                    (
-                        2,
-                        "w-8 h-8 rounded-full bg-gray-200 text-gray-700 font-bold flex items-center justify-center",
-                    ),
-                    (
-                        3,
-                        "w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center",
-                    ),
-                    "w-8 h-8 rounded-full font-bold flex items-center justify-center "
-                    + t(
-                        "bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"
-                    ),
+    return rx.table.row(
+        rx.table.cell(_rank_badge(team["rank"])),
+        rx.table.cell(
+            rx.vstack(
+                rx.text(
+                    team["team_name"].to(str),
+                    weight="bold",
+                    size="2",
+                    class_name=TEXT_PRIMARY,
                 ),
+                rx.text(
+                    team["owner_name"].to(str),
+                    size="1",
+                    class_name=TEXT_SECONDARY,
+                ),
+                spacing="0",
+                align="start",
             ),
-            class_name="p-4",
         ),
-        rx.el.td(
-            rx.el.div(
-                rx.el.div(
-                    team["team_name"], class_name="font-bold " + TEXT_PRIMARY
-                ),
-                rx.el.div(
-                    team["owner_name"],
-                    class_name="text-xs font-medium " + TEXT_SECONDARY,
-                ),
+        rx.table.cell(
+            rx.text(
+                team["wins"].to(str), size="2", weight="medium", align="center"
             ),
-            class_name="p-4",
         ),
-        rx.el.td(
-            team["wins"],
-            class_name="p-4 font-semibold text-center "
-            + t("text-gray-300", "text-gray-700"),
+        rx.table.cell(
+            rx.text(
+                team["losses"].to(str),
+                size="2",
+                weight="medium",
+                align="center",
+            ),
         ),
-        rx.el.td(
-            team["losses"],
-            class_name="p-4 font-semibold text-center "
-            + t("text-gray-300", "text-gray-700"),
+        rx.table.cell(
+            rx.text(
+                team["ties"].to(str), size="2", weight="medium", align="center"
+            ),
         ),
-        rx.el.td(
-            team["ties"],
-            class_name="p-4 font-semibold text-center "
-            + t("text-gray-300", "text-gray-700"),
+        rx.table.cell(
+            rx.text(team["win_pct"].to(str), size="2", align="center"),
         ),
-        rx.el.td(
-            team["win_pct"],
-            class_name="p-4 font-medium text-center " + TEXT_SECONDARY,
+        rx.table.cell(
+            rx.text(
+                team["fpts"].to(str),
+                size="2",
+                weight="bold",
+                class_name="text-[#DC2626]",
+                align="right",
+            ),
         ),
-        rx.el.td(
-            team["fpts"],
-            class_name="p-4 font-semibold text-[#DC2626] text-right",
-        ),
-        rx.el.td(
-            team["fpts_against"],
-            class_name="p-4 font-medium text-[#5B7BA5] text-right",
+        rx.table.cell(
+            rx.text(
+                team["fpts_against"].to(str),
+                size="2",
+                weight="medium",
+                class_name="text-[#5B7BA5]",
+                align="right",
+            ),
         ),
         on_click=MatchupsState.view_roster(team["roster_id"].to(int)),
-        class_name=TABLE_ROW + " cursor-pointer",
+        class_name="cursor-pointer hover:bg-[#DC2626]/5 transition-colors",
     )
 
 
 def standings_page() -> rx.Component:
     return layout(
-        rx.box(
-            rx.el.div(
-                rx.el.h1("Standings", class_name=H1 + " mb-2"),
-                rx.el.p(
+        rx.vstack(
+            rx.vstack(
+                rx.heading("Standings", size="7", weight="bold"),
+                rx.text(
                     "League rankings, records, and points.",
-                    class_name=TEXT_SECONDARY + " font-medium",
+                    size="2",
+                    color_scheme="gray",
                 ),
-                class_name="mb-8",
+                spacing="1",
+                align="start",
+                width="100%",
             ),
-            rx.el.div(league_selector(), class_name="mb-8"),
+            league_selector(),
             rx.cond(
                 AppState.selected_league_id == "",
-                rx.el.div(
-                    rx.icon(
-                        "list-ordered",
-                        class_name="w-12 h-12 text-gray-300 mb-4",
-                    ),
-                    rx.el.h3(
-                        "No League Selected",
-                        class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
-                    ),
-                    rx.el.p(
-                        "Select a league to view standings.",
-                        class_name=TEXT_SECONDARY,
-                    ),
-                    class_name=EMPTY_STATE,
-                ),
-                rx.el.div(
-                    rx.el.div(
-                        rx.el.table(
-                            rx.el.thead(
-                                rx.el.tr(
-                                    rx.el.th(
-                                        "Rank",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-left",
-                                    ),
-                                    rx.el.th(
-                                        "Team",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-left",
-                                    ),
-                                    rx.el.th(
-                                        "W",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-center",
-                                    ),
-                                    rx.el.th(
-                                        "L",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-center",
-                                    ),
-                                    rx.el.th(
-                                        "T",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-center",
-                                    ),
-                                    rx.el.th(
-                                        "Pct",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-center",
-                                    ),
-                                    rx.el.th(
-                                        "PF",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-right",
-                                    ),
-                                    rx.el.th(
-                                        "PA",
-                                        class_name=TABLE_HEADER_CELL
-                                        + " p-4 text-right",
-                                    ),
-                                    class_name=TABLE_HEADER_ROW,
-                                )
-                            ),
-                            rx.el.tbody(
-                                rx.foreach(
-                                    MatchupsState.standings_data, standings_row
-                                )
-                            ),
-                            class_name="min-w-full table-auto",
+                rx.card(
+                    rx.vstack(
+                        rx.icon("list-ordered", size=40, color="gray"),
+                        rx.heading(
+                            "No League Selected", size="4", weight="bold"
                         ),
-                        class_name="overflow-x-auto",
+                        rx.text(
+                            "Select a league to view standings.",
+                            size="2",
+                            color_scheme="gray",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="48px",
+                        width="100%",
                     ),
-                    class_name=TABLE_CONTAINER,
+                    class_name="border-dashed",
+                    width="100%",
+                ),
+                rx.box(
+                    rx.table.root(
+                        rx.table.header(
+                            rx.table.row(
+                                rx.table.column_header_cell("Rank"),
+                                rx.table.column_header_cell("Team"),
+                                rx.table.column_header_cell("W"),
+                                rx.table.column_header_cell("L"),
+                                rx.table.column_header_cell("T"),
+                                rx.table.column_header_cell("Pct"),
+                                rx.table.column_header_cell("PF"),
+                                rx.table.column_header_cell("PA"),
+                            ),
+                        ),
+                        rx.table.body(
+                            rx.foreach(
+                                MatchupsState.standings_data, standings_row
+                            ),
+                        ),
+                        variant="surface",
+                        size="2",
+                    ),
+                    width="100%",
+                    overflow_x="auto",
+                    border_radius="12px",
+                    class_name="border "
+                    + t("border-gray-800", "border-gray-200"),
                 ),
             ),
+            spacing="6",
+            width="100%",
+            align="stretch",
         )
     )
