@@ -157,24 +157,31 @@ def mobile_drawer_std() -> rx.Component:
             bottom="0",
             z_index="40",
             display=rx.cond(ThemeState.mobile_sidebar_open, "block", "none"),
-            class_name="bg-black/50 md:hidden",
+            class_name="bg-black/60 backdrop-blur-sm md:hidden",
         ),
         rx.vstack(
             rx.hstack(
-                rx.heading("More Options", size="4", weight="bold"),
+                rx.hstack(
+                    rx.icon("podcast", size=22, color="#DC2626"),
+                    rx.heading("Navigation", size="4", weight="bold"),
+                    spacing="2",
+                    align="center",
+                ),
                 rx.spacer(),
                 rx.button(
-                    rx.icon("x", size=18),
+                    rx.icon("x", size=20),
                     on_click=ThemeState.close_mobile_sidebar,
-                    variant="ghost",
+                    variant="soft",
                     color_scheme="gray",
+                    radius="full",
+                    size="1",
                 ),
                 width="100%",
-                padding="16px",
+                padding="20px",
                 align="center",
                 class_name=t(
-                    "border-b border-gray-800",
-                    "border-b border-gray-200",
+                    "border-b border-gray-800 bg-[#1C2033]",
+                    "border-b border-gray-200 bg-gray-50",
                 ),
             ),
             rx.vstack(
@@ -182,18 +189,26 @@ def mobile_drawer_std() -> rx.Component:
                     rx.link(
                         rx.hstack(
                             rx.icon(item["icon"], size=18),
-                            rx.text(item["label"], size="3"),
+                            rx.text(item["label"], size="3", weight="medium"),
+                            rx.spacer(),
+                            rx.icon(
+                                "chevron-right",
+                                size=14,
+                                class_name="opacity-50",
+                            ),
                             spacing="3",
                             align="center",
+                            width="100%",
                         ),
                         href=item["href"],
                         on_click=ThemeState.close_mobile_sidebar,
                         underline="none",
                         width="100%",
-                        padding="14px",
+                        padding_x="20px",
+                        padding_y="16px",
                         class_name=t(
-                            "text-gray-300 border-b border-gray-800",
-                            "text-gray-700 border-b border-gray-100",
+                            "text-gray-300 border-b border-gray-800/50 hover:bg-gray-800 hover:text-white active:bg-gray-700",
+                            "text-gray-700 border-b border-gray-100 hover:bg-gray-50 hover:text-[#DC2626] active:bg-gray-100",
                         ),
                     )
                     for item in nav_items
@@ -202,23 +217,39 @@ def mobile_drawer_std() -> rx.Component:
                 width="100%",
                 overflow_y="auto",
                 flex="1",
+                class_name="no-scrollbar",
             ),
-            rx.button(
-                rx.hstack(
-                    rx.icon(
-                        rx.cond(ThemeState.is_dark, "sun", "moon"), size=16
+            rx.box(
+                rx.button(
+                    rx.hstack(
+                        rx.icon(
+                            rx.cond(ThemeState.is_dark, "sun", "moon"), size=18
+                        ),
+                        rx.text(
+                            rx.cond(
+                                ThemeState.is_dark, "Light Mode", "Dark Mode"
+                            ),
+                            size="2",
+                            weight="bold",
+                        ),
+                        spacing="2",
+                        align="center",
                     ),
-                    rx.text(
-                        rx.cond(ThemeState.is_dark, "Light Mode", "Dark Mode"),
-                        size="2",
+                    on_click=ThemeState.toggle_color_mode,
+                    variant="solid",
+                    color_scheme="gray",
+                    width="100%",
+                    size="3",
+                    class_name=t(
+                        "bg-gray-800 text-white", "bg-gray-900 text-white"
                     ),
-                    spacing="2",
-                    align="center",
                 ),
-                on_click=ThemeState.toggle_color_mode,
-                variant="soft",
-                color_scheme="gray",
-                margin="16px",
+                padding="20px",
+                width="100%",
+                class_name=t(
+                    "bg-[#1C2033] border-t border-gray-800",
+                    "bg-gray-50 border-t border-gray-200",
+                ),
             ),
             spacing="0",
             position="fixed",
@@ -226,18 +257,18 @@ def mobile_drawer_std() -> rx.Component:
             left="0",
             right="0",
             z_index="50",
-            max_height="80vh",
-            border_top_left_radius="16px",
-            border_top_right_radius="16px",
+            max_height="85vh",
+            border_top_left_radius="24px",
+            border_top_right_radius="24px",
             transform=rx.cond(
                 ThemeState.mobile_sidebar_open,
                 "translateY(0)",
                 "translateY(100%)",
             ),
-            transition="transform 300ms",
+            transition="transform 400ms cubic-bezier(0.4, 0, 0.2, 1)",
             class_name=t(
-                "bg-[#161926] md:hidden",
-                "bg-white md:hidden",
+                "bg-[#161926] shadow-2xl border-t border-gray-800 md:hidden",
+                "bg-white shadow-2xl border-t border-gray-200 md:hidden",
             ),
         ),
     )
@@ -250,11 +281,24 @@ def header_std() -> rx.Component:
     )
     return rx.hstack(
         rx.button(
-            rx.icon("menu", size=20),
+            rx.hstack(
+                rx.icon("menu", size=20),
+                rx.text(
+                    "Menu",
+                    size="2",
+                    weight="bold",
+                    class_name="hidden xs:block",
+                ),
+                spacing="2",
+                align="center",
+            ),
             on_click=ThemeState.toggle_mobile_sidebar,
-            variant="ghost",
-            color_scheme="gray",
-            class_name="md:hidden",
+            variant="solid",
+            class_name=t(
+                "md:hidden bg-[#DC2626] hover:bg-[#B91C1C] text-white px-4 shadow-lg active:scale-95 transition-all",
+                "md:hidden bg-[#DC2626] hover:bg-[#B91C1C] text-white px-4 shadow-md active:scale-95 transition-all",
+            ),
+            radius="full",
         ),
         rx.heading("Stoned Lack Fantasy", size="5", weight="bold"),
         rx.spacer(),
