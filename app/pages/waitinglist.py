@@ -349,12 +349,12 @@ def registration_form() -> rx.Component:
                         ),
                         rx.el.div(
                             rx.el.label(
-                                "Discord Name (optional)",
+                                "Discord Name *",
                                 class_name="block text-sm font-bold mb-1 "
                                 + TEXT_PRIMARY,
                             ),
                             rx.el.p(
-                                "Für weitere Kommunikation.",
+                                "Pflichtfeld für weitere Kommunikation.",
                                 class_name="text-xs mb-2 " + TEXT_SECONDARY,
                             ),
                             rx.el.input(
@@ -380,7 +380,8 @@ def registration_form() -> rx.Component:
                                 WaitlistState.dynasty_checked
                                 | WaitlistState.dynasty_idp_checked
                                 | WaitlistState.dynasty_bb_checked
-                            ),
+                            )
+                            | (WaitlistState.discord_input == ""),
                             class_name=BTN_PRIMARY + " w-full",
                         ),
                     ),

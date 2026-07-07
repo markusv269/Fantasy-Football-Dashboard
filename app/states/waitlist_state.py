@@ -132,12 +132,18 @@ class WaitlistState(rx.State):
             return rx.toast(
                 "Bitte überprüfe zuerst deinen Sleeper-Namen.", duration=3000
             )
+
+        discord_val = self.discord_input.strip()
+        if not discord_val:
+            return rx.toast(
+                "Bitte gib deinen Discord-Namen ein.", duration=3000
+            )
+
         self.is_submitting = True
         yield
         try:
             client = get_supabase_client()
             if client:
-                discord_val = self.discord_input.strip()
                 client.table("dynasty_waitinglist").upsert(
                     {
                         "user_id": self.resolved_user_id,
@@ -146,7 +152,7 @@ class WaitlistState(rx.State):
                         "dynasty": self.dynasty_checked,
                         "dynasty_idp": self.dynasty_idp_checked,
                         "dynasty_bb": self.dynasty_bb_checked,
-                        "discord": discord_val if discord_val else None,
+                        "discord": discord_val,
                     },
                     on_conflict="user_id",
                 ).execute()
