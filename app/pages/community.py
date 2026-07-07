@@ -2,7 +2,16 @@ import reflex as rx
 from app.states.community_state import CommunityState
 from app.states.theme_state import ThemeState
 from app.components.layout import layout
-from app.theme import t, CARD, H2, H3, TEXT_PRIMARY, TEXT_SECONDARY, BTN_PRIMARY, INPUT
+from app.theme import (
+    t,
+    CARD,
+    H2,
+    H3,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+    BTN_PRIMARY,
+    INPUT,
+)
 
 
 def poll_option_active(poll: dict, option: dict, index: int) -> rx.Component:
@@ -15,7 +24,9 @@ def poll_option_active(poll: dict, option: dict, index: int) -> rx.Component:
         ),
         rx.el.span(
             option["text"].to(str),
-            class_name=t("font-medium text-gray-300", "font-medium text-gray-700"),
+            class_name=t(
+                "font-medium text-gray-300", "font-medium text-gray-700"
+            ),
         ),
         on_click=CommunityState.vote_poll(poll["id"].to(str), index),
         class_name=t(
@@ -73,7 +84,8 @@ def poll_card(poll: dict) -> rx.Component:
             rx.el.h3(
                 poll["question"].to(str),
                 class_name=t(
-                    "text-lg font-bold text-white", "text-lg font-bold text-gray-900"
+                    "text-lg font-bold text-white",
+                    "text-lg font-bold text-gray-900",
                 ),
             ),
             rx.cond(
@@ -137,7 +149,8 @@ def youtube_card(video: dict) -> rx.Component:
     return rx.el.a(
         rx.el.div(
             rx.image(
-                src=video["thumbnail"].to(str), class_name="w-full h-full object-cover"
+                src=video["thumbnail"].to(str),
+                class_name="w-full h-full object-cover",
             ),
             rx.cond(
                 video["is_short"].to(bool),
@@ -211,13 +224,14 @@ def news_card(news: dict) -> rx.Component:
                 ),
             ),
         ),
-        class_name=CARD + " p-6 mb-4 hover:border-emerald-500 transition-colors",
+        class_name=CARD
+        + " p-6 mb-4 hover:border-emerald-500 transition-colors",
     )
 
 
 def community_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1(
                     "Stoned Lack Community",
@@ -250,7 +264,9 @@ def community_page() -> rx.Component:
                         ),
                         rx.cond(
                             CommunityState.news_items.length() > 0,
-                            rx.el.div(rx.foreach(CommunityState.news_items, news_card)),
+                            rx.el.div(
+                                rx.foreach(CommunityState.news_items, news_card)
+                            ),
                             rx.el.p(
                                 "Keine Neuigkeiten vorhanden.",
                                 class_name="text-gray-500 italic",
@@ -275,7 +291,10 @@ def community_page() -> rx.Component:
                                 list[
                                     dict[
                                         str,
-                                        str | int | bool | list[dict[str, str | int]],
+                                        str
+                                        | int
+                                        | bool
+                                        | list[dict[str, str | int]],
                                     ]
                                 ]
                             ),
@@ -305,7 +324,8 @@ def community_page() -> rx.Component:
                                 ),
                                 rx.el.h3(
                                     "Dynasty Warteliste",
-                                    class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
+                                    class_name="text-xl font-bold mb-2 "
+                                    + TEXT_PRIMARY,
                                 ),
                                 rx.el.p(
                                     "Melde dich für die neuen Dynasty-Ligen an!",
@@ -340,7 +360,9 @@ def community_page() -> rx.Component:
                             rx.el.div(
                                 rx.el.button(
                                     "All",
-                                    on_click=CommunityState.set_youtube_filter("All"),
+                                    on_click=CommunityState.set_youtube_filter(
+                                        "All"
+                                    ),
                                     class_name=rx.cond(
                                         CommunityState.youtube_filter == "All",
                                         "px-3 py-1 text-xs font-bold bg-[#DC2626]/20 text-[#DC2626] rounded-md",
@@ -356,7 +378,8 @@ def community_page() -> rx.Component:
                                         "Videos"
                                     ),
                                     class_name=rx.cond(
-                                        CommunityState.youtube_filter == "Videos",
+                                        CommunityState.youtube_filter
+                                        == "Videos",
                                         "px-3 py-1 text-xs font-bold bg-[#DC2626]/20 text-[#DC2626] rounded-md",
                                         t(
                                             "px-3 py-1 text-xs font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 rounded-md transition-colors",
@@ -370,7 +393,8 @@ def community_page() -> rx.Component:
                                         "Shorts"
                                     ),
                                     class_name=rx.cond(
-                                        CommunityState.youtube_filter == "Shorts",
+                                        CommunityState.youtube_filter
+                                        == "Shorts",
                                         "px-3 py-1 text-xs font-bold bg-[#DC2626]/20 text-[#DC2626] rounded-md",
                                         t(
                                             "px-3 py-1 text-xs font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 rounded-md transition-colors",
@@ -383,7 +407,8 @@ def community_page() -> rx.Component:
                             class_name="mb-4",
                         ),
                         rx.foreach(
-                            CommunityState.filtered_youtube_videos[:6], youtube_card
+                            CommunityState.filtered_youtube_videos[:6],
+                            youtube_card,
                         ),
                         rx.el.a(
                             "Alle Videos ansehen",

@@ -54,7 +54,8 @@ def waitlist_row(entry: dict) -> rx.Component:
     return rx.el.tr(
         rx.el.td(
             rx.el.span(
-                entry["sleeper_name"].to(str), class_name="font-bold " + TEXT_PRIMARY
+                entry["sleeper_name"].to(str),
+                class_name="font-bold " + TEXT_PRIMARY,
             ),
             class_name="p-4 whitespace-nowrap",
         ),
@@ -86,7 +87,8 @@ def waitlist_row(entry: dict) -> rx.Component:
             rx.cond(
                 entry["discord"].to(str) != "",
                 rx.el.span(
-                    entry["discord"].to(str), class_name="text-sm " + TEXT_SECONDARY
+                    entry["discord"].to(str),
+                    class_name="text-sm " + TEXT_SECONDARY,
                 ),
                 rx.el.span("—", class_name=TEXT_SECONDARY),
             ),
@@ -152,7 +154,8 @@ def registration_form() -> rx.Component:
                 ),
                 rx.el.h3(
                     "Anmeldung gespeichert!",
-                    class_name="text-xl font-bold text-center mb-2 " + TEXT_PRIMARY,
+                    class_name="text-xl font-bold text-center mb-2 "
+                    + TEXT_PRIMARY,
                 ),
                 rx.el.p(
                     "Deine Auswahl wurde erfolgreich gespeichert.",
@@ -180,7 +183,8 @@ def registration_form() -> rx.Component:
                 rx.el.div(
                     rx.el.label(
                         "Sleeper Name *",
-                        class_name="block text-sm font-bold mb-2 " + TEXT_PRIMARY,
+                        class_name="block text-sm font-bold mb-2 "
+                        + TEXT_PRIMARY,
                     ),
                     rx.el.div(
                         rx.el.input(
@@ -192,7 +196,9 @@ def registration_form() -> rx.Component:
                         rx.el.button(
                             rx.cond(
                                 WaitlistState.is_resolving,
-                                rx.icon("loader", class_name="w-5 h-5 animate-spin"),
+                                rx.icon(
+                                    "loader", class_name="w-5 h-5 animate-spin"
+                                ),
                                 "Überprüfen",
                             ),
                             on_click=WaitlistState.validate_sleeper_name,
@@ -253,7 +259,8 @@ def registration_form() -> rx.Component:
                         ),
                         rx.el.label(
                             "Welche Formate interessieren dich? *",
-                            class_name="block text-sm font-bold mb-3 " + TEXT_PRIMARY,
+                            class_name="block text-sm font-bold mb-3 "
+                            + TEXT_PRIMARY,
                         ),
                         rx.el.div(
                             type_card(
@@ -304,7 +311,8 @@ def registration_form() -> rx.Component:
                             rx.cond(
                                 WaitlistState.is_submitting,
                                 rx.icon(
-                                    "loader", class_name="w-5 h-5 animate-spin mx-auto"
+                                    "loader",
+                                    class_name="w-5 h-5 animate-spin mx-auto",
                                 ),
                                 "Anmeldung absenden",
                             ),
@@ -328,7 +336,7 @@ def registration_form() -> rx.Component:
 
 def waitinglist_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1(
                     rx.icon(
@@ -419,7 +427,8 @@ def waitinglist_page() -> rx.Component:
                                     ),
                                     rx.el.tbody(
                                         rx.foreach(
-                                            WaitlistState.all_entries, waitlist_row
+                                            WaitlistState.all_entries,
+                                            waitlist_row,
                                         )
                                     ),
                                     class_name="w-full table-auto",
@@ -433,7 +442,8 @@ def waitinglist_page() -> rx.Component:
                                 ),
                                 rx.el.h3(
                                     "Keine Anmeldungen",
-                                    class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
+                                    class_name="text-xl font-bold mb-2 "
+                                    + TEXT_PRIMARY,
                                 ),
                                 rx.el.p(
                                     "Bisher hat sich noch niemand eingetragen.",

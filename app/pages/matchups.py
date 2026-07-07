@@ -2,7 +2,15 @@ import reflex as rx
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
 from app.states.theme_state import ThemeState
-from app.theme import t, SELECT, H1, TEXT_SECONDARY, TEXT_PRIMARY, CARD, EMPTY_STATE
+from app.theme import (
+    t,
+    SELECT,
+    H1,
+    TEXT_SECONDARY,
+    TEXT_PRIMARY,
+    CARD,
+    EMPTY_STATE,
+)
 from app.components.layout import layout
 
 
@@ -12,7 +20,9 @@ def league_selector() -> rx.Component:
             rx.el.option("Select a League", value="", disabled=True),
             rx.foreach(
                 AppState.leagues_data,
-                lambda lg: rx.el.option(lg["name"], value=lg["league_id"].to_string()),
+                lambda lg: rx.el.option(
+                    lg["name"], value=lg["league_id"].to_string()
+                ),
             ),
             value=AppState.selected_league_id,
             on_change=lambda val: [
@@ -65,7 +75,10 @@ def week_selector() -> rx.Component:
             class_name="p-2 text-gray-500 hover:text-[#DC2626] transition-colors",
         ),
         class_name="flex items-center rounded-full px-2 py-1 shadow-sm w-full md:w-auto overflow-hidden "
-        + t("bg-[#1C2033] border border-gray-800", "bg-white border border-gray-200"),
+        + t(
+            "bg-[#1C2033] border border-gray-800",
+            "bg-white border border-gray-200",
+        ),
     )
 
 
@@ -94,7 +107,9 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
                 rx.el.span(
                     "VS",
                     class_name="text-xs font-bold px-2 py-1 rounded-full "
-                    + t("text-gray-500 bg-gray-800", "text-gray-400 bg-gray-100"),
+                    + t(
+                        "text-gray-500 bg-gray-800", "text-gray-400 bg-gray-100"
+                    ),
                 ),
                 class_name="flex items-center justify-center px-2",
             ),
@@ -130,7 +145,7 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
 
 def matchups_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1("Matchups", class_name=H1 + " mb-2"),
                 rx.el.p(
@@ -147,13 +162,16 @@ def matchups_page() -> rx.Component:
             rx.cond(
                 AppState.selected_league_id == "",
                 rx.el.div(
-                    rx.icon("trophy", class_name="w-12 h-12 text-gray-300 mb-4"),
+                    rx.icon(
+                        "trophy", class_name="w-12 h-12 text-gray-300 mb-4"
+                    ),
                     rx.el.h3(
                         "No League Selected",
                         class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
                     ),
                     rx.el.p(
-                        "Select a league to view matchups.", class_name=TEXT_SECONDARY
+                        "Select a league to view matchups.",
+                        class_name=TEXT_SECONDARY,
                     ),
                     class_name=EMPTY_STATE,
                 ),
@@ -165,7 +183,8 @@ def matchups_page() -> rx.Component:
                     ),
                     rx.el.div(
                         rx.icon(
-                            "calendar-x", class_name="w-12 h-12 text-gray-300 mb-4"
+                            "calendar-x",
+                            class_name="w-12 h-12 text-gray-300 mb-4",
                         ),
                         rx.el.h3(
                             "No Matchups",

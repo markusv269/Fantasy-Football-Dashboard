@@ -33,7 +33,9 @@ class AppState(rx.State):
         if trending:
             self.trending_adds = enrich_trending(trending)
 
-    def _normalize_league(self, lg: dict, live_data: dict | None = None) -> dict:
+    def _normalize_league(
+        self, lg: dict, live_data: dict | None = None
+    ) -> dict:
         """Normalize a Supabase league row to the shape the UI expects."""
         raw_id = str(lg.get("league_id", ""))
         league_id = raw_id.strip('"').strip()
@@ -67,7 +69,9 @@ class AppState(rx.State):
                 result = client.table("leagues").select("*").execute()
                 if result and result.data:
                     raw_leagues = result.data
-                    use_live = len(raw_leagues) <= 10 # Nur bei 10 oder weniger Ligen Live-Daten abrufen, um Performance zu schonen
+                    use_live = (
+                        len(raw_leagues) <= 10
+                    )  # Nur bei 10 oder weniger Ligen Live-Daten abrufen, um Performance zu schonen
                     # use_live = True  # Immer Live-Daten verwenden, um die Genauigkeit zu gewährleisten
                     normalized = []
                     for lg in raw_leagues:
@@ -81,7 +85,9 @@ class AppState(rx.State):
                                 )
                         normalized.append(self._normalize_league(lg, live_data))
                     self.leagues_data = normalized
-                    self.configured_league_ids = [lg["league_id"] for lg in normalized]
+                    self.configured_league_ids = [
+                        lg["league_id"] for lg in normalized
+                    ]
                 else:
                     self.leagues_data = []
                     self.configured_league_ids = []
@@ -91,10 +97,95 @@ class AppState(rx.State):
 
     @rx.event
     def select_league(self, league_id: str):
-        self.selected_league_id = league_id.strip('"')  # Remove extra quotes if present
+        self.selected_league_id = league_id.strip(
+            '"'
+        )  # Remove extra quotes if present
 
     @rx.event
     def init_app(self):
         yield AppState.fetch_nfl_state
         yield AppState.fetch_trending
         yield AppState.fetch_all_leagues_data
+
+    @rx.var
+    def current_season(self) -> str:
+        seasons: list[int] = []
+        for lg in self.leagues_data:
+            s = str(lg.get("season", ""))
+            if s.isdigit():
+                seasons.append(int(s))
+        if seasons:
+            return str(max(seasons))
+        nfl_season = self.nfl_state.get("season", "")
+        if nfl_season:
+            return str(nfl_season)
+        return ""
+
+    @rx.var
+    def current_dynasty_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        cs = self.current_season
+        return [
+            lg
+            for lg in self.leagues_data
+            if str(lg.get("season", "")) == cs
+            and str(lg.get("status", "")).lower() == "dynasty"
+        ]
+
+    @rx.var
+    def current_redraft_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        cs = self.current_season
+        return [
+            lg
+            for lg in self.leagues_data
+            if str(lg.get("season", "")) == cs
+            and str(lg.get("status", "")).lower() == "redraft"
+        ]
+
+    @rx.var
+    def archived_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        cs = self.current_season
+        return [
+            lg for lg in self.leagues_data if str(lg.get("season", "")) != cs
+        ]
+
+    @rx.var
+    def archive_seasons(self) -> list[str]:
+        seasons = {str(lg.get("season", "")) for lg in self.archived_leagues}
+        seasons.discard("")
+        return sorted(seasons, reverse=True)
+
+    @rx.var
+    def archived_dynasty_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        return [
+            lg
+            for lg in self.archived_leagues
+            if str(lg.get("status", "")).lower() == "dynasty"
+        ]
+
+    @rx.var
+    def archived_redraft_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        return [
+            lg
+            for lg in self.archived_leagues
+            if str(lg.get("status", "")).lower() == "redraft"
+        ]
+
+    @rx.var
+    def archived_other_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        return [
+            lg
+            for lg in self.archived_leagues
+            if str(lg.get("status", "")).lower() not in ("dynasty", "redraft")
+        ]

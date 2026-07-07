@@ -29,12 +29,14 @@ def roster_card(roster: rx.Var) -> rx.Component:
                 ),
                 rx.el.span(
                     f"{roster_settings['wins']}-{roster_settings['losses']}-{roster_settings['ties']}",
-                    class_name="font-semibold " + t("text-gray-300", "text-gray-700"),
+                    class_name="font-semibold "
+                    + t("text-gray-300", "text-gray-700"),
                 ),
             ),
             rx.el.div(
                 rx.el.span(
-                    "PF", class_name="text-xs text-gray-400 font-bold uppercase block"
+                    "PF",
+                    class_name="text-xs text-gray-400 font-bold uppercase block",
                 ),
                 rx.el.span(
                     roster_settings["fpts"].to_string(),
@@ -101,7 +103,8 @@ def roster_detail() -> rx.Component:
                 class_name="flex items-center rounded-xl py-2 "
                 + t("bg-[#161926]", "bg-gray-50"),
             ),
-            class_name=CARD + " flex justify-between items-center p-6 mb-6 shadow-sm",
+            class_name=CARD
+            + " flex justify-between items-center p-6 mb-6 shadow-sm",
         ),
         rx.el.div(
             rx.el.div(
@@ -165,7 +168,10 @@ def roster_detail() -> rx.Component:
                         ),
                     ),
                     class_name="rounded-xl overflow-hidden shadow-sm border "
-                    + t("bg-[#1C2033] border-gray-800", "bg-white border-gray-200"),
+                    + t(
+                        "bg-[#1C2033] border-gray-800",
+                        "bg-white border-gray-200",
+                    ),
                 ),
                 class_name="flex-1",
             ),
@@ -183,7 +189,8 @@ def roster_detail() -> rx.Component:
                             lambda p: rx.el.div(
                                 rx.el.span(
                                     p["full_name"],
-                                    class_name="font-bold text-sm " + TEXT_PRIMARY,
+                                    class_name="font-bold text-sm "
+                                    + TEXT_PRIMARY,
                                 ),
                                 rx.el.div(
                                     rx.el.span(
@@ -232,7 +239,10 @@ def roster_detail() -> rx.Component:
                             ),
                         ),
                         class_name="rounded-xl overflow-hidden shadow-sm border "
-                        + t("bg-[#1C2033] border-gray-800", "bg-white border-gray-200"),
+                        + t(
+                            "bg-[#1C2033] border-gray-800",
+                            "bg-white border-gray-200",
+                        ),
                     ),
                     rx.el.p(
                         "No players on reserve/IR.",
@@ -252,7 +262,7 @@ def roster_detail() -> rx.Component:
 
 def rosters_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1("Rosters", class_name=H1 + " mb-2"),
                 rx.el.p(
@@ -269,10 +279,14 @@ def rosters_page() -> rx.Component:
                     rx.cond(
                         AppState.selected_league_id == "",
                         rx.el.div(
-                            rx.icon("users", class_name="w-12 h-12 text-gray-300 mb-4"),
+                            rx.icon(
+                                "users",
+                                class_name="w-12 h-12 text-gray-300 mb-4",
+                            ),
                             rx.el.h3(
                                 "No League Selected",
-                                class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
+                                class_name="text-xl font-bold mb-2 "
+                                + TEXT_PRIMARY,
                             ),
                             rx.el.p(
                                 "Select a league to view rosters.",
@@ -281,7 +295,9 @@ def rosters_page() -> rx.Component:
                             class_name=EMPTY_STATE,
                         ),
                         rx.el.div(
-                            rx.foreach(MatchupsState.standings_data, roster_card),
+                            rx.foreach(
+                                MatchupsState.standings_data, roster_card
+                            ),
                             class_name="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6",
                         ),
                     ),

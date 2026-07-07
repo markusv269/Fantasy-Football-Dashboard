@@ -134,7 +134,9 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
                     class_name="w-4 h-4 mr-2 text-gray-400",
                 ),
                 rx.el.span(
-                    rx.cond(is_scheduled, draft["start_date_str"].to(str), "TBD"),
+                    rx.cond(
+                        is_scheduled, draft["start_date_str"].to(str), "TBD"
+                    ),
                     class_name=rx.cond(
                         is_scheduled,
                         t(
@@ -154,7 +156,9 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
                     f"{draft['rounds'].to(str)} Rounds",
                     class_name=BADGE_SUBTLE + " mr-2",
                 ),
-                rx.el.span(f"{draft['teams'].to(str)} Teams", class_name=BADGE_SUBTLE),
+                rx.el.span(
+                    f"{draft['teams'].to(str)} Teams", class_name=BADGE_SUBTLE
+                ),
                 class_name="flex items-center",
             ),
         ),
@@ -181,7 +185,8 @@ def historical_draft_row(draft: dict) -> rx.Component:
                 rx.el.span(
                     draft["league_name"].to(str),
                     class_name=t(
-                        "font-bold text-white block", "font-bold text-gray-900 block"
+                        "font-bold text-white block",
+                        "font-bold text-gray-900 block",
                     ),
                 ),
                 rx.el.span(
@@ -255,7 +260,7 @@ def historical_draft_row(draft: dict) -> rx.Component:
 
 def drafts_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1(
                     rx.icon(
@@ -343,12 +348,16 @@ def drafts_page() -> rx.Component:
                         DraftState.filtered_upcoming.length() > 0,
                         rx.el.div(
                             rx.foreach(
-                                DraftState.filtered_upcoming, upcoming_draft_card
+                                DraftState.filtered_upcoming,
+                                upcoming_draft_card,
                             ),
                             class_name="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6",
                         ),
                         rx.el.div(
-                            rx.icon("ghost", class_name="w-12 h-12 text-gray-300 mb-4"),
+                            rx.icon(
+                                "ghost",
+                                class_name="w-12 h-12 text-gray-300 mb-4",
+                            ),
                             rx.el.h3(
                                 "No Drafts Found",
                                 class_name=t(
@@ -373,7 +382,9 @@ def drafts_page() -> rx.Component:
                     ),
                     rx.el.button(
                         rx.cond(
-                            DraftState.show_all_historical, "Show Less", "Show All"
+                            DraftState.show_all_historical,
+                            "Show Less",
+                            "Show All",
                         ),
                         on_click=DraftState.toggle_historical,
                         class_name="text-sm font-bold text-emerald-600 hover:text-emerald-700",

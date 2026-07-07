@@ -10,7 +10,9 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
         rx.el.td(
             rx.el.span(
                 index + 1,
-                class_name=t("text-gray-400 font-bold", "text-gray-500 font-bold"),
+                class_name=t(
+                    "text-gray-400 font-bold", "text-gray-500 font-bold"
+                ),
             ),
             class_name=t(
                 "p-3 w-12 text-center border-b border-gray-800",
@@ -22,7 +24,8 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
                 rx.el.span(
                     player["full_name"].to(str),
                     class_name=t(
-                        "font-bold text-white mr-2", "font-bold text-gray-900 mr-2"
+                        "font-bold text-white mr-2",
+                        "font-bold text-gray-900 mr-2",
                     ),
                 ),
                 rx.el.span(
@@ -74,12 +77,15 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
                 rx.el.span(
                     player["count"].to_string(),
                     class_name=t(
-                        "font-bold text-gray-200 mr-2", "font-bold text-gray-700 mr-2"
+                        "font-bold text-gray-200 mr-2",
+                        "font-bold text-gray-700 mr-2",
                     ),
                 ),
                 rx.cond(
                     is_add,
-                    rx.icon("trending-up", class_name="w-4 h-4 text-emerald-500"),
+                    rx.icon(
+                        "trending-up", class_name="w-4 h-4 text-emerald-500"
+                    ),
                     rx.icon("trending-down", class_name="w-4 h-4 text-red-500"),
                 ),
                 class_name="flex items-center justify-end",
@@ -90,19 +96,21 @@ def trending_player_row(player: dict, index: int, is_add: bool) -> rx.Component:
             ),
         ),
         class_name=t(
-            "hover:bg-[#161926] transition-colors", "hover:bg-gray-50 transition-colors"
+            "hover:bg-[#161926] transition-colors",
+            "hover:bg-gray-50 transition-colors",
         ),
     )
 
 
 def trending_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.div(
                     rx.el.h1(
                         rx.icon(
-                            "flame", class_name="w-8 h-8 mr-3 text-orange-500 inline"
+                            "flame",
+                            class_name="w-8 h-8 mr-3 text-orange-500 inline",
                         ),
                         "Trending Players",
                         class_name=t(
@@ -113,14 +121,17 @@ def trending_page() -> rx.Component:
                     rx.el.p(
                         "The most added and dropped players across Sleeper leagues.",
                         class_name=t(
-                            "text-gray-400 font-medium", "text-gray-500 font-medium"
+                            "text-gray-400 font-medium",
+                            "text-gray-500 font-medium",
                         ),
                     ),
                 ),
                 rx.el.div(
                     rx.el.button(
                         "24 Hours",
-                        on_click=CommunityState.change_trending_timeframe("24h"),
+                        on_click=CommunityState.change_trending_timeframe(
+                            "24h"
+                        ),
                         class_name=rx.cond(
                             CommunityState.trending_timeframe == "24h",
                             "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-l-lg transition-colors",
@@ -132,7 +143,9 @@ def trending_page() -> rx.Component:
                     ),
                     rx.el.button(
                         "48 Hours",
-                        on_click=CommunityState.change_trending_timeframe("48h"),
+                        on_click=CommunityState.change_trending_timeframe(
+                            "48h"
+                        ),
                         class_name=rx.cond(
                             CommunityState.trending_timeframe == "48h",
                             "px-4 py-2 text-sm font-bold bg-[#DC2626] text-white rounded-r-lg transition-colors",

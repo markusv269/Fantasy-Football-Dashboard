@@ -38,14 +38,18 @@ def standings_row(team: dict) -> rx.Component:
                         "w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center",
                     ),
                     "w-8 h-8 rounded-full font-bold flex items-center justify-center "
-                    + t("bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"),
+                    + t(
+                        "bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"
+                    ),
                 ),
             ),
             class_name="p-4",
         ),
         rx.el.td(
             rx.el.div(
-                rx.el.div(team["team_name"], class_name="font-bold " + TEXT_PRIMARY),
+                rx.el.div(
+                    team["team_name"], class_name="font-bold " + TEXT_PRIMARY
+                ),
                 rx.el.div(
                     team["owner_name"],
                     class_name="text-xs font-medium " + TEXT_SECONDARY,
@@ -69,13 +73,16 @@ def standings_row(team: dict) -> rx.Component:
             + t("text-gray-300", "text-gray-700"),
         ),
         rx.el.td(
-            team["win_pct"], class_name="p-4 font-medium text-center " + TEXT_SECONDARY
+            team["win_pct"],
+            class_name="p-4 font-medium text-center " + TEXT_SECONDARY,
         ),
         rx.el.td(
-            team["fpts"], class_name="p-4 font-semibold text-[#DC2626] text-right"
+            team["fpts"],
+            class_name="p-4 font-semibold text-[#DC2626] text-right",
         ),
         rx.el.td(
-            team["fpts_against"], class_name="p-4 font-medium text-[#5B7BA5] text-right"
+            team["fpts_against"],
+            class_name="p-4 font-medium text-[#5B7BA5] text-right",
         ),
         on_click=MatchupsState.view_roster(team["roster_id"].to(int)),
         class_name=TABLE_ROW + " cursor-pointer",
@@ -84,7 +91,7 @@ def standings_row(team: dict) -> rx.Component:
 
 def standings_page() -> rx.Component:
     return layout(
-        rx.el.div(
+        rx.box(
             rx.el.div(
                 rx.el.h1("Standings", class_name=H1 + " mb-2"),
                 rx.el.p(
@@ -97,13 +104,17 @@ def standings_page() -> rx.Component:
             rx.cond(
                 AppState.selected_league_id == "",
                 rx.el.div(
-                    rx.icon("list-ordered", class_name="w-12 h-12 text-gray-300 mb-4"),
+                    rx.icon(
+                        "list-ordered",
+                        class_name="w-12 h-12 text-gray-300 mb-4",
+                    ),
                     rx.el.h3(
                         "No League Selected",
                         class_name="text-xl font-bold mb-2 " + TEXT_PRIMARY,
                     ),
                     rx.el.p(
-                        "Select a league to view standings.", class_name=TEXT_SECONDARY
+                        "Select a league to view standings.",
+                        class_name=TEXT_SECONDARY,
                     ),
                     class_name=EMPTY_STATE,
                 ),
@@ -114,11 +125,13 @@ def standings_page() -> rx.Component:
                                 rx.el.tr(
                                     rx.el.th(
                                         "Rank",
-                                        class_name=TABLE_HEADER_CELL + " p-4 text-left",
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-left",
                                     ),
                                     rx.el.th(
                                         "Team",
-                                        class_name=TABLE_HEADER_CELL + " p-4 text-left",
+                                        class_name=TABLE_HEADER_CELL
+                                        + " p-4 text-left",
                                     ),
                                     rx.el.th(
                                         "W",
@@ -154,7 +167,9 @@ def standings_page() -> rx.Component:
                                 )
                             ),
                             rx.el.tbody(
-                                rx.foreach(MatchupsState.standings_data, standings_row)
+                                rx.foreach(
+                                    MatchupsState.standings_data, standings_row
+                                )
                             ),
                             class_name="min-w-full table-auto",
                         ),
