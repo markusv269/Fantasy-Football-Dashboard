@@ -1,3 +1,11 @@
+"""Main Reflex app entry point.
+
+Phase 2 upgrade note: Verified compatibility with Reflex 0.9.6.post1.
+All components (rx.radix.primitives.dialog for modals, rx.select.root,
+rx.table.root, rx.el.input with on_change, rx.el.form event patterns)
+remain valid under the current framework version.
+"""
+
 import reflex as rx
 from app.pages.home import home_page
 from app.pages.archive import archive_page

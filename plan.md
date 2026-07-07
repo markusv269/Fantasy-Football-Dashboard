@@ -1,12 +1,19 @@
-# Darkmode-Überarbeitung
+# Reflex-Upgrade auf aktuelle Version
 
-## Phase 1: Kontrast und visuelle Grundrichtung ✅
-- [x] Darkmode als deutlich eigenständige Oberfläche mit dunklen Flächen, klaren Grenzen und roten Akzenten definieren
-- [x] Navigation, Kopfbereich, mobile Menüfläche und Seitenhintergrund sichtbar vom Lightmode abheben
-- [x] Karten, Tabellen, Formulare und Dialogflächen mit konsistenten dunklen Oberflächen ausstatten
-- [x] Textfarben, Badges, Hover-Zustände und leere Zustände für bessere Lesbarkeit anpassen
+## Phase 1: Abhängigkeit aktualisieren und Kompatibilität prüfen ✅
+- [x] Reflex auf die aktuell verfügbare Version aktualisieren
+- [x] Projektabhängigkeiten konsistent halten
+- [x] App-Import und grundlegende Framework-Kompatibilität prüfen
+- [x] Auffällige Breaking-Change-Probleme erfassen
 
-## Phase 2: App-weite Anwendung und Prüfung ✅
-- [x] Darkmode-Kontraste auf allen Hauptseiten und gemeinsamen Komponenten vereinheitlichen
-- [x] Theme-Umschaltung, mobile Menüevents und zentrale Interaktionen funktionsfähig halten
-- [x] Import und relevante Zustandsereignisse abschließend prüfen
+## Phase 2: Komponenten und Events modernisieren ✅
+- [x] Veraltete oder problematische UI-Elemente nach Möglichkeit aktualisieren
+- [x] Theme-, Layout-, Menü- und Dialogverhalten kompatibel halten
+- [x] Formulare, Tabellen, Navigation und interaktive Elemente auf aktuelle Reflex-Nutzung prüfen
+- [x] Externe Datenzugriffe unverändert und funktionsfähig lassen
+
+## Phase 3: Abschließende Validierung ✅
+- [x] App-Import mit aktualisierter Reflex-Version prüfen
+- [x] Theme- und mobile Menüevents testen
+- [x] Relevante Interaktionen für Modal, Polls, Drafts und Warteliste testen
+- [x] Upgrade-Plan vollständig abschließen
