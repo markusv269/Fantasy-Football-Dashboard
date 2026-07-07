@@ -123,7 +123,7 @@ def league_detail_modal() -> rx.Component:
         rx.radix.primitives.dialog.portal(
             rx.radix.primitives.dialog.overlay(
                 on_click=LeagueDetailState.close_league_modal,
-                class_name="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer",
+                class_name="fixed inset-0 bg-black/75 z-40 cursor-pointer transition-opacity",
             ),
             rx.radix.primitives.dialog.content(
                 rx.cond(
@@ -159,15 +159,15 @@ def league_detail_modal() -> rx.Component:
                                 rx.icon(
                                     "x",
                                     class_name=t(
-                                        "w-5 h-5 text-gray-300",
-                                        "w-5 h-5 text-gray-600",
+                                        "w-5 h-5 text-gray-400 hover:text-white",
+                                        "w-5 h-5 text-gray-500 hover:text-gray-900",
                                     ),
                                 ),
                                 on_click=LeagueDetailState.close_league_modal,
                                 type="button",
                                 class_name="p-2 rounded-full transition-colors z-10 "
                                 + t(
-                                    "hover:bg-gray-800 bg-[#161926]",
+                                    "hover:bg-gray-800 bg-[#1C2033]",
                                     "hover:bg-gray-100 bg-white",
                                 ),
                             ),
@@ -190,14 +190,14 @@ def league_detail_modal() -> rx.Component:
                                     f"{LeagueDetailState.modal_champion['team_name'].to(str)} ({LeagueDetailState.modal_champion['display_name'].to(str)})",
                                     class_name="font-bold text-yellow-900 ml-1",
                                 ),
-                                class_name="flex items-center bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6",
+                                class_name="flex items-center bg-yellow-50 border border-yellow-200 p-4 rounded-xl mb-6 shadow-xs",
                             ),
                         ),
                         rx.el.div(
                             rx.el.h3(
                                 "Standings",
                                 class_name="text-lg font-bold mb-3 "
-                                + t("text-gray-200", "text-gray-800"),
+                                + t("text-gray-100", "text-gray-900"),
                             ),
                             rx.cond(
                                 LeagueDetailState.modal_standings.length() > 0,
@@ -262,8 +262,8 @@ def league_detail_modal() -> rx.Component:
                                     "No standings available.",
                                     class_name="text-sm italic p-4 border border-dashed rounded-xl "
                                     + t(
-                                        "text-gray-400 border-gray-800",
-                                        "text-gray-500 border-gray-200",
+                                        "text-gray-400 border-gray-800 bg-gray-900/20",
+                                        "text-gray-500 border-gray-200 bg-gray-50",
                                     ),
                                 ),
                             ),
@@ -273,7 +273,7 @@ def league_detail_modal() -> rx.Component:
                             rx.el.h3(
                                 "Recent Matchups",
                                 class_name="text-lg font-bold mb-3 "
-                                + t("text-gray-200", "text-gray-800"),
+                                + t("text-gray-100", "text-gray-900"),
                             ),
                             rx.cond(
                                 LeagueDetailState.modal_recent_matchups.length()
@@ -297,7 +297,7 @@ def league_detail_modal() -> rx.Component:
                             rx.el.h3(
                                 "Roster Settings",
                                 class_name="text-lg font-bold mb-3 "
-                                + t("text-gray-200", "text-gray-800"),
+                                + t("text-gray-100", "text-gray-900"),
                             ),
                             rx.cond(
                                 LeagueDetailState.modal_roster_positions.length()
@@ -307,10 +307,10 @@ def league_detail_modal() -> rx.Component:
                                         LeagueDetailState.modal_roster_positions,
                                         lambda pos: rx.el.span(
                                             pos,
-                                            class_name="px-2 py-1 text-xs font-bold rounded-md "
+                                            class_name="px-2.5 py-1 text-xs font-bold rounded-md shadow-xs "
                                             + t(
-                                                "bg-gray-800 text-gray-300",
-                                                "bg-gray-100 text-gray-700",
+                                                "bg-gray-800 text-gray-100",
+                                                "bg-gray-100 text-gray-900",
                                             ),
                                         ),
                                     ),
@@ -324,7 +324,7 @@ def league_detail_modal() -> rx.Component:
                         ),
                     ),
                 ),
-                class_name="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 "
+                class_name="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-xl p-6 w-[95%] sm:w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 border-none "
                 + t("bg-[#1C2033] text-white", "bg-white text-gray-900"),
             ),
         ),
