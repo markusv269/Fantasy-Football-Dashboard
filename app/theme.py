@@ -3,14 +3,14 @@ from app.states.theme_state import ThemeState
 
 BRAND_RED = "#DC2626"
 BRAND_RED_HOVER = "#B91C1C"
-BRAND_BLUE = "#5B7BA5"
-DARK_BG_PAGE = "#0F1119"
-DARK_BG_SIDEBAR = "#161926"
-DARK_BG_CARD = "#1C2033"
-DARK_BORDER = "gray-800"
-DARK_TEXT_PRIMARY = "white"
-DARK_TEXT_SECONDARY = "gray-400"
-DARK_TEXT_MUTED = "gray-500"
+BRAND_BLUE = "#94A3B8"
+DARK_BG_PAGE = "#08090D"
+DARK_BG_SIDEBAR = "#040507"
+DARK_BG_CARD = "#12141C"
+DARK_BORDER = "white/10"
+DARK_TEXT_PRIMARY = "slate-50"
+DARK_TEXT_SECONDARY = "slate-400"
+DARK_TEXT_MUTED = "slate-500"
 LIGHT_BG_PAGE = "#F8F9FC"
 LIGHT_BG_SIDEBAR = "white"
 LIGHT_BG_CARD = "white"
@@ -31,7 +31,9 @@ CARD = t(
     f"bg-{LIGHT_BG_CARD} border border-{LIGHT_BORDER} shadow-sm rounded-2xl",
 )
 TEXT_PRIMARY = t(f"text-{DARK_TEXT_PRIMARY}", f"text-{LIGHT_TEXT_PRIMARY}")
-TEXT_SECONDARY = t(f"text-{DARK_TEXT_SECONDARY}", f"text-{LIGHT_TEXT_SECONDARY}")
+TEXT_SECONDARY = t(
+    f"text-{DARK_TEXT_SECONDARY}", f"text-{LIGHT_TEXT_SECONDARY}"
+)
 TEXT_MUTED = t(f"text-{DARK_TEXT_MUTED}", f"text-{LIGHT_TEXT_MUTED}")
 H1 = t("text-3xl font-bold text-white", "text-3xl font-bold text-gray-900")
 H2 = t("text-2xl font-bold text-white", "text-2xl font-bold text-gray-800")

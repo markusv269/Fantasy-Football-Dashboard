@@ -89,7 +89,9 @@ def standings_row(team: dict) -> rx.Component:
             ),
         ),
         on_click=MatchupsState.view_roster(team["roster_id"].to(int)),
-        class_name="cursor-pointer hover:bg-[#DC2626]/5 transition-colors",
+        class_name="cursor-pointer "
+        + t("hover:bg-white/5", "hover:bg-gray-50")
+        + " transition-colors",
     )
 
 

@@ -268,7 +268,10 @@ def _form_state() -> rx.Component:
                     align="center",
                     padding="8px 12px",
                     border_radius="8px",
-                    class_name="bg-emerald-50 border border-emerald-200",
+                    class_name=t(
+                        "bg-emerald-500/10 border border-emerald-500/30",
+                        "bg-emerald-50 border border-emerald-200",
+                    ),
                 ),
                 rx.cond(
                     WaitlistState.username_error != "",
@@ -301,7 +304,10 @@ def _form_state() -> rx.Component:
                         align="start",
                         padding="12px",
                         border_radius="8px",
-                        class_name="bg-blue-50 border border-blue-200",
+                        class_name=t(
+                            "bg-blue-500/10 border border-blue-500/30",
+                            "bg-blue-50 border border-blue-200",
+                        ),
                         width="100%",
                     ),
                 ),

@@ -136,7 +136,7 @@ def matchup_card(matchup: dict) -> rx.Component:
         padding="12px",
         border_radius="12px",
         class_name="border "
-        + t("bg-[#161926] border-gray-700", "bg-gray-50 border-gray-200"),
+        + t("bg-[#08090D] border-white/5", "bg-gray-50 border-gray-200"),
     )
 
 
@@ -184,23 +184,26 @@ def _champion() -> rx.Component:
     return rx.cond(
         LeagueDetailState.modal_champion.contains("team_name"),
         rx.hstack(
-            rx.icon("trophy", size=20, color="#CA8A04"),
+            rx.icon("trophy", size=20, color="#F59E0B"),
             rx.text(
                 "League Champion: ",
                 weight="medium",
-                class_name="text-yellow-800",
+                class_name=t("text-yellow-200", "text-yellow-800"),
             ),
             rx.text(
                 f"{LeagueDetailState.modal_champion['team_name'].to(str)} ({LeagueDetailState.modal_champion['display_name'].to(str)})",
                 weight="bold",
-                class_name="text-yellow-900",
+                class_name=t("text-yellow-100", "text-yellow-900"),
             ),
             spacing="2",
             align="center",
             padding="16px",
             border_radius="12px",
             margin_bottom="24px",
-            class_name="bg-yellow-50 border border-yellow-200",
+            class_name=t(
+                "bg-yellow-500/10 border border-yellow-500/30",
+                "bg-yellow-50 border border-yellow-200",
+            ),
         ),
     )
 
@@ -357,8 +360,8 @@ def league_detail_modal() -> rx.Component:
                         align="stretch",
                     ),
                 ),
-                class_name="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-xl p-6 w-[95%] sm:w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 border-none "
-                + t("bg-[#1C2033] text-white", "bg-white text-gray-900"),
+                class_name="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl shadow-2xl p-6 w-[95%] sm:w-full max-w-4xl max-h-[85vh] overflow-y-auto z-50 border border-white/10 "
+                + t("bg-[#12141C] text-slate-50", "bg-white text-gray-900"),
             ),
         ),
         open=LeagueDetailState.show_modal,

@@ -58,13 +58,13 @@ def poll_option_result(poll: dict, option: dict) -> rx.Component:
         rx.box(
             rx.box(
                 class_name=t(
-                    "h-full bg-emerald-500/30 rounded-full transition-all duration-1000",
+                    "h-full bg-emerald-500/40 rounded-full transition-all duration-1000 shadow-inner shadow-emerald-900/50",
                     "h-full bg-emerald-100 rounded-full transition-all duration-1000",
                 ),
                 style={"width": f"{pct}%"},
             ),
             class_name=t(
-                "h-8 w-full bg-gray-800 rounded-full overflow-hidden absolute top-0 left-0",
+                "h-8 w-full bg-black/30 border border-white/5 rounded-full overflow-hidden absolute top-0 left-0",
                 "h-8 w-full bg-gray-100 rounded-full overflow-hidden absolute top-0 left-0",
             ),
         ),

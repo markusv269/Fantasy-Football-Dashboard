@@ -34,8 +34,8 @@ def _nav_link(item: dict) -> rx.Component:
         padding_y="10px",
         border_radius="8px",
         class_name=t(
-            "text-gray-300 hover:bg-gray-800 hover:text-[#DC2626] transition-colors",
-            "text-gray-700 hover:bg-gray-100 hover:text-[#DC2626] transition-colors",
+            "text-slate-400 hover:bg-white/5 hover:text-[#DC2626] transition-all",
+            "text-gray-700 hover:bg-gray-100 hover:text-[#DC2626] transition-all",
         ),
     )
 
@@ -50,7 +50,7 @@ def sidebar_std() -> rx.Component:
             padding="20px",
             width="100%",
             class_name=t(
-                "border-b border-gray-800", "border-b border-gray-200"
+                "border-b border-white/5 shadow-sm", "border-b border-gray-200"
             ),
         ),
         rx.vstack(
@@ -140,7 +140,7 @@ def sidebar_std() -> rx.Component:
         width="260px",
         height="100vh",
         class_name=t(
-            "bg-[#161926] border-r border-gray-800 hidden md:flex",
+            "bg-[#040507] border-r border-white/5 hidden md:flex",
             "bg-white border-r border-gray-200 hidden md:flex",
         ),
     )
@@ -180,7 +180,7 @@ def mobile_drawer_std() -> rx.Component:
                 padding="20px",
                 align="center",
                 class_name=t(
-                    "border-b border-gray-800 bg-[#1C2033]",
+                    "border-b border-white/10 bg-[#12141C]",
                     "border-b border-gray-200 bg-gray-50",
                 ),
             ),
@@ -207,7 +207,7 @@ def mobile_drawer_std() -> rx.Component:
                         padding_x="20px",
                         padding_y="16px",
                         class_name=t(
-                            "text-gray-300 border-b border-gray-800/50 hover:bg-gray-800 hover:text-white active:bg-gray-700",
+                            "text-slate-400 border-b border-white/5 hover:bg-white/5 hover:text-white active:bg-white/10",
                             "text-gray-700 border-b border-gray-100 hover:bg-gray-50 hover:text-[#DC2626] active:bg-gray-100",
                         ),
                     )
@@ -241,13 +241,14 @@ def mobile_drawer_std() -> rx.Component:
                     width="100%",
                     size="3",
                     class_name=t(
-                        "bg-gray-800 text-white", "bg-gray-900 text-white"
+                        "bg-slate-800 text-white hover:bg-slate-700",
+                        "bg-gray-900 text-white",
                     ),
                 ),
                 padding="20px",
                 width="100%",
                 class_name=t(
-                    "bg-[#1C2033] border-t border-gray-800",
+                    "bg-[#12141C] border-t border-white/10",
                     "bg-gray-50 border-t border-gray-200",
                 ),
             ),
@@ -267,7 +268,7 @@ def mobile_drawer_std() -> rx.Component:
             ),
             transition="transform 400ms cubic-bezier(0.4, 0, 0.2, 1)",
             class_name=t(
-                "bg-[#161926] shadow-2xl border-t border-gray-800 md:hidden",
+                "bg-[#08090D] shadow-2xl border-t border-white/10 md:hidden",
                 "bg-white shadow-2xl border-t border-gray-200 md:hidden",
             ),
         ),
@@ -372,7 +373,7 @@ def header_std() -> rx.Component:
         top="0",
         z_index="30",
         class_name=t(
-            "bg-[#161926] border-b border-gray-800",
+            "bg-[#040507] border-b border-white/5 shadow-sm",
             "bg-white border-b border-gray-200",
         ),
     )
@@ -404,7 +405,7 @@ def layout(content: rx.Component) -> rx.Component:
                 min_width="0",
                 height="100vh",
                 overflow="hidden",
-                class_name=t("bg-[#0F1119]", "bg-[#F8F9FC]"),
+                class_name=t("bg-[#08090D]", "bg-[#F8F9FC]"),
             ),
             width="100vw",
             height="100vh",

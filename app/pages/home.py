@@ -89,7 +89,10 @@ def league_card(league: dict) -> rx.Component:
         ),
         size="2",
         class_name="cursor-pointer hover:border-[#DC2626] transition-all "
-        + t("bg-[#1C2033] border-gray-800", "bg-white border-gray-200"),
+        + t(
+            "bg-[#12141C] border-white/10 shadow-lg",
+            "bg-white border-gray-200 shadow-sm",
+        ),
     )
 
 

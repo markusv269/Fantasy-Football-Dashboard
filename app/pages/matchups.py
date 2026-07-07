@@ -78,7 +78,7 @@ def week_selector() -> rx.Component:
         padding="8px 12px",
         border_radius="9999px",
         class_name=t(
-            "bg-[#1C2033] border border-gray-800",
+            "bg-[#12141C] border border-white/10",
             "bg-white border border-gray-200",
         ),
     )
