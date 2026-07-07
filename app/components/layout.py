@@ -16,13 +16,6 @@ nav_items = [
     {"icon": "archive", "label": "Archiv", "href": "/archive"},
     {"icon": "clipboard-list", "label": "Warteliste", "href": "/waitinglist"},
 ]
-bottom_nav_items = [
-    {"icon": "house", "label": "Home", "href": "/"},
-    {"icon": "trophy", "label": "Leagues", "href": "/leagues"},
-    {"icon": "swords", "label": "Matchups", "href": "/matchups"},
-    {"icon": "file-text", "label": "Drafts", "href": "/drafts"},
-    {"icon": "menu", "label": "More", "href": "#"},
-]
 
 
 def _nav_link(item: dict) -> rx.Component:
@@ -149,62 +142,6 @@ def sidebar_std() -> rx.Component:
         class_name=t(
             "bg-[#161926] border-r border-gray-800 hidden md:flex",
             "bg-white border-r border-gray-200 hidden md:flex",
-        ),
-    )
-
-
-def _bottom_nav_item(item: dict) -> rx.Component:
-    inner = rx.vstack(
-        rx.icon(item["icon"], size=22),
-        rx.text(item["label"], size="1", weight="medium"),
-        spacing="1",
-        align="center",
-        justify="center",
-    )
-    return rx.cond(
-        item["label"] == "More",
-        rx.button(
-            inner,
-            on_click=ThemeState.toggle_mobile_sidebar,
-            variant="ghost",
-            color_scheme="gray",
-            width="100%",
-            height="100%",
-        ),
-        rx.link(
-            inner,
-            href=item["href"],
-            underline="none",
-            width="100%",
-            height="100%",
-            display="flex",
-            align_items="center",
-            justify_content="center",
-            class_name=t(
-                "text-gray-400 hover:text-[#DC2626]",
-                "text-gray-500 hover:text-[#DC2626]",
-            ),
-        ),
-    )
-
-
-def mobile_bottom_nav() -> rx.Component:
-    return rx.hstack(
-        *[
-            rx.box(_bottom_nav_item(item), flex="1", height="100%")
-            for item in bottom_nav_items
-        ],
-        spacing="0",
-        width="100%",
-        height="64px",
-        position="fixed",
-        bottom="0",
-        left="0",
-        right="0",
-        z_index="40",
-        class_name=t(
-            "bg-[#161926] border-t border-gray-800 md:hidden",
-            "bg-white border-t border-gray-200 md:hidden",
         ),
     )
 
@@ -411,13 +348,12 @@ def layout(content: rx.Component) -> rx.Component:
                         margin="0 auto",
                         padding_x=["16px", "24px", "32px"],
                         padding_y=["20px", "24px", "32px"],
-                        padding_bottom=["96px", "96px", "40px"],
+                        padding_bottom=["40px", "40px", "40px"],
                     ),
                     flex="1",
                     width="100%",
                     overflow_y="auto",
                 ),
-                mobile_bottom_nav(),
                 mobile_drawer_std(),
                 direction="column",
                 flex="1",
