@@ -84,8 +84,8 @@ def league_card(league: dict) -> rx.Component:
             width="100%",
             align="stretch",
         ),
-        on_click=lambda: LeagueDetailState.open_league_modal(
-            league["league_id"].to_string()
+        on_click=LeagueDetailState.open_league_modal(
+            league["league_id"].to(str)
         ),
         size="2",
         class_name="cursor-pointer hover:border-[#DC2626] transition-all "

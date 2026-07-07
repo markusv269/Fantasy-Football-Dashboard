@@ -23,3 +23,7 @@ class ThemeState(rx.State):
     @rx.var
     def is_dark(self) -> bool:
         return self.color_mode == "dark"
+
+    @rx.var
+    def appearance(self) -> str:
+        return "dark" if self.color_mode == "dark" else "light"

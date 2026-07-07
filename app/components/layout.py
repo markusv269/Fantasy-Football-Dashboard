@@ -523,38 +523,44 @@ def header() -> rx.Component:
 
 
 def layout(content: rx.Component) -> rx.Component:
-    return rx.flex(
-        sidebar_std(),
+    return rx.theme(
         rx.flex(
-            header_std(),
-            rx.box(
+            sidebar_std(),
+            rx.flex(
+                header_std(),
                 rx.box(
-                    content,
+                    rx.box(
+                        content,
+                        width="100%",
+                        max_width="1280px",
+                        margin="0 auto",
+                        padding_x=["16px", "24px", "32px"],
+                        padding_y=["20px", "24px", "32px"],
+                        padding_bottom=["96px", "96px", "40px"],
+                    ),
+                    flex="1",
                     width="100%",
-                    max_width="1280px",
-                    margin="0 auto",
-                    padding_x=["16px", "24px", "32px"],
-                    padding_y=["20px", "24px", "32px"],
-                    padding_bottom=["96px", "96px", "40px"],
+                    overflow_y="auto",
                 ),
+                mobile_bottom_nav(),
+                mobile_drawer_std(),
+                direction="column",
                 flex="1",
-                width="100%",
-                overflow_y="auto",
+                min_width="0",
+                height="100vh",
+                overflow="hidden",
+                class_name=t("bg-[#0F1119]", "bg-[#F8F9FC]"),
             ),
-            mobile_bottom_nav(),
-            mobile_drawer_std(),
-            direction="column",
-            flex="1",
-            min_width="0",
+            width="100vw",
             height="100vh",
             overflow="hidden",
-            class_name=t("bg-[#0F1119]", "bg-[#F8F9FC]"),
+            class_name=t(
+                "font-['Inter'] text-[#F3F4F6]",
+                "font-['Inter'] text-gray-900",
+            ),
         ),
-        width="100vw",
-        height="100vh",
-        overflow="hidden",
-        class_name=t(
-            "font-['Inter'] text-[#F3F4F6]",
-            "font-['Inter'] text-gray-900",
-        ),
+        appearance=rx.cond(ThemeState.is_dark, "dark", "light"),
+        accent_color="red",
+        radius="large",
+        has_background=True,
     )

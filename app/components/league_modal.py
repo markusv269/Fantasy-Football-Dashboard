@@ -1,7 +1,13 @@
 import reflex as rx
 from app.states.league_detail_state import LeagueDetailState
 from app.states.theme_state import ThemeState
-from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY, TABLE_HEADER_ROW, TABLE_ROW
+from app.theme import (
+    t,
+    TEXT_PRIMARY,
+    TEXT_SECONDARY,
+    TABLE_HEADER_ROW,
+    TABLE_ROW,
+)
 
 
 def standing_row(team: dict) -> rx.Component:
@@ -24,7 +30,9 @@ def standing_row(team: dict) -> rx.Component:
                         "w-6 h-6 rounded-full bg-orange-100 text-orange-700 font-bold flex items-center justify-center",
                     ),
                     "w-6 h-6 rounded-full font-bold flex items-center justify-center "
-                    + t("bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"),
+                    + t(
+                        "bg-gray-800 text-gray-400", "bg-gray-50 text-gray-600"
+                    ),
                 ),
             ),
             class_name="p-3",
@@ -131,7 +139,8 @@ def league_detail_modal() -> rx.Component:
                             rx.el.div(
                                 rx.radix.primitives.dialog.title(
                                     LeagueDetailState.modal_league_name,
-                                    class_name="text-2xl font-bold " + TEXT_PRIMARY,
+                                    class_name="text-2xl font-bold "
+                                    + TEXT_PRIMARY,
                                 ),
                                 rx.el.div(
                                     rx.el.span(
@@ -147,19 +156,26 @@ def league_detail_modal() -> rx.Component:
                             ),
                             rx.radix.primitives.dialog.close(
                                 rx.el.button(
-                                    rx.icon("x", class_name="w-5 h-5 text-gray-500"),
+                                    rx.icon(
+                                        "x", class_name="w-5 h-5 text-gray-500"
+                                    ),
                                     on_click=LeagueDetailState.close_league_modal,
                                     class_name="p-2 rounded-full transition-colors "
-                                    + t("hover:bg-gray-800", "hover:bg-gray-100"),
+                                    + t(
+                                        "hover:bg-gray-800", "hover:bg-gray-100"
+                                    ),
                                 )
                             ),
                             class_name="flex justify-between items-start mb-6",
                         ),
                         rx.cond(
-                            LeagueDetailState.modal_champion.contains("team_name"),
+                            LeagueDetailState.modal_champion.contains(
+                                "team_name"
+                            ),
                             rx.el.div(
                                 rx.icon(
-                                    "trophy", class_name="w-5 h-5 text-yellow-600 mr-2"
+                                    "trophy",
+                                    class_name="w-5 h-5 text-yellow-600 mr-2",
                                 ),
                                 rx.el.span(
                                     "League Champion: ",
@@ -240,7 +256,8 @@ def league_detail_modal() -> rx.Component:
                                 + t("text-gray-200", "text-gray-800"),
                             ),
                             rx.cond(
-                                LeagueDetailState.modal_recent_matchups.length() > 0,
+                                LeagueDetailState.modal_recent_matchups.length()
+                                > 0,
                                 rx.el.div(
                                     rx.foreach(
                                         LeagueDetailState.modal_recent_matchups,
@@ -250,7 +267,8 @@ def league_detail_modal() -> rx.Component:
                                 ),
                                 rx.el.p(
                                     "No matchup data available.",
-                                    class_name="text-sm italic " + TEXT_SECONDARY,
+                                    class_name="text-sm italic "
+                                    + TEXT_SECONDARY,
                                 ),
                             ),
                             class_name="mb-6",
@@ -262,7 +280,8 @@ def league_detail_modal() -> rx.Component:
                                 + t("text-gray-200", "text-gray-800"),
                             ),
                             rx.cond(
-                                LeagueDetailState.modal_roster_positions.length() > 0,
+                                LeagueDetailState.modal_roster_positions.length()
+                                > 0,
                                 rx.el.div(
                                     rx.foreach(
                                         LeagueDetailState.modal_roster_positions,
@@ -290,5 +309,4 @@ def league_detail_modal() -> rx.Component:
             ),
         ),
         open=LeagueDetailState.show_modal,
-        on_open_change=lambda _: LeagueDetailState.close_league_modal(),
     )

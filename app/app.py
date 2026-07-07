@@ -19,7 +19,12 @@ from app.states.user_state import UserState
 from app.states.waitlist_state import WaitlistState
 
 app = rx.App(
-    theme=rx.theme(appearance="light"),
+    theme=rx.theme(
+        has_background=True,
+        radius="large",
+        accent_color="red",
+        appearance="light",
+    ),
     head_components=[
         rx.el.link(rel="preconnect", href="https://fonts.googleapis.com"),
         rx.el.link(
