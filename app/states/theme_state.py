@@ -7,10 +7,18 @@ class ThemeState(rx.State):
 
     @rx.event
     def toggle_color_mode(self):
-        if self.color_mode == "light":
-            self.color_mode = "dark"
-        else:
+        if self.color_mode == "dark":
             self.color_mode = "light"
+        else:
+            self.color_mode = "dark"
+
+    @rx.event
+    def set_light_mode(self):
+        self.color_mode = "light"
+
+    @rx.event
+    def set_dark_mode(self):
+        self.color_mode = "dark"
 
     @rx.event
     def toggle_mobile_sidebar(self):
@@ -27,3 +35,11 @@ class ThemeState(rx.State):
     @rx.var
     def appearance(self) -> str:
         return "dark" if self.color_mode == "dark" else "light"
+
+    @rx.var
+    def shell_class(self) -> str:
+        return (
+            "font-['Inter'] text-white bg-[#0F1119]"
+            if self.color_mode == "dark"
+            else "font-['Inter'] text-gray-900 bg-[#F8F9FC]"
+        )

@@ -196,9 +196,26 @@ class LeagueDetailState(rx.State):
     @rx.event
     def close_league_modal(self):
         self.show_modal = False
+        self.modal_loading = False
         self.modal_league_id = ""
+        self.modal_league_name = ""
+        self.modal_league_type = ""
+        self.modal_league_season = ""
         self.modal_standings = []
         self.modal_recent_matchups = []
         self.modal_champion = {}
         self.modal_roster_positions = []
-        self.modal_loading = False
+
+    @rx.event
+    def set_modal_open(self, is_open: bool):
+        if not is_open:
+            self.show_modal = False
+            self.modal_loading = False
+            self.modal_league_id = ""
+            self.modal_league_name = ""
+            self.modal_league_type = ""
+            self.modal_league_season = ""
+            self.modal_standings = []
+            self.modal_recent_matchups = []
+            self.modal_champion = {}
+            self.modal_roster_positions = []

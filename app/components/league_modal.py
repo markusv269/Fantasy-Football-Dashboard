@@ -122,7 +122,8 @@ def league_detail_modal() -> rx.Component:
     return rx.radix.primitives.dialog.root(
         rx.radix.primitives.dialog.portal(
             rx.radix.primitives.dialog.overlay(
-                class_name="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                on_click=LeagueDetailState.close_league_modal,
+                class_name="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 cursor-pointer",
             ),
             rx.radix.primitives.dialog.content(
                 rx.cond(
@@ -154,17 +155,21 @@ def league_detail_modal() -> rx.Component:
                                     class_name="flex items-center gap-2 mt-1",
                                 ),
                             ),
-                            rx.radix.primitives.dialog.close(
-                                rx.el.button(
-                                    rx.icon(
-                                        "x", class_name="w-5 h-5 text-gray-500"
+                            rx.el.button(
+                                rx.icon(
+                                    "x",
+                                    class_name=t(
+                                        "w-5 h-5 text-gray-300",
+                                        "w-5 h-5 text-gray-600",
                                     ),
-                                    on_click=LeagueDetailState.close_league_modal,
-                                    class_name="p-2 rounded-full transition-colors "
-                                    + t(
-                                        "hover:bg-gray-800", "hover:bg-gray-100"
-                                    ),
-                                )
+                                ),
+                                on_click=LeagueDetailState.close_league_modal,
+                                type="button",
+                                class_name="p-2 rounded-full transition-colors z-10 "
+                                + t(
+                                    "hover:bg-gray-800 bg-[#161926]",
+                                    "hover:bg-gray-100 bg-white",
+                                ),
                             ),
                             class_name="flex justify-between items-start mb-6",
                         ),
@@ -194,58 +199,73 @@ def league_detail_modal() -> rx.Component:
                                 class_name="text-lg font-bold mb-3 "
                                 + t("text-gray-200", "text-gray-800"),
                             ),
-                            rx.el.div(
-                                rx.el.table(
-                                    rx.el.thead(
-                                        rx.el.tr(
-                                            rx.el.th(
-                                                "Rank",
-                                                class_name="p-2 text-left text-xs font-bold "
-                                                + TEXT_SECONDARY,
+                            rx.cond(
+                                LeagueDetailState.modal_standings.length() > 0,
+                                rx.el.div(
+                                    rx.el.div(
+                                        rx.el.table(
+                                            rx.el.thead(
+                                                rx.el.tr(
+                                                    rx.el.th(
+                                                        "Rank",
+                                                        class_name="p-2 text-left text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "Team",
+                                                        class_name="p-2 text-left text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "W",
+                                                        class_name="p-2 text-center text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "L",
+                                                        class_name="p-2 text-center text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "T",
+                                                        class_name="p-2 text-center text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "PF",
+                                                        class_name="p-2 text-right text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    rx.el.th(
+                                                        "PA",
+                                                        class_name="p-2 text-right text-xs font-bold "
+                                                        + TEXT_SECONDARY,
+                                                    ),
+                                                    class_name=TABLE_HEADER_ROW,
+                                                )
                                             ),
-                                            rx.el.th(
-                                                "Team",
-                                                class_name="p-2 text-left text-xs font-bold "
-                                                + TEXT_SECONDARY,
+                                            rx.el.tbody(
+                                                rx.foreach(
+                                                    LeagueDetailState.modal_standings,
+                                                    standing_row,
+                                                )
                                             ),
-                                            rx.el.th(
-                                                "W",
-                                                class_name="p-2 text-center text-xs font-bold "
-                                                + TEXT_SECONDARY,
-                                            ),
-                                            rx.el.th(
-                                                "L",
-                                                class_name="p-2 text-center text-xs font-bold "
-                                                + TEXT_SECONDARY,
-                                            ),
-                                            rx.el.th(
-                                                "T",
-                                                class_name="p-2 text-center text-xs font-bold "
-                                                + TEXT_SECONDARY,
-                                            ),
-                                            rx.el.th(
-                                                "PF",
-                                                class_name="p-2 text-right text-xs font-bold "
-                                                + TEXT_SECONDARY,
-                                            ),
-                                            rx.el.th(
-                                                "PA",
-                                                class_name="p-2 text-right text-xs font-bold "
-                                                + TEXT_SECONDARY,
-                                            ),
-                                            class_name=TABLE_HEADER_ROW,
-                                        )
+                                            class_name="w-full table-auto",
+                                        ),
+                                        class_name="overflow-x-auto border rounded-xl "
+                                        + t(
+                                            "border-gray-800", "border-gray-200"
+                                        ),
                                     ),
-                                    rx.el.tbody(
-                                        rx.foreach(
-                                            LeagueDetailState.modal_standings,
-                                            standing_row,
-                                        )
-                                    ),
-                                    class_name="w-full table-auto",
                                 ),
-                                class_name="overflow-x-auto border rounded-xl "
-                                + t("border-gray-800", "border-gray-200"),
+                                rx.el.p(
+                                    "No standings available.",
+                                    class_name="text-sm italic p-4 border border-dashed rounded-xl "
+                                    + t(
+                                        "text-gray-400 border-gray-800",
+                                        "text-gray-500 border-gray-200",
+                                    ),
+                                ),
                             ),
                             class_name="mb-6",
                         ),
