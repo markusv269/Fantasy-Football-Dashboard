@@ -19,7 +19,7 @@ class WaitlistState(rx.State):
     username_valid: bool = False
     username_error: str = ""
     submit_success: bool = False
-    existing_entry: dict[str, str | bool] = {}
+    existing_entry: dict[str, str | bool | None] = {}
     total_dynasty: int = 0
     total_idp: int = 0
     total_bb: int = 0
@@ -88,16 +88,28 @@ class WaitlistState(rx.State):
                         .execute()
                     )
                     if res and res.data:
-                        entry = res.data[0]
+                        raw_entry = res.data[0]
+                        # Normalize row to match the declared state type and handle NULLs
+                        entry = {
+                            "user_id": str(raw_entry.get("user_id", "")),
+                            "sleeper_name": str(
+                                raw_entry.get("sleeper_name", "")
+                            ),
+                            "discord": str(raw_entry.get("discord", "") or ""),
+                            "dynasty": bool(raw_entry.get("dynasty", False)),
+                            "dynasty_idp": bool(
+                                raw_entry.get("dynasty_idp", False)
+                            ),
+                            "dynasty_bb": bool(
+                                raw_entry.get("dynasty_bb", False)
+                            ),
+                            "created_at": str(raw_entry.get("created_at", "")),
+                        }
                         self.existing_entry = entry
-                        self.dynasty_checked = bool(entry.get("dynasty", False))
-                        self.dynasty_idp_checked = bool(
-                            entry.get("dynasty_idp", False)
-                        )
-                        self.dynasty_bb_checked = bool(
-                            entry.get("dynasty_bb", False)
-                        )
-                        self.discord_input = entry.get("discord") or ""
+                        self.dynasty_checked = entry["dynasty"]
+                        self.dynasty_idp_checked = entry["dynasty_idp"]
+                        self.dynasty_bb_checked = entry["dynasty_bb"]
+                        self.discord_input = entry["discord"]
                     else:
                         self.existing_entry = {}
             else:
