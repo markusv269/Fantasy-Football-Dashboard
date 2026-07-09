@@ -884,6 +884,150 @@ def _trades_section() -> rx.Component:
     )
 
 
+def _status_color(status: rx.Var) -> rx.Var:
+    return rx.match(
+        status.to(str),
+        ("complete", "gray"),
+        ("drafting", "green"),
+        ("pre_draft", "yellow"),
+        ("paused", "orange"),
+        "blue",
+    )
+
+
+def _draft_card(d: rx.Var) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.badge(
+                    d["draft_type"].to(str),
+                    color_scheme="purple",
+                    variant="soft",
+                    size="1",
+                ),
+                rx.badge(
+                    d["status"].to(str).upper(),
+                    color_scheme=_status_color(d["status"]),
+                    variant="soft",
+                    size="1",
+                ),
+                rx.spacer(),
+                rx.badge(
+                    f"Saison {d['season'].to(str)}",
+                    color_scheme="gray",
+                    variant="soft",
+                    size="1",
+                ),
+                spacing="2",
+                align="center",
+                width="100%",
+                wrap="wrap",
+            ),
+            rx.hstack(
+                rx.icon("calendar", size=16, color="#DC2626"),
+                rx.cond(
+                    d["start_time_display"].to(str) != "",
+                    rx.text(
+                        d["start_time_display"].to(str),
+                        size="2",
+                        weight="bold",
+                        class_name=TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        "Startzeit noch nicht festgelegt",
+                        size="2",
+                        class_name="italic " + TEXT_SECONDARY,
+                    ),
+                ),
+                spacing="2",
+                align="center",
+                width="100%",
+            ),
+            rx.hstack(
+                rx.text(
+                    f"Draft-ID: {d['draft_id'].to(str)}",
+                    size="1",
+                    class_name="font-mono " + TEXT_SECONDARY,
+                ),
+                rx.spacer(),
+                rx.link(
+                    rx.button(
+                        rx.icon("external-link", size=14),
+                        "Sleeper",
+                        size="1",
+                        style={"background_color": "#DC2626"},
+                    ),
+                    href=d["url"].to(str),
+                    is_external=True,
+                    underline="none",
+                ),
+                width="100%",
+                align="center",
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
+        ),
+        size="2",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
+def _drafts_section() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("file-text", size=20, color="#DC2626"),
+                rx.heading("Drafts", size="5", weight="bold"),
+                rx.spacer(),
+                rx.badge(
+                    LeaguePageState.drafts.length().to_string(),
+                    color_scheme="gray",
+                    variant="soft",
+                ),
+                width="100%",
+                align="center",
+            ),
+            rx.cond(
+                LeaguePageState.drafts.length() > 0,
+                rx.grid(
+                    rx.foreach(LeaguePageState.drafts, _draft_card),
+                    columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                    spacing="4",
+                    width="100%",
+                ),
+                rx.vstack(
+                    rx.icon("calendar-x", size=40, color="gray"),
+                    rx.heading(
+                        "Keine Drafts vorhanden",
+                        size="4",
+                        weight="bold",
+                        class_name=TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        "Für diese Liga sind aktuell keine Drafts in der Datenbank hinterlegt.",
+                        size="2",
+                        color_scheme="gray",
+                        align="center",
+                    ),
+                    spacing="2",
+                    align="center",
+                    padding="32px",
+                    width="100%",
+                    class_name="border border-dashed rounded-xl "
+                    + t("border-gray-800", "border-gray-200"),
+                ),
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+    )
+
+
 def _content() -> rx.Component:
     return rx.vstack(
         _header(),
@@ -894,6 +1038,7 @@ def _content() -> rx.Component:
         _matchups_section(),
         _managers_section(),
         _rosters_section(),
+        _drafts_section(),
         _trades_section(),
         _roster_positions_card(),
         spacing="4",

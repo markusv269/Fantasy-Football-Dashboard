@@ -182,13 +182,39 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
     )
 
 
+def league_matchup_group(league_id: str, matchups: list) -> rx.Component:
+    league_name = MatchupsState.league_names[league_id]
+    return rx.vstack(
+        rx.hstack(
+            rx.icon("trophy", size=20, color="#DC2626"),
+            rx.heading(league_name, size="5", weight="bold"),
+            spacing="2",
+            align="center",
+            padding_y="8px",
+            border_bottom="1px solid",
+            border_color=t("rgba(255,255,255,0.1)", "rgba(0,0,0,0.1)"),
+            width="100%",
+        ),
+        rx.grid(
+            rx.foreach(matchups, matchup_card),
+            columns=rx.breakpoints(initial="1", md="2", xl="3"),
+            spacing="4",
+            width="100%",
+        ),
+        spacing="4",
+        width="100%",
+        align="stretch",
+        padding_bottom="24px",
+    )
+
+
 def matchups_page() -> rx.Component:
     return layout(
         rx.vstack(
             rx.vstack(
                 rx.heading("Matchups", size="7", weight="bold"),
                 rx.text(
-                    "View weekly scores and head-to-head results.",
+                    "View weekly scores and head-to-head results across all Stoned Lack leagues.",
                     size="2",
                     color_scheme="gray",
                 ),
@@ -208,50 +234,84 @@ def matchups_page() -> rx.Component:
                 width="100%",
             ),
             rx.cond(
-                AppState.selected_league_id == "",
-                rx.card(
+                MatchupsState.is_loading,
+                rx.center(
                     rx.vstack(
-                        rx.icon("trophy", size=40, color="gray"),
-                        rx.heading(
-                            "No League Selected", size="4", weight="bold"
-                        ),
+                        rx.spinner(size="3", color="#DC2626"),
                         rx.text(
-                            "Select a league to view matchups.",
-                            size="2",
-                            color_scheme="gray",
+                            "Lade Matchups...", size="2", color_scheme="gray"
                         ),
-                        spacing="2",
+                        spacing="3",
                         align="center",
-                        padding="48px",
-                        width="100%",
                     ),
-                    class_name="border-dashed",
+                    padding_y="80px",
                     width="100%",
                 ),
                 rx.cond(
-                    MatchupsState.paired_matchups.length() > 0,
-                    rx.grid(
-                        rx.foreach(MatchupsState.paired_matchups, matchup_card),
-                        columns=rx.breakpoints(initial="1", md="2", xl="3"),
-                        spacing="4",
-                        width="100%",
-                    ),
-                    rx.card(
+                    AppState.selected_league_id == "",
+                    rx.cond(
+                        MatchupsState.matchups_by_league.keys().length() > 0,
                         rx.vstack(
-                            rx.icon("calendar-x", size=40, color="gray"),
-                            rx.heading("No Matchups", size="4", weight="bold"),
-                            rx.text(
-                                "No matchups available for this week.",
-                                size="2",
-                                color_scheme="gray",
+                            rx.foreach(
+                                MatchupsState.matchups_by_league.keys(),
+                                lambda lid: league_matchup_group(
+                                    lid, MatchupsState.matchups_by_league[lid]
+                                ),
                             ),
-                            spacing="2",
-                            align="center",
-                            padding="48px",
+                            spacing="8",
                             width="100%",
                         ),
-                        class_name="border-dashed",
-                        width="100%",
+                        rx.card(
+                            rx.vstack(
+                                rx.icon("search-x", size=40, color="gray"),
+                                rx.heading(
+                                    "Keine Matchups gefunden",
+                                    size="4",
+                                    weight="bold",
+                                ),
+                                rx.text(
+                                    "Für die gewählte Woche konnten keine Daten geladen werden.",
+                                    size="2",
+                                    color_scheme="gray",
+                                ),
+                                spacing="2",
+                                align="center",
+                                padding="48px",
+                                width="100%",
+                            ),
+                            class_name="border-dashed",
+                            width="100%",
+                        ),
+                    ),
+                    rx.cond(
+                        MatchupsState.paired_matchups.length() > 0,
+                        rx.grid(
+                            rx.foreach(
+                                MatchupsState.paired_matchups, matchup_card
+                            ),
+                            columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                            spacing="4",
+                            width="100%",
+                        ),
+                        rx.card(
+                            rx.vstack(
+                                rx.icon("calendar-x", size=40, color="gray"),
+                                rx.heading(
+                                    "No Matchups", size="4", weight="bold"
+                                ),
+                                rx.text(
+                                    "No matchups available for this league in the selected week.",
+                                    size="2",
+                                    color_scheme="gray",
+                                ),
+                                spacing="2",
+                                align="center",
+                                padding="48px",
+                                width="100%",
+                            ),
+                            class_name="border-dashed",
+                            width="100%",
+                        ),
                     ),
                 ),
             ),

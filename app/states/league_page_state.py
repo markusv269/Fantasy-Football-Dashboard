@@ -24,6 +24,7 @@ class LeaguePageState(rx.State):
     roster_cards: list[dict[str, str | int | float]] = []
     trades: list[dict[str, str]] = []
     trades_available: bool = False
+    drafts: list[dict[str, str | int]] = []
 
     def _reset_state(self):
         self.loading = True
@@ -46,6 +47,7 @@ class LeaguePageState(rx.State):
         self.roster_cards = []
         self.trades = []
         self.trades_available = False
+        self.drafts = []
 
     def _extract_route_id(self) -> str:
         """Extract the dynamic route id, supporting both `lid` and legacy `league_id`."""
@@ -413,6 +415,69 @@ class LeaguePageState(rx.State):
             # Trades / transactions — no table exists in Supabase per validation
             self.trades = []
             self.trades_available = False
+
+            # Drafts for this league
+            try:
+                from datetime import datetime as _dt
+
+                drafts_res = (
+                    client.table("drafts")
+                    .select("*")
+                    .eq("league_id", clean_id)
+                    .execute()
+                )
+                draft_rows = (
+                    drafts_res.data if drafts_res and drafts_res.data else []
+                )
+                dtype_map = {
+                    "0": "Snake",
+                    "1": "Linear",
+                    "2": "Auction",
+                    "snake": "Snake",
+                    "linear": "Linear",
+                    "auction": "Auction",
+                }
+                drafts_out = []
+                for d in draft_rows:
+                    draft_id = str(d.get("draft_id") or "")
+                    if not draft_id:
+                        continue
+                    raw_type = str(d.get("draft_type") or "").lower()
+                    type_str = dtype_map.get(raw_type, raw_type.title() or "—")
+                    status = str(d.get("status") or "unknown")
+                    season = str(d.get("season") or "")
+                    start_raw = d.get("start_time")
+                    start_display = ""
+                    start_ts = 0
+                    if start_raw:
+                        try:
+                            dt = _dt.fromisoformat(
+                                str(start_raw).replace("Z", "+00:00")
+                            )
+                            start_display = dt.strftime("%d.%m.%Y · %H:%M")
+                            start_ts = int(dt.timestamp())
+                        except Exception:
+                            logging.exception("Draft start_time parse failed")
+                            start_display = str(start_raw)[:16]
+                    drafts_out.append(
+                        {
+                            "draft_id": draft_id,
+                            "season": season,
+                            "draft_type": type_str,
+                            "status": status,
+                            "start_time_display": start_display,
+                            "start_time_ts": start_ts,
+                            "url": f"https://sleeper.com/draft/nfl/{draft_id}",
+                        }
+                    )
+                drafts_out.sort(
+                    key=lambda x: (x["season"], x["start_time_ts"]),
+                    reverse=True,
+                )
+                self.drafts = drafts_out
+            except Exception as e:
+                logging.exception(f"Drafts fetch failed: {e}")
+                self.drafts = []
 
         except Exception as e:
             logging.exception(f"Error loading league: {e}")

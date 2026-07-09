@@ -1,22 +1,21 @@
-# Wartelisten-Registrierungslogik erweitern
+# Matchups-Übersicht und Liga-Drafts erweitern
 
-## Phase 1: Datenverhalten und Sortierung aktualisieren ✅
-- [x] Aktuelle Wartelisten-Spalten und Beispielwerte für Format-Registrierungen prüfen
-- [x] Format-Anmeldung so anpassen, dass die jeweiligen Registrierungsfelder gesetzt oder geleert werden
-- [x] Wartelisten-Sortierung je Format anhand der jeweiligen Registrierungsfelder umstellen
-- [x] Bestehende Einträge weiterhin robust mit Fallbacks anzeigen
+## Phase 1: Matchups-Übersicht verbreitern und ligaübergreifend anzeigen ✅
+- [x] Matchups-Seite so anpassen, dass aktuelle Matchups aller verfügbaren Ligen sichtbar sind
+- [x] League-Auswahl als Filtermöglichkeit beibehalten oder ergänzen, ohne die Gesamtübersicht zu verstecken
+- [x] Matchup-Karten nach Liga gruppieren und übersichtlich auf breiten sowie mobilen Bildschirmen darstellen
+- [x] Lade-, Leer- und Fehlerzustände für ligaübergreifende Matchups sauber anzeigen
 
-## Phase 2: Formular-Austragung ergänzen ✅
-- [x] Bestehende Anmeldung im Formular eindeutig erkennen
-- [x] Separaten Button für vollständige Austragung aus der Warteliste anzeigen
-- [x] Austragung mit Ladezustand, Statusmeldung und Statistiken-Refresh umsetzen
-- [x] Formularzustand nach erfolgreicher Austragung sauber zurücksetzen
+## Phase 2: Drafts auf Liga-Detailseiten ergänzen ✅
+- [x] Draft-Daten pro Liga laden und für die Liga-Detailansicht verfügbar machen
+- [x] Draft-Sektion unter den Liga-Inhalten einfügen
+- [x] Draft-Karten oder Tabelle mit Status, Saison, Typ, Startzeit und externem Sleeper-Link anzeigen
+- [x] Leerzustand anzeigen, wenn für eine Liga keine Drafts gefunden werden
 
 ## Phase 3: Validierung und Buildprüfung ✅
-- [x] Format-Update-Events mit echten Supabase-Daten validieren
-- [x] Austragungs-Event mit sicherem Testpfad validieren
-- [x] Wartelisten-Seite und Datenlisten prüfen
+- [x] Matchups-Ladeevents mit realen Liga-Daten validieren
+- [x] Liga-Detail-Ladeevent inklusive Draft-Daten validieren
 - [x] Reflex-Build validieren
 
 ## Designrichtung
-- Bestehendes hell/dunkel kompatibles Design beibehalten; die neue Austragungsaktion wird als dezenter, klar abgegrenzter Danger-Button im vorhandenen Kartenlayout ergänzt.
+- Bestehendes hell/dunkel kompatibles Design beibehalten; rote Akzente, klare Kartenflächen, gruppierte Liga-Sektionen und kompakte Draft-Karten mit deutlicher externer Verlinkung verwenden.

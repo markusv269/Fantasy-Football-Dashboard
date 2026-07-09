@@ -6,25 +6,114 @@ from app.player_cache import enrich_roster_players
 
 class MatchupsState(rx.State):
     selected_week: int = 1
+    is_loading: bool = False
+    matchups_by_league: dict[
+        str, list[dict[str, str | int | float | list | dict | None]]
+    ] = {}
+    league_names: dict[str, str] = {}
+
+    # Fields for filtered view
     matchups_data: list[dict[str, str | int | float | list | dict | None]] = []
-    paired_matchups: list[dict[str, str | int | float | list | dict | None]] = []
+    paired_matchups: list[
+        dict[str, str | int | float | list | dict | None]
+    ] = []
     league_users: list[dict[str, str | int | float | list | dict | None]] = []
     league_rosters: list[dict[str, str | int | float | list | dict | None]] = []
     standings_data: list[
         dict[str, str | int | float | list | dict | list[str] | None]
     ] = []
-    selected_roster: dict[str, str | int | float | list | dict | list[str] | None] = {}
+    selected_roster: dict[
+        str, str | int | float | list | dict | list[str] | None
+    ] = {}
 
     @rx.event
     async def init_matchups(self):
+        self.is_loading = True
+        yield
         app_state = await self.get_state(AppState)
         week = app_state.nfl_state.get("week", 1)
         if str(week) == "0":
             week = 1
         self.selected_week = int(week)
-        if app_state.selected_league_id:
+
+        # Load all if no specific league is selected yet
+        if not app_state.selected_league_id:
+            yield MatchupsState.fetch_all_matchups
+        else:
             yield MatchupsState.fetch_league_detail
             yield MatchupsState.fetch_matchups(self.selected_week)
+
+        self.is_loading = False
+
+    @rx.event
+    async def fetch_all_matchups(self):
+        self.is_loading = True
+        yield
+        from app.states.app_state import AppState
+
+        app_state = await self.get_state(AppState)
+
+        # Ensure we have the list of configured leagues
+        if not app_state.leagues_data:
+            await app_state.fetch_all_leagues_data()
+
+        leagues = app_state.leagues_data
+        all_paired = {}
+        names = {}
+
+        for lg in leagues[:8]:  # Limit concurrent fetch to 8 for performance
+            lid = str(lg["league_id"])
+            names[lid] = str(lg["name"])
+
+            users = get_league_users(lid) or []
+            rosters = get_rosters(lid) or []
+            matchups = get_matchups(lid, self.selected_week) or []
+
+            if not matchups:
+                continue
+
+            user_map = {u.get("user_id"): u for u in users}
+            roster_map = {r.get("roster_id"): r for r in rosters}
+
+            pairs = {}
+            for m in matchups:
+                mid = m.get("matchup_id")
+                if mid not in pairs:
+                    pairs[mid] = []
+
+                rid = m.get("roster_id")
+                r = roster_map.get(rid, {})
+                u = user_map.get(r.get("owner_id"), {})
+
+                m_enriched = dict(m)
+                team_name = u.get("metadata", {}).get("team_name")
+                display_name = u.get("display_name", f"Team {rid}")
+                m_enriched["team_name"] = (
+                    team_name if team_name else display_name
+                )
+                pairs[mid].append(m_enriched)
+
+            paired_list = []
+            for mid, teams in pairs.items():
+                if len(teams) == 2:
+                    paired_list.append(
+                        {
+                            "matchup_id": mid,
+                            "team_a": teams[0],
+                            "team_b": teams[1],
+                        }
+                    )
+                elif len(teams) == 1:
+                    paired_list.append(
+                        {"matchup_id": mid, "team_a": teams[0], "team_b": None}
+                    )
+
+            if paired_list:
+                all_paired[lid] = paired_list
+
+        self.matchups_by_league = all_paired
+        self.league_names = names
+        self.is_loading = False
 
     @rx.event
     async def init_standings(self):
@@ -126,7 +215,9 @@ class MatchupsState(rx.State):
             wins = settings.get("wins", 0)
             losses = settings.get("losses", 0)
             ties = settings.get("ties", 0)
-            fpts = settings.get("fpts", 0) + settings.get("fpts_decimal", 0) / 100
+            fpts = (
+                settings.get("fpts", 0) + settings.get("fpts_decimal", 0) / 100
+            )
             fpts_against = (
                 settings.get("fpts_against", 0)
                 + settings.get("fpts_against_decimal", 0) / 100
@@ -134,7 +225,9 @@ class MatchupsState(rx.State):
             total_games = wins + losses + ties
             win_pct = wins / total_games if total_games > 0 else 0
             team_name = owner.get("metadata", {}).get("team_name")
-            display_name = owner.get("display_name", f"Team {r.get('roster_id')}")
+            display_name = owner.get(
+                "display_name", f"Team {r.get('roster_id')}"
+            )
             standings.append(
                 {
                     "roster_id": r.get("roster_id"),
