@@ -180,7 +180,7 @@ def mobile_drawer_std() -> rx.Component:
             bottom="0",
             z_index="40",
             display=rx.cond(ThemeState.mobile_sidebar_open, "block", "none"),
-            class_name="bg-black/60 backdrop-blur-sm md:hidden",
+            class_name="bg-black/60 backdrop-blur-md md:hidden transition-all duration-300",
         ),
         rx.vstack(
             rx.hstack(
@@ -230,8 +230,8 @@ def mobile_drawer_std() -> rx.Component:
                         padding_x="20px",
                         padding_y="16px",
                         class_name=t(
-                            "text-slate-400 border-b border-white/5 hover:bg-white/5 hover:text-white active:bg-white/10",
-                            "text-gray-700 border-b border-gray-100 hover:bg-gray-50 hover:text-[#DC2626] active:bg-gray-100",
+                            "text-slate-300 border-b border-white/5 hover:bg-white/5 hover:text-white active:bg-white/10 transition-colors",
+                            "text-gray-800 border-b border-gray-100 hover:bg-gray-50 hover:text-[#DC2626] active:bg-gray-100 transition-colors",
                         ),
                     )
                     for item in nav_items
@@ -283,8 +283,8 @@ def mobile_drawer_std() -> rx.Component:
             ),
             transition="transform 400ms cubic-bezier(0.4, 0, 0.2, 1)",
             class_name=t(
-                "bg-[#08090D] shadow-2xl border-t border-white/10 md:hidden",
-                "bg-white shadow-2xl border-t border-gray-200 md:hidden",
+                "bg-[#08090D] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)] border-t border-white/10 md:hidden",
+                "bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] border-t border-gray-200 md:hidden",
             ),
         ),
     )
