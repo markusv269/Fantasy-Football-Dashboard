@@ -107,7 +107,7 @@ def _section(title: str, count: rx.Var, leagues: rx.Var) -> rx.Component:
             rx.grid(
                 rx.foreach(leagues, league_card),
                 columns=rx.breakpoints(
-                    initial="1", sm="1", md="2", lg="3", xl="5"
+                    initial="1", sm="1", md="2", lg="2", xl="2"
                 ),
                 spacing="4",
                 width="100%",
@@ -337,15 +337,12 @@ def home_page() -> rx.Component:
                     _trending_sidebar(),
                     class_name="lg:sticky lg:top-24",
                 ),
-                columns=rx.breakpoints(initial="1", sm="1", md="1", lg="3"),
+                columns=rx.breakpoints(initial="1", sm="1", md="1", lg="2"),
                 spacing="8",
                 width="100%",
                 template_columns=rx.breakpoints(
                     initial="1fr",
-                    sm="1fr",
-                    md="1fr",
-                    lg="1fr 320px",
-                    xl="1fr 380px",
+                    lg="70% 30%",
                 ),
             ),
             spacing="8",

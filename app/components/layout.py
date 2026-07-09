@@ -180,7 +180,7 @@ def mobile_drawer_std() -> rx.Component:
             bottom="0",
             z_index="40",
             display=rx.cond(ThemeState.mobile_sidebar_open, "block", "none"),
-            class_name="bg-black/60 backdrop-blur-md md:hidden transition-all duration-300",
+            class_name="bg-black/80 backdrop-blur-xl md:hidden transition-opacity duration-300",
         ),
         rx.vstack(
             rx.hstack(
@@ -192,34 +192,37 @@ def mobile_drawer_std() -> rx.Component:
                 ),
                 rx.spacer(),
                 rx.button(
-                    rx.icon("x", size=20),
+                    rx.icon("x", size=22),
                     on_click=ThemeState.close_mobile_sidebar,
-                    variant="soft",
+                    variant="solid",
                     color_scheme="gray",
                     radius="full",
-                    size="1",
+                    size="2",
+                    class_name=t(
+                        "bg-white/10 text-white", "bg-gray-200 text-gray-900"
+                    ),
                 ),
                 width="100%",
-                padding="20px",
+                padding="24px",
                 align="center",
                 class_name=t(
-                    "border-b border-white/10 bg-[#12141C]",
-                    "border-b border-gray-200 bg-gray-50",
+                    "border-b border-white/20 bg-[#161B22] text-white",
+                    "border-b border-gray-300 bg-gray-50 text-gray-900",
                 ),
             ),
             rx.vstack(
                 *[
                     rx.link(
                         rx.hstack(
-                            rx.icon(item["icon"], size=18),
-                            rx.text(item["label"], size="3", weight="medium"),
+                            rx.icon(item["icon"], size=20),
+                            rx.text(item["label"], size="4", weight="bold"),
                             rx.spacer(),
                             rx.icon(
                                 "chevron-right",
-                                size=14,
-                                class_name="opacity-50",
+                                size=16,
+                                class_name="opacity-80",
                             ),
-                            spacing="3",
+                            spacing="4",
                             align="center",
                             width="100%",
                         ),
@@ -227,11 +230,11 @@ def mobile_drawer_std() -> rx.Component:
                         on_click=ThemeState.close_mobile_sidebar,
                         underline="none",
                         width="100%",
-                        padding_x="20px",
-                        padding_y="16px",
+                        padding_x="24px",
+                        padding_y="20px",
                         class_name=t(
-                            "text-slate-300 border-b border-white/5 hover:bg-white/5 hover:text-white active:bg-white/10 transition-colors",
-                            "text-gray-800 border-b border-gray-100 hover:bg-gray-50 hover:text-[#DC2626] active:bg-gray-100 transition-colors",
+                            "text-white border-b border-white/10 hover:bg-white/10 active:bg-white/20 transition-colors",
+                            "text-gray-900 border-b border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors",
                         ),
                     )
                     for item in nav_items
@@ -256,15 +259,15 @@ def mobile_drawer_std() -> rx.Component:
                     width="100%",
                     size="3",
                     class_name=t(
-                        "bg-slate-800 text-white hover:bg-slate-700",
+                        "bg-white text-black hover:bg-gray-200",
                         "bg-gray-900 text-white",
                     ),
                 ),
-                padding="20px",
+                padding="24px",
                 width="100%",
                 class_name=t(
-                    "bg-[#12141C] border-t border-white/10",
-                    "bg-gray-50 border-t border-gray-200",
+                    "bg-[#161B22] border-t border-white/20",
+                    "bg-gray-50 border-t border-gray-300",
                 ),
             ),
             spacing="0",
@@ -273,18 +276,18 @@ def mobile_drawer_std() -> rx.Component:
             left="0",
             right="0",
             z_index="50",
-            max_height="85vh",
-            border_top_left_radius="24px",
-            border_top_right_radius="24px",
+            max_height="90vh",
+            border_top_left_radius="32px",
+            border_top_right_radius="32px",
             transform=rx.cond(
                 ThemeState.mobile_sidebar_open,
                 "translateY(0)",
                 "translateY(100%)",
             ),
-            transition="transform 400ms cubic-bezier(0.4, 0, 0.2, 1)",
+            transition="transform 500ms cubic-bezier(0.16, 1, 0.3, 1)",
             class_name=t(
-                "bg-[#08090D] shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.5)] border-t border-white/10 md:hidden",
-                "bg-white shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] border-t border-gray-200 md:hidden",
+                "bg-[#0D1117] shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.8)] border-t border-white/30 md:hidden",
+                "bg-white shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.3)] border-t border-gray-400 md:hidden",
             ),
         ),
     )
