@@ -1,10 +1,8 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.user_state import UserState
-from app.states.league_detail_state import LeagueDetailState
 from app.theme import t
 from app.components.layout import layout
-from app.components.league_modal import league_detail_modal
 
 
 def _status_color(status: rx.Var) -> rx.Var:
@@ -84,9 +82,7 @@ def league_card(league: dict) -> rx.Component:
             width="100%",
             align="stretch",
         ),
-        on_click=LeagueDetailState.open_league_modal(
-            league["league_id"].to(str)
-        ),
+        on_click=rx.redirect(f"/leagues/{league['league_id'].to(str)}"),
         size="2",
         class_name="cursor-pointer hover:border-[#DC2626] transition-all "
         + t(
@@ -343,7 +339,6 @@ def home_page() -> rx.Component:
                     initial="1fr", sm="1fr", md="1fr", lg="2fr 1fr"
                 ),
             ),
-            league_detail_modal(),
             spacing="6",
             width="100%",
             align="stretch",

@@ -1,19 +1,19 @@
-# Darkmode auf Reflex-Standard umstellen
+# Ligaseite statt Liga-Modal
 
-## Phase 1: Theme-Umschaltung korrigieren ✅
-- [x] Bestehende Theme-Umschaltung gegen Reflex-Standardverhalten prüfen
-- [x] Globale Light-/Darkmode-Steuerung auf Reflex-Standard umstellen
-- [x] Hintergrund-, Text- und Flächenfarben an die Standard-Umschaltung anbinden
-- [x] Mobile und Desktop-Umschalter konsistent halten
+## Phase 1: Navigation und Detailseiten-Grundlage ✅
+- [x] Klick auf Liga-Karten auf eine dedizierte Ligaseite umstellen
+- [x] Dynamische Ligaseite mit Ladezuständen und Fehlerzuständen aufbauen
+- [x] Kopfbereich mit Liga-Metadaten und Schnellübersicht ergänzen
+- [x] Bestehende Modal-Abhängigkeit aus den betroffenen Seiten entfernen
 
-## Phase 2: Verknüpfungen und Interaktionen prüfen ✅
-- [x] Layout-, Header-, Sidebar- und Drawer-Verknüpfungen mit dem Darkmode prüfen
-- [x] Seiten- und Komponentenklassen an die neue Umschaltung anbinden
-- [x] Bestehende Navigation und mobile Menüevents unverändert erhalten
-- [x] Externe Datenzugriffe unverändert lassen
+## Phase 2: Statistikbereiche und Datenansichten ✅
+- [x] Tabellenbereich mit aktuellen Standings und Kennzahlen aufbauen
+- [x] Matchups-Bereich mit aktuellen Paarungen und Scores aufbauen
+- [x] Manager- und Roster-Bereiche mit relevanten Teamdetails aufbauen
+- [x] Trades-Bereich mit leerem Zustand oder vorhandenen Transaktionsdaten aufbauen
 
 ## Phase 3: Validierung ✅
-- [x] App-Import mit aktualisierter Theme-Logik prüfen
-- [x] Theme- und mobile Menüevents testen
-- [x] Zentrale UI-Zustände für Light-/Darkmode-Hintergründe validieren
-- [x] Korrektur vollständig abschließen
+- [x] Datenzugriff auf vorhandene Tabellen prüfen
+- [x] Navigation und Detailseiten-Ladeevents testen
+- [x] Interaktive Detailseitenzustände validieren
+- [x] Umsetzung vollständig abschließen

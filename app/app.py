@@ -10,6 +10,8 @@ import reflex as rx
 from app.pages.home import home_page
 from app.pages.archive import archive_page
 from app.pages.leagues import leagues_page
+from app.pages.league_detail import league_detail_page
+from app.states.league_page_state import LeaguePageState
 from app.pages.matchups import matchups_page
 from app.pages.standings import standings_page
 from app.pages.rosters import rosters_page
@@ -46,6 +48,11 @@ app = rx.App(
 )
 app.add_page(
     home_page, route="/", on_load=[AppState.init_app, UserState.init_user]
+)
+app.add_page(
+    league_detail_page,
+    route="/leagues/[lid]",
+    on_load=LeaguePageState.load_league,
 )
 app.add_page(
     leagues_page,

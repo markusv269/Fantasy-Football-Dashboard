@@ -1,9 +1,7 @@
 import reflex as rx
 from app.states.app_state import AppState
-from app.states.league_detail_state import LeagueDetailState
 from app.theme import t
 from app.components.layout import layout
-from app.components.league_modal import league_detail_modal
 from app.pages.home import league_card
 
 
@@ -151,7 +149,6 @@ def archive_page() -> rx.Component:
                 ),
                 _empty_state(),
             ),
-            league_detail_modal(),
             spacing="6",
             width="100%",
             align="stretch",

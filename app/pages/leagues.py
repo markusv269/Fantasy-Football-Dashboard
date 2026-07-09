@@ -1,7 +1,6 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.user_state import UserState
-from app.states.league_detail_state import LeagueDetailState
 from app.theme import (
     t,
     H1,
@@ -13,7 +12,6 @@ from app.theme import (
     PAGE_BG,
 )
 from app.components.layout import layout
-from app.components.league_modal import league_detail_modal
 from app.pages.home import league_card
 
 
@@ -67,6 +65,5 @@ def leagues_page() -> rx.Component:
                     class_name="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
                 ),
             ),
-            league_detail_modal(),
         )
     )
