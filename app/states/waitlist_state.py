@@ -28,10 +28,14 @@ class WaitlistState(rx.State):
     all_entries: list[dict[str, str | bool]] = []
 
     def _sort_key(self, entry: dict, ts_field: str) -> str:
-        ts = str(entry.get(ts_field) or "")
-        if ts:
-            return ts
-        return str(entry.get("created_at") or "")
+        """Helper to generate a stable sort key with fallback. Ensures empty strings/None handle gracefully."""
+        ts = entry.get(ts_field)
+        if ts and str(ts).strip():
+            return str(ts)
+        fallback = entry.get("created_at")
+        if fallback and str(fallback).strip():
+            return str(fallback)
+        return ""  # Stable bottom fallback
 
     @rx.var
     def dynasty_entries(self) -> list[dict[str, str | bool]]:
