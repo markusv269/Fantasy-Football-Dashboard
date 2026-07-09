@@ -577,6 +577,49 @@ def _matchup_card(m: rx.Var) -> rx.Component:
     )
 
 
+def _week_pill(week: rx.Var) -> rx.Component:
+    is_active = week == LeaguePageState.selected_matchup_week
+    return rx.button(
+        week.to_string(),
+        on_click=LeaguePageState.change_matchup_week(week),
+        variant=rx.cond(is_active, "solid", "soft"),
+        color_scheme=rx.cond(is_active, "red", "gray"),
+        size="1",
+        class_name="min-w-[36px]",
+    )
+
+
+def _week_pill_bar() -> rx.Component:
+    return rx.cond(
+        LeaguePageState.available_weeks.length() > 0,
+        rx.hstack(
+            rx.icon("calendar", size=16, color="#DC2626"),
+            rx.text(
+                "Woche:",
+                size="1",
+                weight="bold",
+                class_name="uppercase " + TEXT_SECONDARY,
+            ),
+            rx.hstack(
+                rx.foreach(LeaguePageState.available_weeks, _week_pill),
+                spacing="1",
+                overflow_x="auto",
+                class_name="no-scrollbar",
+            ),
+            spacing="3",
+            align="center",
+            padding="8px 12px",
+            border_radius="9999px",
+            class_name="border "
+            + t(
+                "bg-[#08090D] border-white/5",
+                "bg-gray-50 border-gray-200",
+            ),
+            width="100%",
+        ),
+    )
+
+
 def _matchups_section() -> rx.Component:
     return rx.card(
         rx.vstack(
@@ -585,13 +628,14 @@ def _matchups_section() -> rx.Component:
                 rx.heading("Matchups", size="5", weight="bold"),
                 rx.spacer(),
                 rx.badge(
-                    f"Woche {LeaguePageState.latest_week}",
-                    color_scheme="gray",
+                    f"Woche {LeaguePageState.selected_matchup_week}",
+                    color_scheme="red",
                     variant="soft",
                 ),
                 width="100%",
                 align="center",
             ),
+            _week_pill_bar(),
             rx.cond(
                 LeaguePageState.matchup_pairs.length() > 0,
                 rx.grid(
@@ -697,6 +741,89 @@ def _managers_section() -> rx.Component:
     )
 
 
+def _pos_color(pos: rx.Var) -> rx.Var:
+    return rx.match(
+        pos.to(str),
+        ("QB", "red"),
+        ("RB", "blue"),
+        ("WR", "green"),
+        ("TE", "orange"),
+        ("K", "gray"),
+        ("DEF", "purple"),
+        "gray",
+    )
+
+
+def _player_row(p: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.badge(
+            p["position"].to(str),
+            color_scheme=_pos_color(p["position"]),
+            variant="soft",
+            size="1",
+        ),
+        rx.text(
+            p["full_name"].to(str),
+            size="1",
+            weight="medium",
+            class_name="truncate " + TEXT_PRIMARY,
+        ),
+        rx.spacer(),
+        rx.text(
+            p["team"].to(str),
+            size="1",
+            weight="medium",
+            class_name=TEXT_SECONDARY,
+        ),
+        spacing="2",
+        align="center",
+        width="100%",
+        padding_y="4px",
+        padding_x="8px",
+        class_name="border-b last:border-0 "
+        + t("border-white/5", "border-gray-100"),
+    )
+
+
+def _player_group(
+    label: str, players: rx.Var, accent_class: str
+) -> rx.Component:
+    return rx.cond(
+        players.to(list).length() > 0,
+        rx.vstack(
+            rx.hstack(
+                rx.text(
+                    label,
+                    size="1",
+                    weight="bold",
+                    class_name="uppercase tracking-wide " + accent_class,
+                ),
+                rx.badge(
+                    players.to(list).length().to_string(),
+                    color_scheme="gray",
+                    variant="soft",
+                    size="1",
+                ),
+                spacing="2",
+                align="center",
+            ),
+            rx.box(
+                rx.foreach(players.to(list[dict[str, str]]), _player_row),
+                width="100%",
+                border_radius="8px",
+                class_name="border overflow-hidden "
+                + t(
+                    "bg-[#08090D] border-white/5",
+                    "bg-gray-50 border-gray-200",
+                ),
+            ),
+            spacing="2",
+            width="100%",
+            align="stretch",
+        ),
+    )
+
+
 def _roster_card(r: rx.Var) -> rx.Component:
     return rx.card(
         rx.vstack(
@@ -716,68 +843,11 @@ def _roster_card(r: rx.Var) -> rx.Component:
                 align="start",
                 width="100%",
             ),
-            rx.divider(),
-            rx.hstack(
-                rx.vstack(
-                    rx.text(
-                        "Starter",
-                        size="1",
-                        weight="bold",
-                        class_name="uppercase " + TEXT_SECONDARY,
-                    ),
-                    rx.text(
-                        r["starters_count"].to(str),
-                        size="4",
-                        weight="bold",
-                        class_name=TEXT_PRIMARY,
-                    ),
-                    spacing="0",
-                    align="center",
-                ),
-                rx.divider(orientation="vertical", size="4"),
-                rx.vstack(
-                    rx.text(
-                        "Bank",
-                        size="1",
-                        weight="bold",
-                        class_name="uppercase " + TEXT_SECONDARY,
-                    ),
-                    rx.text(
-                        r["bench_count"].to(str),
-                        size="4",
-                        weight="bold",
-                        class_name=TEXT_PRIMARY,
-                    ),
-                    spacing="0",
-                    align="center",
-                ),
-                rx.divider(orientation="vertical", size="4"),
-                rx.vstack(
-                    rx.text(
-                        "Total",
-                        size="1",
-                        weight="bold",
-                        class_name="uppercase " + TEXT_SECONDARY,
-                    ),
-                    rx.text(
-                        r["players_count"].to(str),
-                        size="4",
-                        weight="bold",
-                        class_name="text-[#DC2626]",
-                    ),
-                    spacing="0",
-                    align="center",
-                ),
-                spacing="3",
-                align="center",
-                justify="between",
-                width="100%",
-            ),
             rx.hstack(
                 rx.text(
                     f"{r['wins']}-{r['losses']}-{r['ties']}",
                     size="1",
-                    weight="medium",
+                    weight="bold",
                     class_name=TEXT_SECONDARY,
                 ),
                 rx.spacer(),
@@ -789,6 +859,12 @@ def _roster_card(r: rx.Var) -> rx.Component:
                 ),
                 width="100%",
                 align="center",
+            ),
+            rx.divider(),
+            _player_group("Starter", r["starter_players"], "text-[#DC2626]"),
+            _player_group("Bank", r["bench_players"], TEXT_SECONDARY),
+            _player_group(
+                "Reserve / IR", r["reserve_players"], "text-amber-500"
             ),
             spacing="3",
             width="100%",

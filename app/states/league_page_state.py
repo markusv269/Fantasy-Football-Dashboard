@@ -1,6 +1,7 @@
 import reflex as rx
 import logging
 from app.supabase_client import get_supabase_client
+from app.player_cache import enrich_roster_players
 
 
 class LeaguePageState(rx.State):
@@ -15,13 +16,15 @@ class LeaguePageState(rx.State):
     total_rosters: int = 0
     manager_count: int = 0
     latest_week: int = 0
+    available_weeks: list[int] = []
+    selected_matchup_week: int = 0
     roster_positions: list[str] = []
     champion: dict[str, str] = {}
     top_standings: list[dict[str, str | int | float]] = []
     full_standings: list[dict[str, str | int | float]] = []
     matchup_pairs: list[dict[str, str | int | float]] = []
     manager_cards: list[dict[str, str | int]] = []
-    roster_cards: list[dict[str, str | int | float]] = []
+    roster_cards: list[dict[str, str | int | float | list[dict[str, str]]]] = []
     trades: list[dict[str, str]] = []
     trades_available: bool = False
     drafts: list[dict[str, str | int]] = []
@@ -38,6 +41,8 @@ class LeaguePageState(rx.State):
         self.total_rosters = 0
         self.manager_count = 0
         self.latest_week = 0
+        self.available_weeks = []
+        self.selected_matchup_week = 0
         self.roster_positions = []
         self.champion = {}
         self.top_standings = []
@@ -256,83 +261,38 @@ class LeaguePageState(rx.State):
             except Exception as e:
                 logging.exception(f"Full standings fetch failed: {e}")
 
-            # Matchup pairs (latest week)
+            # Available matchup weeks + matchup pairs for latest available
             try:
-                if latest_week > 0:
-                    mres = (
-                        client.table("matchup_week_stats")
-                        .select("*")
-                        .eq("league_id", clean_id)
-                        .eq("week", latest_week)
-                        .execute()
+                weeks_res = (
+                    client.table("matchup_week_stats")
+                    .select("week")
+                    .eq("league_id", clean_id)
+                    .execute()
+                )
+                weeks_rows = (
+                    weeks_res.data if weeks_res and weeks_res.data else []
+                )
+                weeks_set = {
+                    int(x.get("week"))
+                    for x in weeks_rows
+                    if x.get("week") is not None
+                }
+                available_weeks = sorted(weeks_set)
+                self.available_weeks = available_weeks
+                if available_weeks:
+                    selected = max(available_weeks)
+                    self.selected_matchup_week = selected
+                    self.matchup_pairs = self._fetch_matchup_pairs(
+                        client, clean_id, selected, mgr_map
                     )
-                    mrows = mres.data if mres and mres.data else []
-                    pairs: dict = {}
-                    for m in mrows:
-                        mid = m.get("matchup_id")
-                        pairs.setdefault(mid, []).append(m)
-                    paired = []
-                    for mid, teams in pairs.items():
-                        if len(teams) >= 2:
-                            t1, t2 = teams[0], teams[1]
-                            m1 = mgr_map.get(t1.get("roster_id"), {})
-                            m2 = mgr_map.get(t2.get("roster_id"), {})
-                            paired.append(
-                                {
-                                    "matchup_id": int(mid)
-                                    if mid is not None
-                                    else 0,
-                                    "team_a_name": str(
-                                        m1.get("team_name")
-                                        or m1.get("display_name")
-                                        or f"Team {t1.get('roster_id')}"
-                                    ),
-                                    "team_a_manager": str(
-                                        m1.get("display_name") or ""
-                                    ),
-                                    "team_a_points": round(
-                                        float(t1.get("points") or 0.0), 2
-                                    ),
-                                    "team_b_name": str(
-                                        m2.get("team_name")
-                                        or m2.get("display_name")
-                                        or f"Team {t2.get('roster_id')}"
-                                    ),
-                                    "team_b_manager": str(
-                                        m2.get("display_name") or ""
-                                    ),
-                                    "team_b_points": round(
-                                        float(t2.get("points") or 0.0), 2
-                                    ),
-                                }
-                            )
-                        elif len(teams) == 1:
-                            t1 = teams[0]
-                            m1 = mgr_map.get(t1.get("roster_id"), {})
-                            paired.append(
-                                {
-                                    "matchup_id": int(mid)
-                                    if mid is not None
-                                    else 0,
-                                    "team_a_name": str(
-                                        m1.get("team_name")
-                                        or m1.get("display_name")
-                                        or f"Team {t1.get('roster_id')}"
-                                    ),
-                                    "team_a_manager": str(
-                                        m1.get("display_name") or ""
-                                    ),
-                                    "team_a_points": round(
-                                        float(t1.get("points") or 0.0), 2
-                                    ),
-                                    "team_b_name": "BYE",
-                                    "team_b_manager": "",
-                                    "team_b_points": 0.0,
-                                }
-                            )
-                    self.matchup_pairs = paired
+                else:
+                    self.selected_matchup_week = 0
+                    self.matchup_pairs = []
             except Exception as e:
                 logging.exception(f"Matchup pairs fetch failed: {e}")
+                self.available_weeks = []
+                self.selected_matchup_week = 0
+                self.matchup_pairs = []
 
             # Manager cards
             try:
@@ -356,7 +316,7 @@ class LeaguePageState(rx.State):
             except Exception as e:
                 logging.exception(f"Manager cards build failed: {e}")
 
-            # Roster cards using json_data
+            # Roster cards using json_data + real player lists
             try:
                 if latest_week > 0:
                     rc_res = (
@@ -373,18 +333,31 @@ class LeaguePageState(rx.State):
                         mgr = mgr_map.get(rid, {})
                         jd = r.get("json_data") or {}
                         players = (
-                            jd.get("players") if isinstance(jd, dict) else None
-                        )
+                            jd.get("players") if isinstance(jd, dict) else []
+                        ) or []
                         starters = (
-                            jd.get("starters") if isinstance(jd, dict) else None
-                        )
-                        players_count = (
-                            len(players) if isinstance(players, list) else 0
-                        )
-                        starters_count = (
-                            len(starters) if isinstance(starters, list) else 0
-                        )
-                        bench_count = max(players_count - starters_count, 0)
+                            jd.get("starters") if isinstance(jd, dict) else []
+                        ) or []
+                        reserve = (
+                            jd.get("reserve") if isinstance(jd, dict) else []
+                        ) or []
+                        players = [
+                            str(p) for p in players if p not in (None, "0", 0)
+                        ]
+                        starters = [
+                            str(p) for p in starters if p not in (None, "0", 0)
+                        ]
+                        reserve = [
+                            str(p) for p in reserve if p not in (None, "0", 0)
+                        ]
+                        bench = [
+                            p
+                            for p in players
+                            if p not in starters and p not in reserve
+                        ]
+                        starter_players = enrich_roster_players(starters)
+                        bench_players = enrich_roster_players(bench)
+                        reserve_players = enrich_roster_players(reserve)
                         cards.append(
                             {
                                 "roster_id": int(rid) if rid is not None else 0,
@@ -396,9 +369,13 @@ class LeaguePageState(rx.State):
                                 "display_name": str(
                                     mgr.get("display_name") or ""
                                 ),
-                                "players_count": players_count,
-                                "starters_count": starters_count,
-                                "bench_count": bench_count,
+                                "players_count": len(players),
+                                "starters_count": len(starters),
+                                "bench_count": len(bench),
+                                "reserve_count": len(reserve),
+                                "starter_players": starter_players,
+                                "bench_players": bench_players,
+                                "reserve_players": reserve_players,
                                 "wins": int(r.get("wins") or 0),
                                 "losses": int(r.get("losses") or 0),
                                 "ties": int(r.get("ties") or 0),
@@ -484,3 +461,106 @@ class LeaguePageState(rx.State):
             self.error_message = "Fehler beim Laden der Liga."
         finally:
             self.loading = False
+
+    def _fetch_matchup_pairs(
+        self, client, league_id: str, week: int, mgr_map: dict
+    ) -> list[dict]:
+        """Load and pair matchups for a given week."""
+        try:
+            mres = (
+                client.table("matchup_week_stats")
+                .select("*")
+                .eq("league_id", league_id)
+                .eq("week", int(week))
+                .execute()
+            )
+            mrows = mres.data if mres and mres.data else []
+            pairs: dict = {}
+            for m in mrows:
+                mid = m.get("matchup_id")
+                pairs.setdefault(mid, []).append(m)
+            paired = []
+            for mid, teams in pairs.items():
+                if len(teams) >= 2:
+                    t1, t2 = teams[0], teams[1]
+                    m1 = mgr_map.get(t1.get("roster_id"), {})
+                    m2 = mgr_map.get(t2.get("roster_id"), {})
+                    paired.append(
+                        {
+                            "matchup_id": int(mid) if mid is not None else 0,
+                            "team_a_name": str(
+                                m1.get("team_name")
+                                or m1.get("display_name")
+                                or f"Team {t1.get('roster_id')}"
+                            ),
+                            "team_a_manager": str(m1.get("display_name") or ""),
+                            "team_a_points": round(
+                                float(t1.get("points") or 0.0), 2
+                            ),
+                            "team_b_name": str(
+                                m2.get("team_name")
+                                or m2.get("display_name")
+                                or f"Team {t2.get('roster_id')}"
+                            ),
+                            "team_b_manager": str(m2.get("display_name") or ""),
+                            "team_b_points": round(
+                                float(t2.get("points") or 0.0), 2
+                            ),
+                        }
+                    )
+                elif len(teams) == 1:
+                    t1 = teams[0]
+                    m1 = mgr_map.get(t1.get("roster_id"), {})
+                    paired.append(
+                        {
+                            "matchup_id": int(mid) if mid is not None else 0,
+                            "team_a_name": str(
+                                m1.get("team_name")
+                                or m1.get("display_name")
+                                or f"Team {t1.get('roster_id')}"
+                            ),
+                            "team_a_manager": str(m1.get("display_name") or ""),
+                            "team_a_points": round(
+                                float(t1.get("points") or 0.0), 2
+                            ),
+                            "team_b_name": "BYE",
+                            "team_b_manager": "",
+                            "team_b_points": 0.0,
+                        }
+                    )
+            paired.sort(key=lambda x: x["matchup_id"])
+            return paired
+        except Exception as e:
+            logging.exception(f"Fetch matchups for week {week} failed: {e}")
+            return []
+
+    @rx.event
+    def change_matchup_week(self, week: int):
+        """Update only the selected week and its matchup pairs."""
+        try:
+            w = int(week)
+        except Exception:
+            logging.exception("Invalid week arg")
+            return
+        if w not in self.available_weeks:
+            return
+        client = get_supabase_client()
+        if not client or not self.league_id:
+            self.selected_matchup_week = w
+            return
+        try:
+            mgr_res = (
+                client.table("managers")
+                .select("*")
+                .eq("league_id", self.league_id)
+                .execute()
+            )
+            mgrs = mgr_res.data if mgr_res and mgr_res.data else []
+            mgr_map = {m.get("roster_id"): m for m in mgrs}
+        except Exception as e:
+            logging.exception(f"Manager map reload failed: {e}")
+            mgr_map = {}
+        self.selected_matchup_week = w
+        self.matchup_pairs = self._fetch_matchup_pairs(
+            client, self.league_id, w, mgr_map
+        )

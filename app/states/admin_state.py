@@ -176,8 +176,10 @@ class AdminState(rx.State):
         except Exception as e:
             logging.exception(f"Error loading admin leagues: {e}")
             self._set_status(f"Fehler beim Laden: {e}", "error")
-        finally:
-            self.is_loading = False
+
+    @rx.event
+    def init_admin(self):
+        yield AdminState.load_leagues
 
     def _sync_league_metadata(self, client, league_id: str) -> dict:
         data = get_league(league_id)
@@ -187,11 +189,28 @@ class AdminState(rx.State):
         season_val = (
             int(season_raw) if str(season_raw).isdigit() else season_raw
         )
-        # Only include columns that exist on the `leagues` table.
+        # Preserve existing league_type — the leagues.league_type column is
+        # NOT NULL on many rows and Sleeper does not return it. Fall back
+        # to a safe default only when the row is brand new.
+        existing_type = ""
+        try:
+            existing = (
+                client.table("leagues")
+                .select("league_type")
+                .eq("league_id", str(league_id))
+                .limit(1)
+                .execute()
+            )
+            if existing and existing.data:
+                existing_type = str(existing.data[0].get("league_type") or "")
+        except Exception as e:
+            logging.exception(f"Existing league_type lookup failed: {e}")
+        safe_type = existing_type or "dynasty"
         payload = {
             "league_id": str(league_id),
             "league_name": data.get("name", "") or f"Liga {league_id}",
             "league_season": season_val,
+            "league_type": safe_type,
             "roster_positions": data.get("roster_positions") or [],
         }
         try:

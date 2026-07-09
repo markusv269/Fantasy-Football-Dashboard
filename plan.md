@@ -1,20 +1,20 @@
-# Vorgänger-Ligen aus Sleeper nach Supabase übernehmen
+# Liga-Detailseiten: Wochen-Matchups, Spieler-Roster und Sync-Fehler
 
-## Phase 1: Datenzugriff und Umfang prüfen ✅
-- [x] Supabase-Verbindung mit vorhandenen Zugangsdaten validieren
-- [x] Alle bestehenden Liga-IDs aus der Datenbank laden
-- [x] Sleeper-Ligadaten abrufen und vorhandene Vorgänger-Referenzen bestimmen
+## Phase 1: Datenfluss und Fehlerursache prüfen ✅
+- [x] Supabase-Verbindung und vorhandene Liga-/Roster-/Matchup-Daten validieren
+- [x] Ursache für fehlenden Liga-Typ beim Sync bestimmen
+- [x] Verfügbare Matchup-Wochen und Roster-Spielerdaten anhand echter Daten prüfen
 
-## Phase 2: Vorgänger-Ligen synchronisieren ✅
-- [x] Vorgänger-Ligen rekursiv anhand der Sleeper-Referenz ermitteln
-- [x] Neue Vorgänger-Ligen in Supabase speichern
-- [x] Zugehörige Manager-, Roster-, Matchup- und Draft-Daten soweit verfügbar synchronisieren
-- [x] Duplikate und bereits vorhandene Ligen überspringen
+## Phase 2: Liga-Detailseite erweitern ✅
+- [x] Matchups auf Liga-Detailseiten nach auswählbarer Woche anzeigen
+- [x] Wochenleiste mit verfügbaren Wochen hinzufügen
+- [x] Roster-Karten um sichtbare Spielerlisten ergänzen
+- [x] Lade-, Leer- und responsive Zustände im bestehenden roten Karten-Design beibehalten
 
-## Phase 3: Ergebnis validieren ✅
-- [x] Anzahl gefundener, eingefügter und übersprungener Vorgänger-Ligen prüfen
-- [x] Stichprobe der neu gespeicherten Ligen aus Supabase laden
-- [x] Abschlussstatus dokumentieren
+## Phase 3: Sync-Fehler beheben und validieren ✅
+- [x] Liga-Metadaten-Sync so absichern, dass vorhandene Liga-Typen erhalten bleiben
+- [x] Liga-Detail-Ladeevents mit Wochenwechsel und Roster-Spielern testen
+- [x] Sync-Fehlerpfad gegen echte Supabase-/Sleeper-Daten validieren
 
 ## Designrichtung
-- Keine UI-Änderung erforderlich; bestehendes Admin-/Liga-Datenmodell wird unverändert genutzt.
+- Bestehendes hell/dunkel kompatibles Design beibehalten; rote Akzente, kompakte Wochen-Pills, klare Matchup-Karten und Roster-Karten mit gut scannbaren Spielerlisten verwenden.
