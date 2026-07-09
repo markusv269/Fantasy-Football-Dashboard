@@ -140,8 +140,16 @@ class AdminState(rx.State):
         self.status_message = ""
         self.status_type = ""
 
+    async def _require_auth(self) -> bool:
+        from app.states.admin_auth_state import AdminAuthState
+
+        auth = await self.get_state(AdminAuthState)
+        return bool(auth.is_authenticated)
+
     @rx.event
-    def load_leagues(self):
+    async def load_leagues(self):
+        if not await self._require_auth():
+            return
         self.is_loading = True
         yield
         try:
@@ -178,7 +186,9 @@ class AdminState(rx.State):
             self._set_status(f"Fehler beim Laden: {e}", "error")
 
     @rx.event
-    def init_admin(self):
+    async def init_admin(self):
+        if not await self._require_auth():
+            return
         yield AdminState.load_leagues
 
     def _sync_league_metadata(self, client, league_id: str) -> dict:
@@ -393,7 +403,9 @@ class AdminState(rx.State):
         return len(rows)
 
     @rx.event
-    def sync_league(self, league_id: str):
+    async def sync_league(self, league_id: str):
+        if not await self._require_auth():
+            return
         self.is_syncing = True
         self.sync_target = league_id
         yield
@@ -440,7 +452,9 @@ class AdminState(rx.State):
             yield AdminState.load_leagues
 
     @rx.event
-    def sync_all(self):
+    async def sync_all(self):
+        if not await self._require_auth():
+            return
         self.is_syncing = True
         self.sync_target = "ALL"
         yield
@@ -481,7 +495,9 @@ class AdminState(rx.State):
             yield AdminState.load_leagues
 
     @rx.event
-    def add_league(self):
+    async def add_league(self):
+        if not await self._require_auth():
+            return
         raw = self.add_league_input.strip().strip('"')
         if not raw:
             self._set_status("Bitte gib eine Sleeper League-ID ein.", "error")
@@ -622,7 +638,3 @@ class AdminState(rx.State):
             self.is_syncing = False
             self.sync_target = ""
             yield AdminState.load_leagues
-
-    @rx.event
-    def init_admin(self):
-        yield AdminState.load_leagues

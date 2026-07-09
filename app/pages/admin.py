@@ -1,7 +1,97 @@
 import reflex as rx
 from app.states.admin_state import AdminState
+from app.states.admin_auth_state import AdminAuthState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+
+
+def _login_form() -> rx.Component:
+    return layout(
+        rx.center(
+            rx.card(
+                rx.vstack(
+                    rx.hstack(
+                        rx.icon("shield", size=28, color="#DC2626"),
+                        rx.heading("Admin-Zugang", size="6", weight="bold"),
+                        spacing="3",
+                        align="center",
+                    ),
+                    rx.text(
+                        "Bitte gib das Admin-Passwort ein, um fortzufahren.",
+                        size="2",
+                        color_scheme="gray",
+                    ),
+                    rx.el.form(
+                        rx.vstack(
+                            rx.input(
+                                placeholder="Passwort",
+                                type="password",
+                                on_change=AdminAuthState.set_password_input,
+                                default_value=AdminAuthState.password_input,
+                                size="3",
+                                width="100%",
+                                disabled=AdminAuthState.is_locked,
+                            ),
+                            rx.cond(
+                                AdminAuthState.error_message != "",
+                                rx.hstack(
+                                    rx.icon(
+                                        "circle-alert",
+                                        size=16,
+                                        color="#EF4444",
+                                    ),
+                                    rx.text(
+                                        AdminAuthState.error_message,
+                                        size="2",
+                                        weight="medium",
+                                        class_name="text-red-500",
+                                    ),
+                                    spacing="2",
+                                    align="center",
+                                ),
+                            ),
+                            rx.cond(
+                                AdminAuthState.is_locked,
+                                rx.text(
+                                    f"Gesperrt. Bitte {AdminAuthState.lockout_remaining}s warten.",
+                                    size="1",
+                                    class_name="text-amber-500",
+                                ),
+                            ),
+                            rx.button(
+                                rx.cond(
+                                    AdminAuthState.is_checking,
+                                    rx.spinner(size="2"),
+                                    rx.text("Anmelden"),
+                                ),
+                                type="submit",
+                                size="3",
+                                width="100%",
+                                disabled=AdminAuthState.is_checking
+                                | AdminAuthState.is_locked,
+                                style={"background_color": "#DC2626"},
+                            ),
+                            spacing="3",
+                            width="100%",
+                            align="stretch",
+                        ),
+                        on_submit=AdminAuthState.submit_login,
+                        reset_on_submit=False,
+                        width="100%",
+                    ),
+                    spacing="4",
+                    width="100%",
+                    align="stretch",
+                ),
+                size="4",
+                width="100%",
+                max_width="420px",
+                class_name="border-l-4 border-l-[#DC2626]",
+            ),
+            padding_y="80px",
+            width="100%",
+        )
+    )
 
 
 def _filter_tab(label: str, value: str) -> rx.Component:
@@ -560,8 +650,18 @@ def _hero() -> rx.Component:
             rx.hstack(
                 rx.icon("shield", size=28, color="#DC2626"),
                 rx.heading("Admin-Dashboard", size="7", weight="bold"),
+                rx.spacer(),
+                rx.button(
+                    rx.icon("log-out", size=14),
+                    "Logout",
+                    on_click=AdminAuthState.logout,
+                    variant="soft",
+                    color_scheme="gray",
+                    size="2",
+                ),
                 spacing="3",
                 align="center",
+                width="100%",
             ),
             rx.text(
                 "Synchronisiere Liga-Metadaten, Manager und Roster mit der Sleeper-API und der Datenbank.",
@@ -579,6 +679,14 @@ def _hero() -> rx.Component:
 
 
 def admin_page() -> rx.Component:
+    return rx.cond(
+        AdminAuthState.is_authenticated,
+        _admin_dashboard(),
+        _login_form(),
+    )
+
+
+def _admin_dashboard() -> rx.Component:
     return layout(
         rx.vstack(
             _hero(),
