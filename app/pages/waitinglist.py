@@ -62,7 +62,7 @@ def waitlist_row(entry: dict, index: int) -> rx.Component:
         ),
         rx.table.cell(
             rx.text(
-                entry["created_at_display"].to(str),
+                entry["time_display"].to(str),
                 size="1",
                 class_name=TEXT_SECONDARY,
             ),
@@ -102,7 +102,7 @@ def waitlist_section(
                                 rx.table.column_header_cell("#"),
                                 rx.table.column_header_cell("Sleeper Name"),
                                 rx.table.column_header_cell("Discord"),
-                                rx.table.column_header_cell("Angemeldet am"),
+                                rx.table.column_header_cell("Registriert am"),
                             ),
                         ),
                         rx.table.body(rx.foreach(entries, waitlist_row)),

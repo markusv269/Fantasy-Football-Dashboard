@@ -37,23 +37,57 @@ class WaitlistState(rx.State):
             return str(fallback)
         return ""  # Stable bottom fallback
 
+    def _format_iso_to_display(self, iso_str: str | None) -> str:
+        if not iso_str or not str(iso_str).strip():
+            return ""
+        try:
+            dt = datetime.fromisoformat(str(iso_str).replace("Z", "+00:00"))
+            return dt.strftime("%d.%m.%Y %H:%M")
+        except Exception:
+            logging.exception("Unexpected error")
+            return str(iso_str)[:10]
+
     @rx.var
     def dynasty_entries(self) -> list[dict[str, str | bool]]:
         entries = [e for e in self.all_entries if e.get("dynasty")]
         entries.sort(key=lambda e: self._sort_key(e, "registration_dyn"))
-        return entries
+        formatted = []
+        for e in entries:
+            new_e = dict(e)
+            reg_ts = e.get("registration_dyn")
+            new_e["time_display"] = self._format_iso_to_display(
+                reg_ts if reg_ts else e.get("created_at")
+            )
+            formatted.append(new_e)
+        return formatted
 
     @rx.var
     def dynasty_idp_entries(self) -> list[dict[str, str | bool]]:
         entries = [e for e in self.all_entries if e.get("dynasty_idp")]
         entries.sort(key=lambda e: self._sort_key(e, "registration_idp"))
-        return entries
+        formatted = []
+        for e in entries:
+            new_e = dict(e)
+            reg_ts = e.get("registration_idp")
+            new_e["time_display"] = self._format_iso_to_display(
+                reg_ts if reg_ts else e.get("created_at")
+            )
+            formatted.append(new_e)
+        return formatted
 
     @rx.var
     def dynasty_bb_entries(self) -> list[dict[str, str | bool]]:
         entries = [e for e in self.all_entries if e.get("dynasty_bb")]
         entries.sort(key=lambda e: self._sort_key(e, "registration_bb"))
-        return entries
+        formatted = []
+        for e in entries:
+            new_e = dict(e)
+            reg_ts = e.get("registration_bb")
+            new_e["time_display"] = self._format_iso_to_display(
+                reg_ts if reg_ts else e.get("created_at")
+            )
+            formatted.append(new_e)
+        return formatted
 
     @rx.event
     def set_sleeper_name_input(self, val: str):
