@@ -69,10 +69,7 @@ class AppState(rx.State):
                 result = client.table("leagues").select("*").execute()
                 if result and result.data:
                     raw_leagues = result.data
-                    use_live = (
-                        len(raw_leagues) <= 10
-                    )  # Nur bei 10 oder weniger Ligen Live-Daten abrufen, um Performance zu schonen
-                    # use_live = True  # Immer Live-Daten verwenden, um die Genauigkeit zu gewährleisten
+                    use_live = len(raw_leagues) <= 10
                     normalized = []
                     for lg in raw_leagues:
                         live_data = None
@@ -97,9 +94,7 @@ class AppState(rx.State):
 
     @rx.event
     def select_league(self, league_id: str):
-        self.selected_league_id = league_id.strip(
-            '"'
-        )  # Remove extra quotes if present
+        self.selected_league_id = league_id.strip('"')
 
     @rx.event
     def init_app(self):
