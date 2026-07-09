@@ -1,7 +1,7 @@
 import reflex as rx
 import requests
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from app.supabase_client import get_supabase_client
 
 
@@ -16,6 +16,7 @@ class WaitlistState(rx.State):
     resolved_avatar: str = ""
     is_resolving: bool = False
     is_submitting: bool = False
+    is_removing: bool = False
     username_valid: bool = False
     username_error: str = ""
     submit_success: bool = False
@@ -26,17 +27,29 @@ class WaitlistState(rx.State):
     total_registrations: int = 0
     all_entries: list[dict[str, str | bool]] = []
 
+    def _sort_key(self, entry: dict, ts_field: str) -> str:
+        ts = str(entry.get(ts_field) or "")
+        if ts:
+            return ts
+        return str(entry.get("created_at") or "")
+
     @rx.var
     def dynasty_entries(self) -> list[dict[str, str | bool]]:
-        return [e for e in self.all_entries if e.get("dynasty")]
+        entries = [e for e in self.all_entries if e.get("dynasty")]
+        entries.sort(key=lambda e: self._sort_key(e, "registration_dyn"))
+        return entries
 
     @rx.var
     def dynasty_idp_entries(self) -> list[dict[str, str | bool]]:
-        return [e for e in self.all_entries if e.get("dynasty_idp")]
+        entries = [e for e in self.all_entries if e.get("dynasty_idp")]
+        entries.sort(key=lambda e: self._sort_key(e, "registration_idp"))
+        return entries
 
     @rx.var
     def dynasty_bb_entries(self) -> list[dict[str, str | bool]]:
-        return [e for e in self.all_entries if e.get("dynasty_bb")]
+        entries = [e for e in self.all_entries if e.get("dynasty_bb")]
+        entries.sort(key=lambda e: self._sort_key(e, "registration_bb"))
+        return entries
 
     @rx.event
     def set_sleeper_name_input(self, val: str):
@@ -104,6 +117,15 @@ class WaitlistState(rx.State):
                                 raw_entry.get("dynasty_bb", False)
                             ),
                             "created_at": str(raw_entry.get("created_at", "")),
+                            "registration_dyn": str(
+                                raw_entry.get("registration_dyn") or ""
+                            ),
+                            "registration_idp": str(
+                                raw_entry.get("registration_idp") or ""
+                            ),
+                            "registration_bb": str(
+                                raw_entry.get("registration_bb") or ""
+                            ),
                         }
                         self.existing_entry = entry
                         self.dynasty_checked = entry["dynasty"]
@@ -156,6 +178,39 @@ class WaitlistState(rx.State):
         try:
             client = get_supabase_client()
             if client:
+                now_iso = datetime.now(timezone.utc).isoformat()
+                existing_dyn = str(
+                    self.existing_entry.get("registration_dyn") or ""
+                )
+                existing_idp = str(
+                    self.existing_entry.get("registration_idp") or ""
+                )
+                existing_bb = str(
+                    self.existing_entry.get("registration_bb") or ""
+                )
+                prev_dyn = bool(self.existing_entry.get("dynasty", False))
+                prev_idp = bool(self.existing_entry.get("dynasty_idp", False))
+                prev_bb = bool(self.existing_entry.get("dynasty_bb", False))
+
+                if self.dynasty_checked:
+                    reg_dyn = (
+                        existing_dyn if (prev_dyn and existing_dyn) else now_iso
+                    )
+                else:
+                    reg_dyn = None
+                if self.dynasty_idp_checked:
+                    reg_idp = (
+                        existing_idp if (prev_idp and existing_idp) else now_iso
+                    )
+                else:
+                    reg_idp = None
+                if self.dynasty_bb_checked:
+                    reg_bb = (
+                        existing_bb if (prev_bb and existing_bb) else now_iso
+                    )
+                else:
+                    reg_bb = None
+
                 client.table("dynasty_waitinglist").upsert(
                     {
                         "user_id": self.resolved_user_id,
@@ -165,6 +220,9 @@ class WaitlistState(rx.State):
                         "dynasty_idp": self.dynasty_idp_checked,
                         "dynasty_bb": self.dynasty_bb_checked,
                         "discord": discord_val,
+                        "registration_dyn": reg_dyn,
+                        "registration_idp": reg_idp,
+                        "registration_bb": reg_bb,
                     },
                     on_conflict="user_id",
                 ).execute()
@@ -176,6 +234,49 @@ class WaitlistState(rx.State):
             return rx.toast("Es ist ein Fehler aufgetreten.", duration=3000)
         finally:
             self.is_submitting = False
+
+    @rx.event
+    def remove_from_waitlist(self):
+        if not self.resolved_user_id:
+            return rx.toast(
+                "Keine bestehende Anmeldung gefunden.", duration=3000
+            )
+        self.is_removing = True
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                return rx.toast("Datenbank nicht verfügbar.", duration=3000)
+            client.table("dynasty_waitinglist").delete().eq(
+                "user_id", self.resolved_user_id
+            ).execute()
+
+            # Atomic state reset after successful deletion
+            self.sleeper_name_input = ""
+            self.discord_input = ""
+            self.dynasty_checked = False
+            self.dynasty_idp_checked = False
+            self.dynasty_bb_checked = False
+            self.resolved_user_id = ""
+            self.resolved_display_name = ""
+            self.resolved_avatar = ""
+            self.username_valid = False
+            self.username_error = ""
+            self.submit_success = False
+            self.existing_entry = {}
+
+            yield WaitlistState.load_waitlist_stats
+            return rx.toast(
+                "Du wurdest erfolgreich von der Warteliste entfernt.",
+                duration=3000,
+            )
+        except Exception as e:
+            logging.exception(f"Error removing from waitlist: {e}")
+            return rx.toast(
+                "Fehler beim Entfernen von der Warteliste.", duration=3000
+            )
+        finally:
+            self.is_removing = False
 
     @rx.event
     def reset_form(self):
@@ -241,6 +342,15 @@ class WaitlistState(rx.State):
                                 "discord": str(d.get("discord") or ""),
                                 "created_at": created,
                                 "created_at_display": display,
+                                "registration_dyn": str(
+                                    d.get("registration_dyn") or ""
+                                ),
+                                "registration_idp": str(
+                                    d.get("registration_idp") or ""
+                                ),
+                                "registration_bb": str(
+                                    d.get("registration_bb") or ""
+                                ),
                             }
                         )
                     self.all_entries = entries

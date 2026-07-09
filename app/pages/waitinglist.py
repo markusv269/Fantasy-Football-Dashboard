@@ -377,6 +377,7 @@ def _form_state() -> rx.Component:
                     ),
                     on_click=WaitlistState.submit_waitlist,
                     disabled=WaitlistState.is_submitting
+                    | WaitlistState.is_removing
                     | ~(
                         WaitlistState.dynasty_checked
                         | WaitlistState.dynasty_idp_checked
@@ -386,6 +387,58 @@ def _form_state() -> rx.Component:
                     size="3",
                     width="100%",
                     style={"background_color": "#DC2626"},
+                ),
+                rx.cond(
+                    WaitlistState.existing_entry.contains("user_id"),
+                    rx.vstack(
+                        rx.divider(),
+                        rx.hstack(
+                            rx.icon("triangle-alert", size=16, color="#DC2626"),
+                            rx.text(
+                                "Gefahrenbereich",
+                                size="1",
+                                weight="bold",
+                                class_name="uppercase tracking-wide text-red-600",
+                            ),
+                            spacing="2",
+                            align="center",
+                        ),
+                        rx.text(
+                            "Wenn du dich komplett von der Warteliste austragen möchtest, kannst du deinen Eintrag hier vollständig entfernen.",
+                            size="1",
+                            class_name=TEXT_SECONDARY,
+                        ),
+                        rx.button(
+                            rx.cond(
+                                WaitlistState.is_removing,
+                                rx.spinner(size="2"),
+                                rx.hstack(
+                                    rx.icon("trash-2", size=14),
+                                    rx.text(
+                                        "Komplett von Warteliste entfernen"
+                                    ),
+                                    spacing="2",
+                                    align="center",
+                                ),
+                            ),
+                            on_click=WaitlistState.remove_from_waitlist,
+                            disabled=WaitlistState.is_removing
+                            | WaitlistState.is_submitting,
+                            size="2",
+                            width="100%",
+                            variant="soft",
+                            color_scheme="red",
+                        ),
+                        spacing="2",
+                        width="100%",
+                        align="stretch",
+                        padding="12px",
+                        border_radius="8px",
+                        class_name=t(
+                            "border border-red-500/30 bg-red-500/5",
+                            "border border-red-200 bg-red-50",
+                        ),
+                    ),
                 ),
                 spacing="4",
                 width="100%",
