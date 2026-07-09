@@ -28,7 +28,7 @@ from app.states.waitlist_state import WaitlistState
 
 app = rx.App(
     theme=rx.theme(
-        has_background=True,
+        has_background=False,
         radius="large",
         accent_color="red",
         appearance="light",

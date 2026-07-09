@@ -1,19 +1,19 @@
-# Reflex-Upgrade auf aktuelle Version
+# Darkmode auf Reflex-Standard umstellen
 
-## Phase 1: Abhängigkeit aktualisieren und Kompatibilität prüfen ✅
-- [x] Reflex auf die aktuell verfügbare Version aktualisieren
-- [x] Projektabhängigkeiten konsistent halten
-- [x] App-Import und grundlegende Framework-Kompatibilität prüfen
-- [x] Auffällige Breaking-Change-Probleme erfassen
+## Phase 1: Theme-Umschaltung korrigieren ✅
+- [x] Bestehende Theme-Umschaltung gegen Reflex-Standardverhalten prüfen
+- [x] Globale Light-/Darkmode-Steuerung auf Reflex-Standard umstellen
+- [x] Hintergrund-, Text- und Flächenfarben an die Standard-Umschaltung anbinden
+- [x] Mobile und Desktop-Umschalter konsistent halten
 
-## Phase 2: Komponenten und Events modernisieren ✅
-- [x] Veraltete oder problematische UI-Elemente nach Möglichkeit aktualisieren
-- [x] Theme-, Layout-, Menü- und Dialogverhalten kompatibel halten
-- [x] Formulare, Tabellen, Navigation und interaktive Elemente auf aktuelle Reflex-Nutzung prüfen
-- [x] Externe Datenzugriffe unverändert und funktionsfähig lassen
+## Phase 2: Verknüpfungen und Interaktionen prüfen ✅
+- [x] Layout-, Header-, Sidebar- und Drawer-Verknüpfungen mit dem Darkmode prüfen
+- [x] Seiten- und Komponentenklassen an die neue Umschaltung anbinden
+- [x] Bestehende Navigation und mobile Menüevents unverändert erhalten
+- [x] Externe Datenzugriffe unverändert lassen
 
-## Phase 3: Abschließende Validierung ✅
-- [x] App-Import mit aktualisierter Reflex-Version prüfen
+## Phase 3: Validierung ✅
+- [x] App-Import mit aktualisierter Theme-Logik prüfen
 - [x] Theme- und mobile Menüevents testen
-- [x] Relevante Interaktionen für Modal, Polls, Drafts und Warteliste testen
-- [x] Upgrade-Plan vollständig abschließen
+- [x] Zentrale UI-Zustände für Light-/Darkmode-Hintergründe validieren
+- [x] Korrektur vollständig abschließen

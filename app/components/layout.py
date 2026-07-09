@@ -4,6 +4,33 @@ from app.states.theme_state import ThemeState
 from app.states.user_state import UserState
 from app.theme import t
 
+
+def _theme_icon() -> rx.Component:
+    return rx.color_mode_cond(
+        light=rx.icon("moon", size=16), dark=rx.icon("sun", size=16)
+    )
+
+
+def _theme_icon_lg() -> rx.Component:
+    return rx.color_mode_cond(
+        light=rx.icon("moon", size=18), dark=rx.icon("sun", size=18)
+    )
+
+
+def _theme_label() -> rx.Component:
+    return rx.color_mode_cond(
+        light=rx.text("Dark Mode", size="2"),
+        dark=rx.text("Light Mode", size="2"),
+    )
+
+
+def _theme_label_bold() -> rx.Component:
+    return rx.color_mode_cond(
+        light=rx.text("Dark Mode", size="2", weight="bold"),
+        dark=rx.text("Light Mode", size="2", weight="bold"),
+    )
+
+
 nav_items = [
     {"icon": "house", "label": "Home", "href": "/"},
     {"icon": "trophy", "label": "Leagues", "href": "/leagues"},
@@ -114,17 +141,12 @@ def sidebar_std() -> rx.Component:
             ),
             rx.button(
                 rx.hstack(
-                    rx.icon(
-                        rx.cond(ThemeState.is_dark, "sun", "moon"), size=16
-                    ),
-                    rx.text(
-                        rx.cond(ThemeState.is_dark, "Light Mode", "Dark Mode"),
-                        size="2",
-                    ),
+                    _theme_icon(),
+                    _theme_label(),
                     spacing="2",
                     align="center",
                 ),
-                on_click=ThemeState.toggle_color_mode,
+                on_click=rx.toggle_color_mode,
                 variant="soft",
                 color_scheme="gray",
                 width="100%",
@@ -222,20 +244,12 @@ def mobile_drawer_std() -> rx.Component:
             rx.box(
                 rx.button(
                     rx.hstack(
-                        rx.icon(
-                            rx.cond(ThemeState.is_dark, "sun", "moon"), size=18
-                        ),
-                        rx.text(
-                            rx.cond(
-                                ThemeState.is_dark, "Light Mode", "Dark Mode"
-                            ),
-                            size="2",
-                            weight="bold",
-                        ),
+                        _theme_icon_lg(),
+                        _theme_label_bold(),
                         spacing="2",
                         align="center",
                     ),
-                    on_click=ThemeState.toggle_color_mode,
+                    on_click=rx.toggle_color_mode,
                     variant="solid",
                     color_scheme="gray",
                     width="100%",
@@ -359,8 +373,8 @@ def header_std() -> rx.Component:
             class_name="hidden sm:flex",
         ),
         rx.button(
-            rx.icon(rx.cond(ThemeState.is_dark, "sun", "moon"), size=18),
-            on_click=ThemeState.toggle_color_mode,
+            _theme_icon_lg(),
+            on_click=rx.toggle_color_mode,
             variant="ghost",
             color_scheme="gray",
         ),
@@ -380,43 +394,37 @@ def header_std() -> rx.Component:
 
 
 def layout(content: rx.Component) -> rx.Component:
-    return rx.theme(
+    return rx.flex(
+        sidebar_std(),
         rx.flex(
-            sidebar_std(),
-            rx.flex(
-                header_std(),
+            header_std(),
+            rx.box(
                 rx.box(
-                    rx.box(
-                        content,
-                        width="100%",
-                        max_width="1280px",
-                        margin="0 auto",
-                        padding_x=["16px", "24px", "32px"],
-                        padding_y=["20px", "24px", "32px"],
-                        padding_bottom=["40px", "40px", "40px"],
-                    ),
-                    flex="1",
+                    content,
                     width="100%",
-                    overflow_y="auto",
-                    class_name=t("bg-[#020617]", "bg-[#F8F9FC]"),
+                    max_width="1280px",
+                    margin="0 auto",
+                    padding_x=["16px", "24px", "32px"],
+                    padding_y=["20px", "24px", "32px"],
+                    padding_bottom=["40px", "40px", "40px"],
                 ),
-                mobile_drawer_std(),
-                direction="column",
                 flex="1",
-                min_width="0",
-                height="100vh",
-                overflow="hidden",
+                width="100%",
+                overflow_y="auto",
+                class_name=t("bg-[#020617]", "bg-[#F8F9FC]"),
             ),
-            width="100vw",
+            mobile_drawer_std(),
+            direction="column",
+            flex="1",
+            min_width="0",
             height="100vh",
             overflow="hidden",
-            class_name=t(
-                "font-['Inter'] text-[#F3F4F6] bg-[#020617]",
-                "font-['Inter'] text-gray-900 bg-[#F8F9FC]",
-            ),
         ),
-        appearance=rx.cond(ThemeState.is_dark, "dark", "light"),
-        accent_color="red",
-        radius="large",
-        has_background=False,
+        width="100vw",
+        height="100vh",
+        overflow="hidden",
+        class_name=t(
+            "font-['Inter'] text-[#F3F4F6] bg-[#020617]",
+            "font-['Inter'] text-gray-900 bg-[#F8F9FC]",
+        ),
     )

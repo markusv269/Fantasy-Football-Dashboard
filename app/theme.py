@@ -1,5 +1,4 @@
 import reflex as rx
-from app.states.theme_state import ThemeState
 
 BRAND_RED = "#DC2626"
 BRAND_RED_HOVER = "#B91C1C"
@@ -21,8 +20,8 @@ LIGHT_TEXT_MUTED = "gray-400"
 
 
 def t(dark: str, light: str) -> rx.Var:
-    """Theme-aware class selector. Returns rx.cond that picks dark or light classes."""
-    return rx.cond(ThemeState.is_dark, dark, light)
+    """Theme-aware class selector using Reflex standard color mode."""
+    return rx.color_mode_cond(light=light, dark=dark)
 
 
 PAGE_BG = t(f"bg-[{DARK_BG_PAGE}]", f"bg-[{LIGHT_BG_PAGE}]")
