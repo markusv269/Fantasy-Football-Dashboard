@@ -42,6 +42,7 @@ nav_items = [
     {"icon": "mic", "label": "Community", "href": "/community"},
     {"icon": "archive", "label": "Archiv", "href": "/archive"},
     {"icon": "clipboard-list", "label": "Warteliste", "href": "/waitinglist"},
+    {"icon": "shield", "label": "Admin", "href": "/admin"},
 ]
 
 

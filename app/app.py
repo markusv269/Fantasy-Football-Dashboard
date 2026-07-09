@@ -19,6 +19,8 @@ from app.pages.community import community_page
 from app.pages.trending import trending_page
 from app.pages.drafts import drafts_page
 from app.pages.waitinglist import waitinglist_page
+from app.pages.admin import admin_page
+from app.states.admin_state import AdminState
 from app.states.app_state import AppState
 from app.states.matchups_state import MatchupsState
 from app.states.community_state import CommunityState
@@ -88,4 +90,9 @@ app.add_page(
     archive_page,
     route="/archive",
     on_load=[AppState.init_app, UserState.init_user],
+)
+app.add_page(
+    admin_page,
+    route="/admin",
+    on_load=AdminState.init_admin,
 )
