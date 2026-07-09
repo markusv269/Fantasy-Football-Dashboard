@@ -49,14 +49,24 @@ class LeaguePageState(rx.State):
 
     def _extract_route_id(self) -> str:
         """Extract the dynamic route id, supporting both `lid` and legacy `league_id`."""
+        params: dict = {}
         try:
-            params = self.router.page.params or {}
+            params = dict(self.router.page.params or {})
         except Exception:
             logging.exception("Failed to read router.page.params")
             params = {}
+        try:
+            url_params = getattr(self.router.url, "query_parameters", None)
+            if url_params:
+                for k, v in dict(url_params).items():
+                    params.setdefault(k, v)
+        except Exception:
+            logging.exception("Failed to read router.url query_parameters")
         for key in ("lid", "league_id"):
             val = params.get(key, "")
             if val:
+                if isinstance(val, list):
+                    val = val[0] if val else ""
                 return str(val).strip('"').strip()
         return ""
 

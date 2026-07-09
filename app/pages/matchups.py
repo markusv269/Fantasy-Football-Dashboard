@@ -87,6 +87,7 @@ def week_selector() -> rx.Component:
 def matchup_card(matchup: rx.Var) -> rx.Component:
     team_a = matchup["team_a"].to(dict)
     team_b = matchup["team_b"].to(dict)
+    has_team_b = matchup["team_b"] != None  # noqa: E711
     return rx.card(
         rx.vstack(
             rx.badge(
@@ -118,28 +119,53 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
                     align="center",
                     flex="1",
                 ),
-                rx.badge("VS", color_scheme="gray", variant="soft", size="2"),
-                rx.vstack(
-                    rx.text(
-                        team_b["team_name"].to(str),
-                        size="2",
-                        weight="bold",
-                        class_name="truncate max-w-[120px] " + TEXT_PRIMARY,
-                    ),
-                    rx.text(
-                        team_b["points"].to_string(),
-                        size="5",
-                        weight="bold",
-                        class_name=rx.cond(
-                            team_b["points"].to(float)
-                            > team_a["points"].to(float),
-                            "text-[#DC2626]",
-                            TEXT_SECONDARY,
+                rx.badge(
+                    rx.cond(has_team_b, "VS", "BYE"),
+                    color_scheme="gray",
+                    variant="soft",
+                    size="2",
+                ),
+                rx.cond(
+                    has_team_b,
+                    rx.vstack(
+                        rx.text(
+                            team_b["team_name"].to(str),
+                            size="2",
+                            weight="bold",
+                            class_name="truncate max-w-[120px] " + TEXT_PRIMARY,
                         ),
+                        rx.text(
+                            team_b["points"].to_string(),
+                            size="5",
+                            weight="bold",
+                            class_name=rx.cond(
+                                team_b["points"].to(float)
+                                > team_a["points"].to(float),
+                                "text-[#DC2626]",
+                                TEXT_SECONDARY,
+                            ),
+                        ),
+                        spacing="1",
+                        align="center",
+                        flex="1",
                     ),
-                    spacing="1",
-                    align="center",
-                    flex="1",
+                    rx.vstack(
+                        rx.text(
+                            "BYE",
+                            size="2",
+                            weight="bold",
+                            class_name=TEXT_SECONDARY,
+                        ),
+                        rx.text(
+                            "—",
+                            size="5",
+                            weight="bold",
+                            class_name=TEXT_SECONDARY,
+                        ),
+                        spacing="1",
+                        align="center",
+                        flex="1",
+                    ),
                 ),
                 spacing="3",
                 align="center",

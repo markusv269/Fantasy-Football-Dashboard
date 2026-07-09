@@ -500,6 +500,7 @@ def _full_standings_section() -> rx.Component:
 def _matchup_card(m: rx.Var) -> rx.Component:
     a = m["team_a_points"].to(float)
     b = m["team_b_points"].to(float)
+    is_bye = m["team_b_name"].to(str) == "BYE"
     return rx.card(
         rx.vstack(
             rx.badge(
@@ -533,7 +534,11 @@ def _matchup_card(m: rx.Var) -> rx.Component:
                     align="center",
                     flex="1",
                 ),
-                rx.badge("VS", color_scheme="gray", variant="soft"),
+                rx.badge(
+                    rx.cond(is_bye, "BYE", "VS"),
+                    color_scheme="gray",
+                    variant="soft",
+                ),
                 rx.vstack(
                     rx.text(
                         m["team_b_name"].to(str),

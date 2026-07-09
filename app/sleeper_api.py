@@ -6,8 +6,6 @@ BASE_URL = "https://api.sleeper.app/v1"
 
 def _get(path: str):
     """Helper method to fetch JSON data from Sleeper API."""
-    full_url = f"{BASE_URL}{path}"
-    print(f"DEBUG: Requesting URL: {full_url}")  # Add this
     try:
         r = requests.get(f"{BASE_URL}{path}", timeout=10)
         if r.status_code == 404:
