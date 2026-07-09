@@ -394,7 +394,7 @@ def header_std() -> rx.Component:
     )
 
 
-def layout(content: rx.Component) -> rx.Component:
+def layout(content: rx.Component, full_width: bool = False) -> rx.Component:
     return rx.flex(
         sidebar_std(),
         rx.flex(
@@ -403,7 +403,7 @@ def layout(content: rx.Component) -> rx.Component:
                 rx.box(
                     content,
                     width="100%",
-                    max_width="1280px",
+                    max_width=rx.cond(full_width, "100%", "1280px"),
                     margin="0 auto",
                     padding_x=["16px", "24px", "32px"],
                     padding_y=["20px", "24px", "32px"],
