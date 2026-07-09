@@ -1,21 +1,20 @@
-# Matchups-Übersicht und Liga-Drafts erweitern
+# Vorgänger-Ligen aus Sleeper nach Supabase übernehmen
 
-## Phase 1: Matchups-Übersicht verbreitern und ligaübergreifend anzeigen ✅
-- [x] Matchups-Seite so anpassen, dass aktuelle Matchups aller verfügbaren Ligen sichtbar sind
-- [x] League-Auswahl als Filtermöglichkeit beibehalten oder ergänzen, ohne die Gesamtübersicht zu verstecken
-- [x] Matchup-Karten nach Liga gruppieren und übersichtlich auf breiten sowie mobilen Bildschirmen darstellen
-- [x] Lade-, Leer- und Fehlerzustände für ligaübergreifende Matchups sauber anzeigen
+## Phase 1: Datenzugriff und Umfang prüfen ✅
+- [x] Supabase-Verbindung mit vorhandenen Zugangsdaten validieren
+- [x] Alle bestehenden Liga-IDs aus der Datenbank laden
+- [x] Sleeper-Ligadaten abrufen und vorhandene Vorgänger-Referenzen bestimmen
 
-## Phase 2: Drafts auf Liga-Detailseiten ergänzen ✅
-- [x] Draft-Daten pro Liga laden und für die Liga-Detailansicht verfügbar machen
-- [x] Draft-Sektion unter den Liga-Inhalten einfügen
-- [x] Draft-Karten oder Tabelle mit Status, Saison, Typ, Startzeit und externem Sleeper-Link anzeigen
-- [x] Leerzustand anzeigen, wenn für eine Liga keine Drafts gefunden werden
+## Phase 2: Vorgänger-Ligen synchronisieren ✅
+- [x] Vorgänger-Ligen rekursiv anhand der Sleeper-Referenz ermitteln
+- [x] Neue Vorgänger-Ligen in Supabase speichern
+- [x] Zugehörige Manager-, Roster-, Matchup- und Draft-Daten soweit verfügbar synchronisieren
+- [x] Duplikate und bereits vorhandene Ligen überspringen
 
-## Phase 3: Validierung und Buildprüfung ✅
-- [x] Matchups-Ladeevents mit realen Liga-Daten validieren
-- [x] Liga-Detail-Ladeevent inklusive Draft-Daten validieren
-- [x] Reflex-Build validieren
+## Phase 3: Ergebnis validieren ✅
+- [x] Anzahl gefundener, eingefügter und übersprungener Vorgänger-Ligen prüfen
+- [x] Stichprobe der neu gespeicherten Ligen aus Supabase laden
+- [x] Abschlussstatus dokumentieren
 
 ## Designrichtung
-- Bestehendes hell/dunkel kompatibles Design beibehalten; rote Akzente, klare Kartenflächen, gruppierte Liga-Sektionen und kompakte Draft-Karten mit deutlicher externer Verlinkung verwenden.
+- Keine UI-Änderung erforderlich; bestehendes Admin-/Liga-Datenmodell wird unverändert genutzt.
