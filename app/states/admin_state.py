@@ -159,13 +159,16 @@ class AdminState(rx.State):
             data = res.data if res and res.data else []
             leagues = []
             for lg in data:
+                # `avatar` is intentionally not read from Supabase — the
+                # column does not exist. UI fallbacks handle the missing
+                # value via a default Sleeper league placeholder.
                 leagues.append(
                     {
                         "league_id": str(lg.get("league_id", "")),
                         "league_name": str(lg.get("league_name", "")),
                         "league_season": str(lg.get("league_season", "")),
                         "league_type": str(lg.get("league_type", "")),
-                        "avatar": str(lg.get("avatar") or ""),
+                        "avatar": "",
                     }
                 )
             self.leagues = leagues
@@ -180,13 +183,15 @@ class AdminState(rx.State):
         data = get_league(league_id)
         if not data:
             raise Exception(f"Sleeper API: Liga {league_id} nicht gefunden.")
+        season_raw = data.get("season", "")
+        season_val = (
+            int(season_raw) if str(season_raw).isdigit() else season_raw
+        )
+        # Only include columns that exist on the `leagues` table.
         payload = {
             "league_id": str(league_id),
-            "league_name": data.get("name", ""),
-            "league_season": int(data.get("season") or 0)
-            if str(data.get("season", "")).isdigit()
-            else data.get("season"),
-            "avatar": data.get("avatar") or "",
+            "league_name": data.get("name", "") or f"Liga {league_id}",
+            "league_season": season_val,
             "roster_positions": data.get("roster_positions") or [],
         }
         try:
@@ -207,6 +212,7 @@ class AdminState(rx.State):
             owner_id = r.get("owner_id")
             u = user_map.get(owner_id, {})
             meta = u.get("metadata", {}) or {}
+            # Only include columns that exist on the `managers` table.
             rows.append(
                 {
                     "league_id": str(league_id),
@@ -216,7 +222,6 @@ class AdminState(rx.State):
                     "team_name": meta.get("team_name")
                     or u.get("display_name", "")
                     or "",
-                    "avatar": u.get("avatar") or "",
                 }
             )
         if rows:
@@ -486,7 +491,7 @@ class AdminState(rx.State):
 
             existing = (
                 client.table("leagues")
-                .select("league_id, league_name, league_type")
+                .select("league_id,league_name,league_type")
                 .eq("league_id", raw)
                 .limit(1)
                 .execute()
@@ -519,12 +524,12 @@ class AdminState(rx.State):
             season_val = (
                 int(season_raw) if str(season_raw).isdigit() else season_raw
             )
+            # Only include columns present in the `leagues` schema.
             payload = {
                 "league_id": raw,
                 "league_name": data.get("name", "") or f"Liga {raw}",
                 "league_season": season_val,
                 "league_type": self.add_league_type,
-                "avatar": data.get("avatar") or "",
                 "roster_positions": data.get("roster_positions") or [],
             }
             try:

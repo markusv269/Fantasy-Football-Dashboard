@@ -36,20 +36,34 @@ class AppState(rx.State):
     def _normalize_league(
         self, lg: dict, live_data: dict | None = None
     ) -> dict:
-        """Normalize a Supabase league row to the shape the UI expects."""
-        raw_id = str(lg.get("league_id", ""))
+        """Normalize a Supabase league row to the shape the UI expects.
+
+        The Supabase `leagues` table has no `avatar` column — we tolerate
+        its absence and rely on the UI's placeholder fallback. When live
+        Sleeper data is available (small sets only), we opportunistically
+        enrich the row with the live avatar and total_rosters.
+        """
+        raw_id = str(lg.get("league_id", "") or "")
         league_id = raw_id.strip('"').strip()
-        name = lg.get("league_name", f"League {league_id}")
-        season = str(lg.get("league_season", ""))
-        status = lg.get("league_type", "unknown")
-        avatar = lg.get("avatar", "") or ""
+        name = str(
+            lg.get("league_name") or lg.get("name") or f"League {league_id}"
+        )
+        season = str(lg.get("league_season") or lg.get("season") or "")
+        status = str(lg.get("league_type") or lg.get("status") or "unknown")
+        avatar = ""
         total_rosters = ""
         if live_data:
-            name = live_data.get("name", name)
-            season = str(live_data.get("season", season))
-            status = live_data.get("status", status)
-            avatar = live_data.get("avatar", "") or ""
-            total_rosters = str(live_data.get("total_rosters", ""))
+            name = str(live_data.get("name") or name)
+            live_season = live_data.get("season")
+            if live_season not in (None, ""):
+                season = str(live_season)
+            live_status = live_data.get("status")
+            if live_status:
+                status = str(live_status)
+            avatar = str(live_data.get("avatar") or "")
+            live_total = live_data.get("total_rosters")
+            if live_total not in (None, ""):
+                total_rosters = str(live_total)
         return {
             "league_id": league_id,
             "name": name,
