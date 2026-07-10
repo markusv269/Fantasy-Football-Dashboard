@@ -48,7 +48,15 @@ app = rx.App(
 
 # Route Registrations
 app.add_page(
-    home_page, route="/", on_load=[AppState.init_app, UserState.init_user]
+    home_page,
+    route="/",
+    on_load=[
+        AppState.init_app,
+        UserState.init_user,
+        CommunityState.load_news,
+        CommunityState.load_polls,
+        CommunityState.fetch_youtube_feed,
+    ],
 )
 app.add_page(
     league_detail_page,

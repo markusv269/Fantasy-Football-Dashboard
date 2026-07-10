@@ -1,16 +1,17 @@
-# Matchups-Seite für aktuelle Saison und Wochenauswahl
+# Home-Seite neu gestalten
 
-## Phase 1: Datenbasis und Anzeigeziel prüfen ✅
-- [x] Aktuelle Saison, aktuelle Ligen und verfügbare Matchup-Wochen aus der Datenbank prüfen
-- [x] Zielverhalten für All-Leagues-Ansicht und Wochenwechsel festlegen
-- [x] UI-Richtung beibehalten: vorhandenes hell/dunkel Design, rote Akzente, klare größere Controls und kompakte Spielkarten
+## Phase 1: Daten und Layoutziel prüfen ✅
+- [x] Vorhandene Liga-, News-, Poll- und Videodaten prüfen
+- [x] Home-Seiten-Struktur festlegen: Hero, breite Liga-Sektion, News/Polls, Video und zusätzlicher Highlightbereich
+- [x] UI-Richtung beibehalten: modernes hell/dunkel Design, rote Akzente, klare Karten, scrollbare Inhalte und responsive Zwei-Spalten-Bereiche
 
-## Phase 2: Matchups-Datenlogik aktualisieren ✅
-- [x] Matchups auf aktuelle Saison und aktuelle Ligen begrenzen
-- [x] Alle verfügbaren Wochen der aktuellen Saison aus Datenbankdaten ableiten
-- [x] Wochenwechsel und Ligaauswahl mit aktualisierten Daten verknüpfen
+## Phase 2: Home-Seite implementieren ✅
+- [x] Trends von der Home-Seite entfernen
+- [x] Ligen über die volle Breite in begrenzten scrollbaren Bereichen darstellen
+- [x] Aktuelle News und Polls nebeneinander mit Links zu den jeweiligen Seiten ergänzen
+- [x] Letztes Video und zusätzlichen attraktiven Community-/Archiv-/Wartelistenbereich ergänzen
 
-## Phase 3: Matchups-UI optimieren und testen ✅
-- [x] Kleine Wochenzahlen durch eine besser lesbare Auswahl ersetzen
-- [x] All-Leagues-Gruppen und Leer-/Ladezustände vollständig anpassen
-- [x] Events für Datenladen und Wochenwechsel gegen echte Daten testen
+## Phase 3: Verhalten testen und abschließen ✅
+- [x] Datenladeevents für Home-Inhalte mit echten Daten testen
+- [x] Fehler aus der Validierung beheben
+- [x] Planstatus abschließen

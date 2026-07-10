@@ -1,7 +1,8 @@
 import reflex as rx
 from app.states.app_state import AppState
 from app.states.user_state import UserState
-from app.theme import t
+from app.states.community_state import CommunityState
+from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
 
 
@@ -92,45 +93,77 @@ def league_card(league: dict) -> rx.Component:
     )
 
 
-def _section(title: str, count: rx.Var, leagues: rx.Var) -> rx.Component:
-    return rx.vstack(
-        rx.hstack(
-            rx.heading(title, size="6", weight="bold"),
-            rx.badge(
-                count.to_string(), color_scheme="red", variant="soft", size="2"
-            ),
-            spacing="3",
-            align="center",
-        ),
-        rx.cond(
-            leagues.length() > 0,
-            rx.grid(
-                rx.foreach(leagues, league_card),
-                columns=rx.breakpoints(
-                    initial="1", sm="1", md="2", lg="2", xl="2"
+def _section(
+    title: str, icon: str, count: rx.Var, leagues: rx.Var
+) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon(icon, size=22, color="#DC2626"),
+                rx.heading(title, size="5", weight="bold"),
+                rx.badge(
+                    count.to_string(),
+                    color_scheme="red",
+                    variant="soft",
+                    size="2",
                 ),
-                spacing="4",
-                width="100%",
-            ),
-            rx.card(
-                rx.vstack(
-                    rx.icon("inbox", size=32, color="gray"),
-                    rx.text(
-                        "Keine Ligen in dieser Kategorie.",
-                        size="2",
+                rx.spacer(),
+                rx.link(
+                    rx.button(
+                        "Alle Ligen",
+                        rx.icon("arrow-right", size=14),
+                        variant="soft",
                         color_scheme="gray",
+                        size="1",
                     ),
-                    spacing="2",
-                    align="center",
-                    padding="32px",
+                    href="/leagues",
+                    underline="none",
+                ),
+                spacing="3",
+                align="center",
+                width="100%",
+                wrap="wrap",
+            ),
+            rx.cond(
+                leagues.length() > 0,
+                rx.scroll_area(
+                    rx.grid(
+                        rx.foreach(leagues, league_card),
+                        columns=rx.breakpoints(
+                            initial="1", sm="2", md="3", lg="3", xl="4"
+                        ),
+                        spacing="4",
+                        width="100%",
+                        padding_right="8px",
+                    ),
+                    type="hover",
+                    scrollbars="vertical",
+                    class_name="h-[420px] w-full",
+                ),
+                rx.box(
+                    rx.vstack(
+                        rx.icon("inbox", size=32, color="gray"),
+                        rx.text(
+                            "Keine Ligen in dieser Kategorie.",
+                            size="2",
+                            color_scheme="gray",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="32px",
+                        width="100%",
+                    ),
+                    class_name="border border-dashed rounded-xl "
+                    + t("border-gray-800", "border-gray-200"),
                     width="100%",
                 ),
-                class_name="border-dashed",
             ),
+            spacing="4",
+            width="100%",
+            align="stretch",
         ),
-        spacing="4",
+        size="3",
         width="100%",
-        align="stretch",
     )
 
 
@@ -206,108 +239,429 @@ def _hero() -> rx.Component:
     )
 
 
-def _archive_cta() -> rx.Component:
-    return rx.card(
-        rx.hstack(
-            rx.icon("archive", size=24, color="#DC2626"),
-            rx.vstack(
-                rx.heading("Archiv", size="3", weight="bold"),
+def _news_item(item: dict) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("newspaper", size=14, color="#DC2626"),
                 rx.text(
-                    "Ältere Ligen und vergangene Saisons ansehen.",
-                    size="2",
-                    color_scheme="gray",
+                    item["date"].to(str),
+                    size="1",
+                    weight="medium",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
                 ),
-                spacing="1",
-                align="start",
-                flex="1",
+                spacing="2",
+                align="center",
             ),
-            rx.link(
-                rx.button(
-                    "Ältere Ligen ansehen",
-                    rx.icon("arrow-right", size=16),
-                    variant="soft",
-                    color_scheme="gray",
-                ),
-                href="/archive",
-                underline="none",
+            rx.heading(
+                item["title"].to(str),
+                size="3",
+                weight="bold",
+                class_name="line-clamp-1 " + TEXT_PRIMARY,
             ),
-            spacing="4",
-            align="center",
+            rx.text(
+                item["content"].to(str),
+                size="2",
+                class_name="line-clamp-2 " + TEXT_SECONDARY,
+            ),
+            spacing="1",
+            align="start",
             width="100%",
         ),
-        size="2",
+        padding="12px",
+        border_radius="8px",
         width="100%",
+        class_name="border "
+        + t(
+            "bg-[#08090D] border-white/5 hover:border-[#DC2626]/40",
+            "bg-gray-50 border-gray-200 hover:border-[#DC2626]/40",
+        )
+        + " transition-all",
     )
 
 
-def _trending_sidebar() -> rx.Component:
+def _news_card() -> rx.Component:
     return rx.card(
         rx.vstack(
             rx.hstack(
-                rx.heading("Trending Adds", size="4", weight="bold"),
+                rx.icon("newspaper", size=22, color="#DC2626"),
+                rx.heading("Neuigkeiten", size="5", weight="bold"),
                 rx.spacer(),
-                rx.icon("flame", size=18, color="orange"),
+                rx.link(
+                    rx.button(
+                        "Alle News",
+                        rx.icon("arrow-right", size=14),
+                        variant="soft",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    href="/community",
+                    underline="none",
+                ),
                 width="100%",
                 align="center",
             ),
-            rx.vstack(
-                rx.foreach(
-                    AppState.trending_adds,
-                    lambda p: rx.hstack(
-                        rx.vstack(
-                            rx.text(
-                                p["full_name"].to(str), size="2", weight="bold"
-                            ),
-                            rx.hstack(
-                                rx.badge(
-                                    p["position"].to(str),
-                                    color_scheme=rx.match(
-                                        p["position"].to(str),
-                                        ("QB", "red"),
-                                        ("RB", "blue"),
-                                        ("WR", "green"),
-                                        ("TE", "orange"),
-                                        ("K", "gray"),
-                                        ("DEF", "purple"),
-                                        "gray",
-                                    ),
-                                    size="1",
-                                    variant="soft",
-                                ),
-                                rx.text(
-                                    p["team"].to(str),
-                                    size="1",
-                                    color_scheme="gray",
-                                ),
-                                spacing="2",
-                                align="center",
-                            ),
-                            spacing="1",
-                            align="start",
-                        ),
-                        rx.spacer(),
-                        rx.badge(
-                            f"+{p['count']}",
-                            color_scheme="blue",
-                            variant="soft",
-                        ),
-                        width="100%",
-                        align="center",
-                        padding_y="8px",
-                        class_name="border-b last:border-0 "
-                        + t("border-gray-800", "border-gray-100"),
-                    ),
+            rx.cond(
+                CommunityState.news_items.length() > 0,
+                rx.vstack(
+                    rx.foreach(CommunityState.news_items[:3], _news_item),
+                    spacing="2",
+                    width="100%",
+                    align="stretch",
                 ),
-                spacing="0",
-                width="100%",
-                align="stretch",
+                rx.text(
+                    "Keine Neuigkeiten verfügbar.",
+                    size="2",
+                    color_scheme="gray",
+                    class_name="italic",
+                ),
             ),
             spacing="3",
             width="100%",
             align="stretch",
         ),
-        size="2",
+        size="3",
         width="100%",
+        height="100%",
+    )
+
+
+def _poll_preview(poll: dict) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("bar-chart-3", size=14, color="#DC2626"),
+                rx.text(
+                    f"{poll['total_votes']} Stimmen",
+                    size="1",
+                    weight="medium",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                ),
+                spacing="2",
+                align="center",
+            ),
+            rx.heading(
+                poll["question"].to(str),
+                size="3",
+                weight="bold",
+                class_name="line-clamp-2 " + TEXT_PRIMARY,
+            ),
+            rx.vstack(
+                rx.foreach(
+                    poll["options"].to(list[dict[str, str | int]])[:3],
+                    lambda opt: rx.hstack(
+                        rx.text(
+                            opt["text"].to(str),
+                            size="1",
+                            weight="medium",
+                            class_name="truncate " + TEXT_PRIMARY,
+                        ),
+                        rx.spacer(),
+                        rx.text(
+                            opt["pct_str"].to(str),
+                            size="1",
+                            class_name=TEXT_SECONDARY,
+                        ),
+                        width="100%",
+                        align="center",
+                    ),
+                ),
+                spacing="1",
+                width="100%",
+                align="stretch",
+            ),
+            spacing="2",
+            align="start",
+            width="100%",
+        ),
+        padding="12px",
+        border_radius="8px",
+        width="100%",
+        class_name="border "
+        + t(
+            "bg-[#08090D] border-white/5 hover:border-[#DC2626]/40",
+            "bg-gray-50 border-gray-200 hover:border-[#DC2626]/40",
+        )
+        + " transition-all",
+    )
+
+
+def _polls_card() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("bar-chart-3", size=22, color="#DC2626"),
+                rx.heading("Community Polls", size="5", weight="bold"),
+                rx.spacer(),
+                rx.link(
+                    rx.button(
+                        "Alle Polls",
+                        rx.icon("arrow-right", size=14),
+                        variant="soft",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    href="/community",
+                    underline="none",
+                ),
+                width="100%",
+                align="center",
+            ),
+            rx.cond(
+                CommunityState.polls.length() > 0,
+                rx.vstack(
+                    rx.foreach(
+                        CommunityState.polls.to(
+                            list[
+                                dict[
+                                    str,
+                                    str
+                                    | int
+                                    | bool
+                                    | list[dict[str, str | int]],
+                                ]
+                            ]
+                        )[:2],
+                        _poll_preview,
+                    ),
+                    spacing="2",
+                    width="100%",
+                    align="stretch",
+                ),
+                rx.text(
+                    "Keine aktiven Polls.",
+                    size="2",
+                    color_scheme="gray",
+                    class_name="italic",
+                ),
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+        height="100%",
+    )
+
+
+def _latest_video_card() -> rx.Component:
+    video = CommunityState.filtered_youtube_videos[0]
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("circle-play", size=22, color="#DC2626"),
+                rx.heading("Letztes Video", size="5", weight="bold"),
+                rx.spacer(),
+                rx.link(
+                    rx.button(
+                        "YouTube Kanal",
+                        rx.icon("external-link", size=14),
+                        variant="soft",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    href="https://www.youtube.com/channel/UCMD4pfyYl2hxHez34eqnfkQ",
+                    is_external=True,
+                    underline="none",
+                ),
+                width="100%",
+                align="center",
+            ),
+            rx.cond(
+                CommunityState.youtube_videos.length() > 0,
+                rx.link(
+                    rx.grid(
+                        rx.box(
+                            rx.image(
+                                src=video["thumbnail"].to(str),
+                                class_name="w-full h-full object-cover",
+                            ),
+                            rx.cond(
+                                video["is_short"].to(bool),
+                                rx.badge(
+                                    "Short",
+                                    color_scheme="red",
+                                    variant="solid",
+                                    class_name="absolute top-3 right-3",
+                                ),
+                            ),
+                            class_name=t(
+                                "relative aspect-video w-full overflow-hidden rounded-xl bg-gray-800",
+                                "relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100",
+                            ),
+                        ),
+                        rx.vstack(
+                            rx.heading(
+                                video["title"].to(str),
+                                size="4",
+                                weight="bold",
+                                class_name="line-clamp-3 " + TEXT_PRIMARY,
+                            ),
+                            rx.hstack(
+                                rx.icon("calendar", size=14, color="#DC2626"),
+                                rx.text(
+                                    video["date_str"].to(str),
+                                    size="2",
+                                    weight="medium",
+                                    class_name=TEXT_SECONDARY,
+                                ),
+                                spacing="2",
+                                align="center",
+                            ),
+                            rx.hstack(
+                                rx.icon("eye", size=14, color="#DC2626"),
+                                rx.text(
+                                    f"{video['views']} Views",
+                                    size="2",
+                                    weight="medium",
+                                    class_name=TEXT_SECONDARY,
+                                ),
+                                spacing="2",
+                                align="center",
+                            ),
+                            rx.spacer(),
+                            rx.button(
+                                rx.icon("play", size=16),
+                                "Jetzt ansehen",
+                                size="2",
+                                style={"background_color": "#DC2626"},
+                                width="100%",
+                            ),
+                            spacing="3",
+                            align="start",
+                            width="100%",
+                            height="100%",
+                        ),
+                        columns=rx.breakpoints(initial="1", md="2"),
+                        spacing="4",
+                        width="100%",
+                    ),
+                    href=video["link"].to(str),
+                    is_external=True,
+                    underline="none",
+                    width="100%",
+                ),
+                rx.text(
+                    "Keine Videos verfügbar.",
+                    size="2",
+                    color_scheme="gray",
+                    class_name="italic",
+                ),
+            ),
+            spacing="4",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+    )
+
+
+def _highlight_tile(
+    title: str,
+    description: str,
+    icon: str,
+    color: str,
+    cta_text: str,
+    href: str,
+) -> rx.Component:
+    return rx.link(
+        rx.card(
+            rx.vstack(
+                rx.box(
+                    rx.icon(icon, size=28, color=color),
+                    padding="12px",
+                    border_radius="12px",
+                    class_name="w-fit " + t("bg-white/5", "bg-gray-50"),
+                ),
+                rx.heading(
+                    title,
+                    size="4",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
+                ),
+                rx.text(
+                    description,
+                    size="2",
+                    class_name=TEXT_SECONDARY,
+                ),
+                rx.spacer(),
+                rx.hstack(
+                    rx.text(
+                        cta_text,
+                        size="2",
+                        weight="bold",
+                        class_name="text-[#DC2626]",
+                    ),
+                    rx.icon("arrow-right", size=14, color="#DC2626"),
+                    spacing="1",
+                    align="center",
+                ),
+                spacing="3",
+                width="100%",
+                align="start",
+                height="100%",
+            ),
+            size="3",
+            width="100%",
+            height="100%",
+            class_name="hover:border-[#DC2626] transition-all cursor-pointer border-l-4 border-l-transparent hover:border-l-[#DC2626]",
+        ),
+        href=href,
+        underline="none",
+        width="100%",
+    )
+
+
+def _highlights_section() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.icon("sparkles", size=22, color="#DC2626"),
+            rx.heading("Highlights", size="5", weight="bold"),
+            spacing="2",
+            align="center",
+        ),
+        rx.grid(
+            _highlight_tile(
+                "Dynasty Warteliste",
+                "Sichere dir jetzt deinen Platz in einer der neuen Dynasty-Ligen 2026.",
+                "clipboard-list",
+                "#10B981",
+                "Jetzt anmelden",
+                "/waitinglist",
+            ),
+            _highlight_tile(
+                "Community & Podcast",
+                "Diskussionen, Live-Shows und Community-Aktionen rund um Stoned Lack.",
+                "mic",
+                "#A855F7",
+                "Zur Community",
+                "/community",
+            ),
+            _highlight_tile(
+                "Trending Player",
+                "Die heißesten Adds und Drops aus allen Sleeper-Ligen — täglich aktuell.",
+                "flame",
+                "#F97316",
+                "Trends ansehen",
+                "/trending",
+            ),
+            _highlight_tile(
+                "Liga-Archiv",
+                "Vergangene Saisons und historische Ligen der Stoned Lack Army.",
+                "archive",
+                "#3B82F6",
+                "Archiv öffnen",
+                "/archive",
+            ),
+            columns=rx.breakpoints(initial="1", sm="2", lg="4"),
+            spacing="4",
+            width="100%",
+        ),
+        spacing="4",
+        width="100%",
+        align="stretch",
     )
 
 
@@ -316,36 +670,28 @@ def home_page() -> rx.Component:
         rx.vstack(
             _hero(),
             rx.cond(~UserState.has_username, _login_card()),
-            rx.grid(
-                rx.vstack(
-                    _section(
-                        f"Dynasty Ligen {AppState.current_season}",
-                        AppState.current_dynasty_leagues.length(),
-                        AppState.current_dynasty_leagues,
-                    ),
-                    _section(
-                        f"Redraft Ligen {AppState.current_season}",
-                        AppState.current_redraft_leagues.length(),
-                        AppState.current_redraft_leagues,
-                    ),
-                    _archive_cta(),
-                    spacing="6",
-                    width="100%",
-                    align="stretch",
-                ),
-                rx.box(
-                    _trending_sidebar(),
-                    class_name="lg:sticky lg:top-24",
-                ),
-                columns=rx.breakpoints(initial="1", sm="1", md="1", lg="2"),
-                spacing="8",
-                width="100%",
-                template_columns=rx.breakpoints(
-                    initial="1fr",
-                    lg="70% 30%",
-                ),
+            _section(
+                f"Dynasty Ligen {AppState.current_season}",
+                "crown",
+                AppState.current_dynasty_leagues.length(),
+                AppState.current_dynasty_leagues,
             ),
-            spacing="8",
+            _section(
+                f"Redraft Ligen {AppState.current_season}",
+                "trophy",
+                AppState.current_redraft_leagues.length(),
+                AppState.current_redraft_leagues,
+            ),
+            rx.grid(
+                _news_card(),
+                _polls_card(),
+                columns=rx.breakpoints(initial="1", lg="2"),
+                spacing="6",
+                width="100%",
+            ),
+            _latest_video_card(),
+            _highlights_section(),
+            spacing="6",
             width="100%",
             align="stretch",
         ),
