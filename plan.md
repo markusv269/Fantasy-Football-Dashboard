@@ -1,17 +1,18 @@
-# Home-Seite neu gestalten
+# Redraft-Registrierung 2026
 
-## Phase 1: Daten und Layoutziel prüfen ✅
-- [x] Vorhandene Liga-, News-, Poll- und Videodaten prüfen
-- [x] Home-Seiten-Struktur festlegen: Hero, breite Liga-Sektion, News/Polls, Video und zusätzlicher Highlightbereich
-- [x] UI-Richtung beibehalten: modernes hell/dunkel Design, rote Akzente, klare Karten, scrollbare Inhalte und responsive Zwei-Spalten-Bereiche
+## Phase 1: Datenbank und Registrierungsfluss vorbereiten
+- [ ] Bestehende Registrierungsdaten als Referenz prüfen
+- [ ] Neue Registrierungstabelle für Redraft 2026 anlegen oder erforderliche Einrichtung validieren
+- [ ] Datenschutzfreundlichen Registrierungsfluss mit Pflichtfeldern, optionaler E-Mail, Mitspielerwünschen und Änderungscode festlegen
+- [ ] UI-Richtung beibehalten: moderne helle/dunkle Cards, rote Akzente, klare Formulargruppen und transparente Statusbereiche
 
-## Phase 2: Home-Seite implementieren ✅
-- [x] Trends von der Home-Seite entfernen
-- [x] Ligen über die volle Breite in begrenzten scrollbaren Bereichen darstellen
-- [x] Aktuelle News und Polls nebeneinander mit Links zu den jeweiligen Seiten ergänzen
-- [x] Letztes Video und zusätzlichen attraktiven Community-/Archiv-/Wartelistenbereich ergänzen
+## Phase 2: Registrierungslogik und Seite implementieren
+- [ ] Neue Registrierungsseite mit Erläuterungsbereich, Formular und Erfolgscode-Anzeige erstellen
+- [ ] Sleeper-Namen validieren und dauerhaft über user_id speichern
+- [ ] Bis zu drei Mitspielerwünsche erfassen und beidseitige Zuordnungen sichtbar auswerten
+- [ ] Aktuellen Stand der Anmeldungen unter dem Formular anzeigen
 
-## Phase 3: Verhalten testen und abschließen ✅
-- [x] Datenladeevents für Home-Inhalte mit echten Daten testen
-- [x] Fehler aus der Validierung beheben
-- [x] Planstatus abschließen
+## Phase 3: Navigation, Tests und Abschluss
+- [ ] Seite in Navigation und Routing integrieren
+- [ ] Registrierungs-, Validierungs- und Ladeevents mit echten Daten testen
+- [ ] Fehler beheben und finalen Planstatus abschließen
