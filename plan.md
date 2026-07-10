@@ -1,20 +1,19 @@
-# Liga-Detailseiten: Wochen-Matchups, Spieler-Roster und Sync-Fehler
+# Wöchentliche Supabase-Synchronisierung aller Ligen
 
-## Phase 1: Datenfluss und Fehlerursache prüfen ✅
-- [x] Supabase-Verbindung und vorhandene Liga-/Roster-/Matchup-Daten validieren
-- [x] Ursache für fehlenden Liga-Typ beim Sync bestimmen
-- [x] Verfügbare Matchup-Wochen und Roster-Spielerdaten anhand echter Daten prüfen
+## Phase 1: Datenbankzugriff und Synchronisierungsumfang prüfen ✅
+- [x] Supabase-Zugang und vorhandene Ligadaten validieren
+- [x] Tabellenumfang für Drafts, Roster, Matchups und Manager anhand der bestehenden App-Logik bestätigen
+- [x] Synchronisierungsstrategie für alle Ligen und aktuelle NFL-Woche festlegen
 
-## Phase 2: Liga-Detailseite erweitern ✅
-- [x] Matchups auf Liga-Detailseiten nach auswählbarer Woche anzeigen
-- [x] Wochenleiste mit verfügbaren Wochen hinzufügen
-- [x] Roster-Karten um sichtbare Spielerlisten ergänzen
-- [x] Lade-, Leer- und responsive Zustände im bestehenden roten Karten-Design beibehalten
+## Phase 2: Wiederverwendbares Wartungsskript erstellen ✅
+- [x] Skript für wöchentliche Synchronisierung aller Ligen ergänzen
+- [x] Fortschrittsausgabe, Fehlerzählung und sichere Wiederholbarkeit einbauen
+- [x] Bestehende Datenbankspalten und Konfliktregeln der App beibehalten
 
-## Phase 3: Sync-Fehler beheben und validieren ✅
-- [x] Liga-Metadaten-Sync so absichern, dass vorhandene Liga-Typen erhalten bleiben
-- [x] Liga-Detail-Ladeevents mit Wochenwechsel und Roster-Spielern testen
-- [x] Sync-Fehlerpfad gegen echte Supabase-/Sleeper-Daten validieren
+## Phase 3: Synchronisierung ausführen und validieren
+- [ ] Synchronisierung gegen echte Supabase- und Sleeper-Daten ausführen
+- [ ] Ergebniszahlen und Fehler prüfen
+- [ ] Abschlussstatus und Nutzungshinweis bereitstellen
 
 ## Designrichtung
-- Bestehendes hell/dunkel kompatibles Design beibehalten; rote Akzente, kompakte Wochen-Pills, klare Matchup-Karten und Roster-Karten mit gut scannbaren Spielerlisten verwenden.
+- Keine UI-Änderungen; Fokus auf robuste Datenpflege, klare Konsolenausgabe und sichere Wiederholbarkeit ohne Mock-Daten.
