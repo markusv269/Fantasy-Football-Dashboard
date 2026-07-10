@@ -1,15 +1,15 @@
-# Redraft-Registrierung: Commish-Auswertung
+# Redraft-Registrierung: Anmeldezeitpunkt und Sortierung
 
-## Phase 1: Commish-Auswahl und Speicherung ✅
-- [x] Commish-Interesse im Registrierungsformular als klare Ja/Nein-Auswahl ergänzen
-- [x] Commish-Wert beim Erstellen und Aktualisieren zuverlässig speichern
-- [x] Formularstatus beim Zurücksetzen vollständig bereinigen
+## Phase 1: Datenbankverfügbarkeit und Zeitstempel prüfen ✅
+- [x] Verfügbare Redraft-Registrierungstabelle bestimmen
+- [x] Bestehende Zeitstempelspalte und Schreibbarkeit mit echten Daten validieren
+- [x] Fallback-Verhalten für fehlende Primärtabelle sauber definieren
 
-## Phase 2: Anmeldeübersicht erweitern ✅
-- [x] Commish-Anzahl in der Übersicht sichtbar machen
-- [x] Anzahl voller Ligen anhand von 12 Managern pro Liga anzeigen
-- [x] Tabellenbereich responsiv und im bestehenden roten Stoned-Lack-Stil erweitern
+## Phase 2: Speicherung und Sortierung implementieren ✅
+- [x] Beim Erstellen einer Anmeldung den Anmeldezeitpunkt in der Datenbank speichern
+- [x] Bestehenden Anmeldezeitpunkt bei Aktualisierungen erhalten
+- [x] Anmeldungen chronologisch von früh nach später laden und anzeigen
 
 ## Phase 3: Validierung und Abschluss ✅
-- [x] Lade-, Speicher- und Aktualisierungsfluss mit echten Daten prüfen
-- [x] Fehler beheben und Abschlussstatus festhalten
+- [x] Lade- und Speicherfluss mit echten Daten prüfen
+- [x] Fehler beheben und finalen Status dokumentieren

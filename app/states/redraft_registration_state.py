@@ -5,7 +5,7 @@ import json
 import re
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 from app.supabase_client import get_supabase_client
 
 
@@ -136,7 +136,7 @@ class RedraftRegistrationState(rx.State):
             .select(
                 "user_id,sleeper,discord,email,mitspieler,key,created_at,commish"
             )
-            .order("created_at", desc=False)
+            .order("created_at", desc=False, nullsfirst=False)
             .execute()
         )
         return res.data if res and res.data else []
@@ -183,14 +183,28 @@ class RedraftRegistrationState(rx.State):
             try:
                 rows = self._fetch_from_table(client, PRIMARY_TABLE)
             except Exception as e:
-                logging.exception(f"Primary table read failed: {e}")
+                # Primary table not available — silently try fallback.
+                # Avoid noisy stack traces; this is an expected path.
+                logging.debug(f"Primary table read failed: {e}")
                 self.table_missing = True
                 try:
                     rows = self._fetch_from_table(client, FALLBACK_TABLE)
                     self.using_fallback = True
                 except Exception as e2:
-                    logging.exception(f"Fallback table read failed: {e2}")
+                    logging.exception("Unexpected error")
+                    logging.debug(f"Fallback table read failed: {e2}")
                     rows = []
+
+            # Stable client-side sort by created_at ascending (early -> late),
+            # with a safe fallback for rows without created_at.
+            def _sort_key(r: dict) -> str:
+                v = r.get("created_at")
+                if v:
+                    return str(v)
+                # Fallback: sort missing timestamps last but stably.
+                return "9999-12-31T23:59:59"
+
+            rows = sorted(rows, key=_sort_key)
 
             # Build normalized-name -> sleeper name map for reciprocity check
             name_map: dict[str, str] = {}
@@ -462,6 +476,11 @@ class RedraftRegistrationState(rx.State):
             }
             payload = {**base_payload, **optional_defaults}
 
+            # Persist the registration timestamp only on INSERT. On updates,
+            # the original created_at must be preserved (never overwritten).
+            if not is_update:
+                payload["created_at"] = datetime.now(timezone.utc).isoformat()
+
             def _extract_missing_column(msg: str) -> str:
                 m = re.search(r"Could not find the '([^']+)' column", msg)
                 if m:
@@ -474,13 +493,15 @@ class RedraftRegistrationState(rx.State):
             def _write(current_payload: dict) -> tuple[bool, str]:
                 attempt = dict(current_payload)
                 last_err = ""
-                for _ in range(len(optional_defaults) + 2):
+                # Allow enough retries to strip any optional columns +
+                # the optional created_at column if the schema lacks it.
+                for _ in range(len(optional_defaults) + 3):
                     try:
                         if is_update:
                             update_payload = {
                                 k: v
                                 for k, v in attempt.items()
-                                if k != "user_id"
+                                if k != "user_id" and k != "created_at"
                             }
                             client.table(PRIMARY_TABLE).update(
                                 update_payload
@@ -492,23 +513,21 @@ class RedraftRegistrationState(rx.State):
                         return True, ""
                     except Exception as err:
                         logging.exception("Unexpected error")
+                        logging.debug(f"Write attempt failed: {err}")
                         msg = str(err)
                         last_err = msg
                         col = _extract_missing_column(msg)
-                        if (
-                            col
-                            and col in attempt
-                            and col
-                            not in (
-                                "index",
-                                "user_id",
-                                "sleeper",
-                                "discord",
-                                "email",
-                                "mitspieler",
-                                "key",
-                            )
-                        ):
+                        # Never drop these required columns
+                        required = {
+                            "index",
+                            "user_id",
+                            "sleeper",
+                            "discord",
+                            "email",
+                            "mitspieler",
+                            "key",
+                        }
+                        if col and col in attempt and col not in required:
                             attempt.pop(col, None)
                             continue
                         return False, msg
