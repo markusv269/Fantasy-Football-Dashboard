@@ -208,6 +208,108 @@ def _validation_state() -> rx.Component:
     )
 
 
+def _commish_option(
+    label: str, value: bool, icon: str, description: str
+) -> rx.Component:
+    is_selected = RedraftRegistrationState.commish_input == value
+    return rx.box(
+        rx.hstack(
+            rx.box(
+                rx.cond(
+                    is_selected,
+                    rx.box(
+                        class_name="w-3 h-3 rounded-full bg-[#DC2626]",
+                    ),
+                    rx.fragment(),
+                ),
+                class_name=rx.cond(
+                    is_selected,
+                    "w-5 h-5 rounded-full border-2 border-[#DC2626] flex items-center justify-center flex-shrink-0",
+                    "w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 "
+                    + t("border-gray-600", "border-gray-300"),
+                ),
+            ),
+            rx.icon(icon, size=18, color="#DC2626"),
+            rx.vstack(
+                rx.text(
+                    label,
+                    size="2",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
+                ),
+                rx.text(description, size="1", class_name=TEXT_SECONDARY),
+                spacing="0",
+                align="start",
+            ),
+            spacing="3",
+            align="center",
+            width="100%",
+        ),
+        on_click=rx.cond(
+            value,
+            RedraftRegistrationState.set_commish_yes,
+            RedraftRegistrationState.set_commish_no,
+        ),
+        padding="12px 14px",
+        border_radius="10px",
+        width="100%",
+        class_name=rx.cond(
+            is_selected,
+            "cursor-pointer border-2 border-[#DC2626] "
+            + t("bg-[#DC2626]/10", "bg-red-50")
+            + " transition-all",
+            "cursor-pointer border-2 "
+            + t(
+                "border-white/10 bg-[#08090D] hover:border-white/20",
+                "border-gray-200 bg-white hover:border-gray-300",
+            )
+            + " transition-all",
+        ),
+    )
+
+
+def _commish_selector() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.icon("crown", size=18, color="#DC2626"),
+            rx.text(
+                "Interesse als Commissioner?",
+                size="2",
+                weight="bold",
+                class_name=TEXT_PRIMARY,
+            ),
+            rx.text("*", size="2", weight="bold", class_name="text-red-500"),
+            spacing="2",
+            align="center",
+        ),
+        rx.text(
+            "Ein Commish übernimmt die organisatorische Verantwortung für eine Liga (Setup, Regeln, Kommunikation).",
+            size="1",
+            class_name=TEXT_SECONDARY,
+        ),
+        rx.grid(
+            _commish_option(
+                "Ja, ich möchte Commish sein",
+                True,
+                "check",
+                "Ich übernehme Verantwortung für eine Liga.",
+            ),
+            _commish_option(
+                "Nein, danke",
+                False,
+                "x",
+                "Ich möchte nur als Manager teilnehmen.",
+            ),
+            columns=rx.breakpoints(initial="1", sm="2"),
+            spacing="2",
+            width="100%",
+        ),
+        spacing="2",
+        width="100%",
+        align="stretch",
+    )
+
+
 def _form_group(
     label: str, required: bool, child: rx.Component
 ) -> rx.Component:
@@ -291,6 +393,8 @@ def _form() -> rx.Component:
                     width="100%",
                 ),
             ),
+            rx.divider(),
+            _commish_selector(),
             rx.divider(),
             rx.vstack(
                 rx.hstack(
@@ -396,6 +500,24 @@ def _entry_row(e: dict) -> rx.Component:
             ),
         ),
         rx.table.cell(
+            rx.cond(
+                e["commish"].to(bool),
+                rx.badge(
+                    rx.icon("crown", size=12),
+                    "Ja",
+                    color_scheme="red",
+                    variant="solid",
+                    size="1",
+                ),
+                rx.badge(
+                    "Nein",
+                    color_scheme="gray",
+                    variant="soft",
+                    size="1",
+                ),
+            ),
+        ),
+        rx.table.cell(
             rx.text(
                 e["mates_display"].to(str),
                 size="2",
@@ -417,6 +539,81 @@ def _entry_row(e: dict) -> rx.Component:
                 class_name=TEXT_SECONDARY,
             ),
         ),
+    )
+
+
+def _stat_tile(
+    label: str, value: rx.Var, icon: str, color: str, subtitle: str = ""
+) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.box(
+                rx.icon(icon, size=22, color=color),
+                padding="10px",
+                border_radius="10px",
+                class_name="w-fit " + t("bg-white/5", "bg-gray-50"),
+            ),
+            rx.vstack(
+                rx.text(
+                    label,
+                    size="1",
+                    weight="bold",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                ),
+                rx.heading(value, size="6", weight="bold"),
+                rx.cond(
+                    subtitle != "",
+                    rx.text(subtitle, size="1", class_name=TEXT_SECONDARY),
+                    rx.fragment(),
+                ),
+                spacing="0",
+                align="start",
+            ),
+            spacing="3",
+            align="center",
+            width="100%",
+        ),
+        padding="14px",
+        border_radius="12px",
+        width="100%",
+        class_name="border "
+        + t(
+            "bg-[#08090D] border-white/5",
+            "bg-white border-gray-200",
+        ),
+    )
+
+
+def _stats_bar() -> rx.Component:
+    return rx.grid(
+        _stat_tile(
+            "Anmeldungen",
+            RedraftRegistrationState.total_entries.to_string(),
+            "users",
+            "#DC2626",
+        ),
+        _stat_tile(
+            "Commish-Interesse",
+            RedraftRegistrationState.commish_count.to_string(),
+            "crown",
+            "#DC2626",
+        ),
+        _stat_tile(
+            "Volle Ligen",
+            RedraftRegistrationState.full_leagues_count.to_string(),
+            "trophy",
+            "#10B981",
+            "12 Manager je Liga",
+        ),
+        _stat_tile(
+            "Fehlend f. nächste Liga",
+            RedraftRegistrationState.remaining_for_next_league.to_string(),
+            "user-plus",
+            "#F59E0B",
+        ),
+        columns=rx.breakpoints(initial="1", sm="2", lg="4"),
+        spacing="3",
+        width="100%",
     )
 
 
@@ -445,6 +642,7 @@ def _entries_card() -> rx.Component:
                 align="center",
                 wrap="wrap",
             ),
+            _stats_bar(),
             rx.text(
                 "E-Mail-Adressen werden aus Datenschutzgründen NICHT angezeigt.",
                 size="1",
@@ -465,6 +663,7 @@ def _entries_card() -> rx.Component:
                                 rx.table.row(
                                     rx.table.column_header_cell("Sleeper"),
                                     rx.table.column_header_cell("Discord"),
+                                    rx.table.column_header_cell("Commish"),
                                     rx.table.column_header_cell(
                                         "Mitspieler-Wünsche"
                                     ),

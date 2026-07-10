@@ -55,6 +55,7 @@ class RedraftRegistrationState(rx.State):
     teammate2_input: str = ""
     teammate3_input: str = ""
     edit_code_input: str = ""
+    commish_input: bool = False
 
     resolved_user_id: str = ""
     resolved_display_name: str = ""
@@ -105,6 +106,18 @@ class RedraftRegistrationState(rx.State):
     def set_edit_code_input(self, v: str):
         self.edit_code_input = v
 
+    @rx.event
+    def set_commish_input(self, v: bool):
+        self.commish_input = bool(v)
+
+    @rx.event
+    def set_commish_yes(self):
+        self.commish_input = True
+
+    @rx.event
+    def set_commish_no(self):
+        self.commish_input = False
+
     def _set_status(self, msg: str, kind: str = "info"):
         self.status_message = msg
         self.status_type = kind
@@ -120,7 +133,9 @@ class RedraftRegistrationState(rx.State):
     def _fetch_from_table(self, client, table: str) -> list[dict]:
         res = (
             client.table(table)
-            .select("user_id,sleeper,discord,email,mitspieler,key,created_at")
+            .select(
+                "user_id,sleeper,discord,email,mitspieler,key,created_at,commish"
+            )
             .order("created_at", desc=False)
             .execute()
         )
@@ -241,6 +256,7 @@ class RedraftRegistrationState(rx.State):
                         else "—",
                         "mutual_count": str(mutual_count),
                         "created_display": display,
+                        "commish": bool(r.get("commish") or False),
                     }
                 )
             self.entries = entries
@@ -296,7 +312,7 @@ class RedraftRegistrationState(rx.State):
                 try:
                     res = (
                         client.table(PRIMARY_TABLE)
-                        .select("user_id,sleeper,discord,email,key")
+                        .select("user_id,sleeper,discord,email,key,commish")
                         .eq("user_id", self.resolved_user_id)
                         .limit(1)
                         .execute()
@@ -310,6 +326,8 @@ class RedraftRegistrationState(rx.State):
                             "email": str(row.get("email") or ""),
                             "key": str(row.get("key") or ""),
                         }
+                        # Preload commish state from existing entry
+                        self.commish_input = bool(row.get("commish") or False)
                 except Exception as e:
                     logging.exception(f"Existing entry lookup failed: {e}")
                     self.existing_entry = {}
@@ -439,7 +457,7 @@ class RedraftRegistrationState(rx.State):
             }
             # Optional columns are attempted with safe defaults
             optional_defaults: dict[str, bool] = {
-                "commish": False,
+                "commish": bool(self.commish_input),
                 "Doppelanmeldung": False,
             }
             payload = {**base_payload, **optional_defaults}
@@ -537,6 +555,7 @@ class RedraftRegistrationState(rx.State):
         self.teammate2_input = ""
         self.teammate3_input = ""
         self.edit_code_input = ""
+        self.commish_input = False
         self.resolved_user_id = ""
         self.resolved_display_name = ""
         self.resolved_avatar = ""
@@ -550,3 +569,16 @@ class RedraftRegistrationState(rx.State):
     @rx.var
     def total_entries(self) -> int:
         return len(self.entries)
+
+    @rx.var
+    def commish_count(self) -> int:
+        return sum(1 for e in self.entries if e.get("commish"))
+
+    @rx.var
+    def full_leagues_count(self) -> int:
+        return len(self.entries) // 12
+
+    @rx.var
+    def remaining_for_next_league(self) -> int:
+        rem = 12 - (len(self.entries) % 12)
+        return rem if rem != 12 else 0

@@ -1,18 +1,15 @@
-# Redraft-Registrierung 2026
+# Redraft-Registrierung: Commish-Auswertung
 
-## Phase 1: Datenbank und Registrierungsfluss vorbereiten ✅
-- [x] Bestehende Registrierungsdaten als Referenz prüfen
-- [x] Neue Registrierungstabelle für Redraft 2026 anlegen oder erforderliche Einrichtung validieren
-- [x] Datenschutzfreundlichen Registrierungsfluss mit Pflichtfeldern, optionaler E-Mail, Mitspielerwünschen und Änderungscode festlegen
-- [x] UI-Richtung beibehalten: moderne helle/dunkle Cards, rote Akzente, klare Formulargruppen und transparente Statusbereiche
+## Phase 1: Commish-Auswahl und Speicherung ✅
+- [x] Commish-Interesse im Registrierungsformular als klare Ja/Nein-Auswahl ergänzen
+- [x] Commish-Wert beim Erstellen und Aktualisieren zuverlässig speichern
+- [x] Formularstatus beim Zurücksetzen vollständig bereinigen
 
-## Phase 2: Registrierungslogik und Seite implementieren ✅
-- [x] Neue Registrierungsseite mit Erläuterungsbereich, Formular und Erfolgscode-Anzeige erstellen
-- [x] Sleeper-Namen validieren und dauerhaft über user_id speichern
-- [x] Bis zu drei Mitspielerwünsche erfassen und beidseitige Zuordnungen sichtbar auswerten
-- [x] Aktuellen Stand der Anmeldungen unter dem Formular anzeigen
+## Phase 2: Anmeldeübersicht erweitern ✅
+- [x] Commish-Anzahl in der Übersicht sichtbar machen
+- [x] Anzahl voller Ligen anhand von 12 Managern pro Liga anzeigen
+- [x] Tabellenbereich responsiv und im bestehenden roten Stoned-Lack-Stil erweitern
 
-## Phase 3: Navigation, Tests und Abschluss ✅
-- [x] Seite in Navigation und Routing integrieren
-- [x] Registrierungs-, Validierungs- und Ladeevents mit echten Daten testen
-- [x] Fehler beheben und finalen Planstatus abschließen
+## Phase 3: Validierung und Abschluss ✅
+- [x] Lade-, Speicher- und Aktualisierungsfluss mit echten Daten prüfen
+- [x] Fehler beheben und Abschlussstatus festhalten
