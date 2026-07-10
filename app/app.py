@@ -12,6 +12,8 @@ from app.pages.community import community_page
 from app.pages.trending import trending_page
 from app.pages.drafts import drafts_page
 from app.pages.waitinglist import waitinglist_page
+from app.pages.redraft_registration import redraft_registration_page
+from app.states.redraft_registration_state import RedraftRegistrationState
 from app.pages.admin import admin_page
 from app.states.admin_state import AdminState
 from app.states.app_state import AppState
@@ -92,6 +94,11 @@ app.add_page(
 app.add_page(drafts_page, route="/drafts", on_load=DraftState.init_drafts)
 app.add_page(
     waitinglist_page, route="/waitinglist", on_load=WaitlistState.init_waitlist
+)
+app.add_page(
+    redraft_registration_page,
+    route="/redraft-registration",
+    on_load=RedraftRegistrationState.init_page,
 )
 app.add_page(
     archive_page,
