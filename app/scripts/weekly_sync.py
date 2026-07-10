@@ -45,6 +45,24 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
 )
+# Silence chatty HTTP INFO logs from third-party libraries during long runs.
+for _noisy in (
+    "httpx",
+    "httpcore",
+    "httpcore.http11",
+    "httpcore.connection",
+    "hpack",
+    "urllib3",
+    "urllib3.connectionpool",
+    "postgrest",
+    "postgrest._async.request_builder",
+    "postgrest._sync.request_builder",
+    "supabase",
+    "gotrue",
+    "storage3",
+    "realtime",
+):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
 log = logging.getLogger("weekly_sync")
 
 
@@ -267,8 +285,19 @@ def sync_all(
     league_ids: list[str] | None = None,
     skip_matchups: bool = False,
     skip_drafts: bool = False,
+    offset: int = 0,
+    start: int | None = None,
+    end: int | None = None,
 ) -> int:
-    """Run the full weekly sync. Returns process exit code (0 on success)."""
+    """Run the full weekly sync. Returns process exit code (0 on success).
+
+    Batch parameters (for large inventories):
+        offset: number of leagues to skip from the start (0-based).
+        start:  1-based position (inclusive). Alias for offset+1.
+        end:    1-based end position (inclusive). Combined with start/offset
+                to define a range window.
+        limit:  maximum number of leagues to process after offset/start.
+    """
     _print("=" * 70)
     _print("Stoned Lack — wöchentliche Liga-Synchronisierung")
     _print("=" * 70)
@@ -289,10 +318,47 @@ def sync_all(
         leagues = [{"league_id": lid} for lid in league_ids]
         _print(f"Modus: gezielte Ligen ({len(leagues)})")
     else:
-        leagues = _load_all_leagues(client)
+        all_leagues = _load_all_leagues(client)
+        total_available = len(all_leagues)
+        _print(f"Ligen in Supabase gesamt: {total_available}")
+
+        # Resolve batch window: start (1-based) takes precedence over offset.
+        effective_offset = 0
+        if start is not None and start > 0:
+            effective_offset = start - 1
+        elif offset and offset > 0:
+            effective_offset = offset
+        if effective_offset >= total_available and total_available > 0:
+            _print(
+                f"Offset {effective_offset} liegt außerhalb des Bestands "
+                f"({total_available}). Nichts zu tun."
+            )
+            return 0
+
+        window = all_leagues[effective_offset:]
+
+        # Apply end (1-based, inclusive) if given.
+        if end is not None and end > 0:
+            end_zero = end - effective_offset
+            if end_zero < 0:
+                _print(
+                    f"end={end} liegt vor Offset={effective_offset}. "
+                    "Nichts zu tun."
+                )
+                return 0
+            window = window[:end_zero]
+
+        # Apply limit last.
         if limit and limit > 0:
-            leagues = leagues[:limit]
-        _print(f"Ligen aus Supabase geladen: {len(leagues)}")
+            window = window[:limit]
+
+        leagues = window
+        first_idx = effective_offset + 1 if leagues else 0
+        last_idx = effective_offset + len(leagues)
+        _print(
+            f"Batch-Fenster: Position {first_idx}..{last_idx} "
+            f"({len(leagues)} von {total_available})"
+        )
 
     if not leagues:
         _print("Keine Ligen zu verarbeiten. Abbruch.")
@@ -375,19 +441,42 @@ def sync_all(
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         description="Wöchentliche Synchronisierung aller Ligen "
-        "aus der Supabase-Tabelle 'leagues' mit Sleeper-Daten."
+        "aus der Supabase-Tabelle 'leagues' mit Sleeper-Daten. "
+        "Unterstützt Batch-Läufe via --offset/--start/--end/--limit."
     )
     p.add_argument(
         "--limit",
         type=int,
         default=None,
-        help="Nur die ersten N Ligen verarbeiten (optional).",
+        help="Maximal N Ligen im aktuellen Batch verarbeiten.",
+    )
+    p.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Anzahl der Ligen, die am Anfang übersprungen werden "
+        "(0-basiert). Kombinierbar mit --limit.",
+    )
+    p.add_argument(
+        "--start",
+        type=int,
+        default=None,
+        help="1-basierte Startposition (inklusive). Alias für "
+        "--offset (start-1). Überschreibt --offset.",
+    )
+    p.add_argument(
+        "--end",
+        type=int,
+        default=None,
+        help="1-basierte Endposition (inklusive). In Kombination "
+        "mit --start/--offset ergibt sich ein Bereichsfenster.",
     )
     p.add_argument(
         "--league-id",
         action="append",
         default=None,
-        help="Nur diese Liga(n) synchronisieren. Mehrfach nutzbar.",
+        help="Nur diese Liga(n) synchronisieren. Mehrfach nutzbar. "
+        "Deaktiviert --offset/--start/--end/--limit.",
     )
     p.add_argument(
         "--skip-matchups",
@@ -399,16 +488,34 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Draft-Synchronisierung überspringen.",
     )
+    p.add_argument(
+        "--verbose-http",
+        action="store_true",
+        help="HTTP-INFO-Logs von httpx/postgrest wieder aktivieren "
+        "(Standard: unterdrückt für ruhige Ausgabe).",
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    if args.verbose_http:
+        for _noisy in (
+            "httpx",
+            "httpcore",
+            "urllib3",
+            "postgrest",
+            "supabase",
+        ):
+            logging.getLogger(_noisy).setLevel(logging.INFO)
     return sync_all(
         limit=args.limit,
         league_ids=args.league_id,
         skip_matchups=args.skip_matchups,
         skip_drafts=args.skip_drafts,
+        offset=args.offset,
+        start=args.start,
+        end=args.end,
     )
 
 

@@ -55,6 +55,44 @@ python -m app.scripts.weekly_sync --league-id 111 --league-id 222
 python -m app.scripts.weekly_sync --skip-matchups
 python -m app.scripts.weekly_sync --skip-drafts
 
+# HTTP-INFO-Logs von Drittbibliotheken wieder aktivieren (Debug)
+python -m app.scripts.weekly_sync --verbose-http
+
+
+### Batch-Läufe für große Bestände
+
+Bei mehreren hundert Ligen empfiehlt sich die Aufteilung in Batches. Die
+Kombination aus `--offset`/`--start`/`--end` und `--limit` erlaubt es, den
+Bestand in kontrollierbaren Fenstern zu verarbeiten (z. B. per Cron, in
+mehreren Shells oder mit Timeout-Schutz).
+
+bash
+# Batch 1: Ligen 1..50 (die ersten 50)
+python -m app.scripts.weekly_sync --limit 50
+
+# Batch 2: Ligen 51..100
+python -m app.scripts.weekly_sync --offset 50 --limit 50
+
+# Batch 3: Ligen 101..150
+python -m app.scripts.weekly_sync --offset 100 --limit 50
+
+# Alternativ mit 1-basierten Positionen (inklusiv):
+python -m app.scripts.weekly_sync --start 1   --end 50
+python -m app.scripts.weekly_sync --start 51  --end 100
+python -m app.scripts.weekly_sync --start 101 --end 150
+
+# Nur ein Bereichsfenster ohne Limit:
+python -m app.scripts.weekly_sync --start 200 --end 250
+
+# Offset + Limit kombinieren (Ligen 201..225):
+python -m app.scripts.weekly_sync --offset 200 --limit 25
+
+
+Die Sortierung der Ligen ist stabil (`league_season DESC`), sodass
+aufeinanderfolgende Batches denselben Bestand konsistent aufteilen. Werden
+`--league-id` Argumente übergeben, werden `--offset`/`--start`/`--end`/
+`--limit` ignoriert.
+
 
 ### Ausgabe
 

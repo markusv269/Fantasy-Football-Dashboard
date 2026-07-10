@@ -1,6 +1,7 @@
 import reflex as rx
 from app.pages.home import home_page
 from app.pages.archive import archive_page
+from app.states.archive_state import ArchiveState
 from app.pages.leagues import leagues_page
 from app.pages.league_detail import league_detail_page
 from app.states.league_page_state import LeaguePageState
@@ -87,7 +88,7 @@ app.add_page(
 app.add_page(
     archive_page,
     route="/archive",
-    on_load=[AppState.init_app, UserState.init_user],
+    on_load=[AppState.init_app, UserState.init_user, ArchiveState.load_archive],
 )
 app.add_page(
     admin_page,
