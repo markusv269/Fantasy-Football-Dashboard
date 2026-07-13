@@ -549,6 +549,322 @@ def _leagues_table() -> rx.Component:
     )
 
 
+def _week_mode_tab(label: str, value: str) -> rx.Component:
+    return rx.button(
+        label,
+        on_click=AdminState.set_week_mode(value),
+        variant=rx.cond(AdminState.week_mode == value, "solid", "soft"),
+        color_scheme=rx.cond(AdminState.week_mode == value, "red", "gray"),
+        size="2",
+        radius="full",
+    )
+
+
+def _league_option(lg: dict) -> rx.Component:
+    return rx.select.item(
+        f"{lg['league_name'].to(str)} ({lg['league_season'].to(str)})",
+        value=lg["league_id"].to(str),
+    )
+
+
+def _sync_button(
+    label: str, icon: str, on_click, op_key: str, warn: bool = False
+) -> rx.Component:
+    is_active = (AdminState.sync_operation == op_key) & AdminState.is_syncing
+    return rx.button(
+        rx.cond(is_active, rx.spinner(size="1"), rx.icon(icon, size=14)),
+        label,
+        on_click=on_click,
+        disabled=AdminState.is_syncing,
+        size="2",
+        width="100%",
+        style={
+            "background_color": rx.cond(warn, "#B91C1C", "#DC2626"),
+        },
+    )
+
+
+def _data_updates_card() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("database-zap", size=22, color="#DC2626"),
+                rx.heading("Daten-Updates", size="4", weight="bold"),
+                rx.cond(
+                    AdminState.sync_operation != "",
+                    rx.badge(
+                        AdminState.sync_operation,
+                        color_scheme="red",
+                        variant="soft",
+                    ),
+                ),
+                rx.spacer(),
+                rx.cond(
+                    AdminState.last_sync_time != "",
+                    rx.text(
+                        f"Zuletzt: {AdminState.last_sync_time}",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                ),
+                width="100%",
+                align="center",
+                wrap="wrap",
+            ),
+            rx.text(
+                "Synchronisiere Drafts, Draftpicks, Manager, NFL-Spieler, Matchups und Roster direkt aus der Sleeper-API. Große Läufe können mehrere Minuten dauern und können nicht abgebrochen werden.",
+                size="2",
+                class_name=TEXT_SECONDARY,
+            ),
+            # Target league + week mode config
+            rx.grid(
+                rx.vstack(
+                    rx.text(
+                        "Ziel-Liga",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                    ),
+                    rx.select.root(
+                        rx.select.trigger(width="100%"),
+                        rx.select.content(
+                            rx.select.item("Alle Ligen", value="__ALL__"),
+                            rx.foreach(AdminState.leagues, _league_option),
+                        ),
+                        value=AdminState.target_league_display,
+                        on_change=AdminState.set_target_league_id,
+                        size="2",
+                    ),
+                    spacing="1",
+                    width="100%",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    rx.text(
+                        "Wochenmodus",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                    ),
+                    rx.hstack(
+                        _week_mode_tab("Einzeln", "single"),
+                        _week_mode_tab("Spanne", "range"),
+                        _week_mode_tab("Alle 0–18", "all"),
+                        spacing="2",
+                        wrap="wrap",
+                    ),
+                    spacing="1",
+                    width="100%",
+                    align="stretch",
+                ),
+                columns=rx.breakpoints(initial="1", md="2"),
+                spacing="3",
+                width="100%",
+            ),
+            rx.cond(
+                AdminState.week_mode == "single",
+                rx.vstack(
+                    rx.text(
+                        "Woche (0–18)",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                    ),
+                    rx.input(
+                        type="number",
+                        min=0,
+                        max=18,
+                        default_value=AdminState.week_single.to_string(),
+                        on_change=AdminState.set_week_single.debounce(200),
+                        size="2",
+                        width="120px",
+                    ),
+                    spacing="1",
+                    align="start",
+                ),
+                rx.cond(
+                    AdminState.week_mode == "range",
+                    rx.hstack(
+                        rx.vstack(
+                            rx.text(
+                                "Start-Woche",
+                                size="1",
+                                weight="bold",
+                                class_name="uppercase tracking-wide "
+                                + TEXT_SECONDARY,
+                            ),
+                            rx.input(
+                                type="number",
+                                min=0,
+                                max=18,
+                                default_value=AdminState.week_start.to_string(),
+                                on_change=AdminState.set_week_start.debounce(
+                                    200
+                                ),
+                                size="2",
+                                width="120px",
+                            ),
+                            spacing="1",
+                        ),
+                        rx.vstack(
+                            rx.text(
+                                "End-Woche",
+                                size="1",
+                                weight="bold",
+                                class_name="uppercase tracking-wide "
+                                + TEXT_SECONDARY,
+                            ),
+                            rx.input(
+                                type="number",
+                                min=0,
+                                max=18,
+                                default_value=AdminState.week_end.to_string(),
+                                on_change=AdminState.set_week_end.debounce(200),
+                                size="2",
+                                width="120px",
+                            ),
+                            spacing="1",
+                        ),
+                        spacing="3",
+                        align="start",
+                        wrap="wrap",
+                    ),
+                    rx.hstack(
+                        rx.icon("info", size=14, color="#F59E0B"),
+                        rx.text(
+                            "Es werden alle Wochen 0 bis 18 synchronisiert.",
+                            size="1",
+                            weight="medium",
+                            class_name="text-amber-500",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="8px 12px",
+                        border_radius="8px",
+                        class_name="border border-amber-500/30 bg-amber-500/5",
+                    ),
+                ),
+            ),
+            rx.divider(),
+            rx.hstack(
+                rx.icon("triangle-alert", size=14, color="#F59E0B"),
+                rx.text(
+                    "Große Syncs (alle Ligen × alle Wochen, NFL-Spieler) können mehrere Minuten dauern.",
+                    size="1",
+                    weight="medium",
+                    class_name="text-amber-500",
+                ),
+                spacing="2",
+                align="center",
+            ),
+            # Global sync buttons
+            rx.grid(
+                rx.vstack(
+                    _sync_button(
+                        "Drafts scannen",
+                        "list",
+                        AdminState.sync_all_drafts,
+                        "Drafts scannen",
+                    ),
+                    rx.text(
+                        "Scannt alle Drafts für die gewählte(n) Liga(en) via Sleeper und upsertet in drafts.",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    _sync_button(
+                        "Draftpicks importieren",
+                        "download",
+                        AdminState.sync_all_draft_picks,
+                        "Draftpicks importieren",
+                        warn=True,
+                    ),
+                    rx.text(
+                        "Löscht pro Draft alle Picks und fügt aktuelle Picks aus Sleeper neu ein.",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    _sync_button(
+                        "Manager aktualisieren",
+                        "users",
+                        AdminState.sync_all_managers,
+                        "Manager aktualisieren",
+                    ),
+                    rx.text(
+                        "Synchronisiert User + Roster-Owner für die gewählte(n) Liga(en) in managers.",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    _sync_button(
+                        "NFL-Spieler synchronisieren",
+                        "user-round",
+                        AdminState.sync_nfl_players,
+                        "NFL-Spieler synchronisieren",
+                        warn=True,
+                    ),
+                    rx.text(
+                        "Lädt den gesamten Sleeper NFL-Katalog (~11k Spieler) und upsertet in nfl_players.",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    _sync_button(
+                        "Matchups synchronisieren",
+                        "swords",
+                        AdminState.sync_matchups_bulk,
+                        "Matchups synchronisieren",
+                    ),
+                    rx.text(
+                        "Speichert Matchups nach Wochenmodus in matchup_week_stats (on_conflict league_id,week,roster_id).",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                rx.vstack(
+                    _sync_button(
+                        "Roster synchronisieren",
+                        "layout-list",
+                        AdminState.sync_rosters_bulk,
+                        "Roster synchronisieren",
+                    ),
+                    rx.text(
+                        "Speichert Roster wochenweise in rosters (on_conflict league_id,roster_id,week).",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="stretch",
+                ),
+                columns=rx.breakpoints(initial="1", sm="2", lg="3"),
+                spacing="4",
+                width="100%",
+            ),
+            spacing="4",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
 def _log_entry(entry: dict) -> rx.Component:
     return rx.hstack(
         rx.text(
@@ -721,6 +1037,7 @@ def _admin_dashboard() -> rx.Component:
                 width="100%",
             ),
             _add_league_card(),
+            _data_updates_card(),
             _leagues_table(),
             _log_card(),
             _confirm_sync_all_dialog(),

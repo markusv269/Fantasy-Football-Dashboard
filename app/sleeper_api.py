@@ -78,3 +78,14 @@ def get_draft(draft_id: str):
 def get_draft_picks(draft_id: str):
     """Fetch picks for a specific draft."""
     return _get(f"/draft/{draft_id}/picks")
+
+
+def get_all_nfl_players():
+    """Fetch full NFL player catalog from Sleeper."""
+    try:
+        r = requests.get(f"{BASE_URL}/players/nfl", timeout=60)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        logging.exception(f"Error fetching all NFL players: {e}")
+        return None

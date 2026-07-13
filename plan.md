@@ -1,16 +1,17 @@
-# Leagues-Seite: Filterung und Sortierung
+# Admin-Synchronisierung: Drafts, Picks, Manager, Player, Matchups und Roster
 
-## Phase 1: Datenbasis und Filtermodell vorbereiten ✅
-- [x] Verfügbare Liga-, Manager-, Saison- und Wocheninformationen aus der Datenbank prüfen
-- [x] Filterziele für Manager, Saison, Woche, Liga-Typ und Suchtext festlegen
-- [x] Sortieroptionen für Name, Saison, Manageranzahl und letzte Woche definieren
+## Phase 1: Datenbasis und Sync-Ziele prüfen ✅
+- [x] Verfügbare Datenbanktabellen und Spalten für Drafts, Draftpicks, Manager, NFL-Player, Matchups und Roster prüfen
+- [x] Sleeper-Datenquellen und benötigte League-/Draft-IDs aus bestehenden Daten ableiten
+- [x] Wochenauswahl für einzelne Woche, Wochenbereich und alle Wochen festlegen
 
-## Phase 2: Filter- und Sortierlogik implementieren ✅
-- [x] Daten für Ligen inklusive Manager- und Wochenmetadaten laden
-- [x] Filterzustand, Zurücksetzen und kombinierte Filterauswertung ergänzen
-- [x] Sortierung mit stabilen Fallbacks für fehlende Werte umsetzen
+## Phase 2: Admin-Sync-Aktionen implementieren ✅
+- [x] Admin-Aktionen für Draft-Scan, Draftpicks-Import, Manager-Update und NFL-Player-Sync ergänzen
+- [x] Admin-Aktionen für Matchup-Sync mit Wochenmodus ergänzen
+- [x] Admin-Aktionen für Roster-Sync mit Wochenmodus ergänzen
+- [x] Statusmeldungen, Fortschrittslog und Sperrzustände während laufender Updates pflegen
 
-## Phase 3: UI auf /leagues erweitern und validieren ✅
-- [x] Filterleiste, aktive Filter und Ergebniszähler im bestehenden Stoned-Lack-Stil einbauen
-- [x] Gefilterte Liga-Cards mit relevanten Metadaten anzeigen
-- [x] Lade-, Filter- und Sortierfluss mit echten Daten prüfen
+## Phase 3: Admin-Oberfläche erweitern und validieren ✅
+- [x] Update-Buttons und Wochensteuerung sichtbar in die Adminseite integrieren
+- [x] Ergebnisfeedback und Fehlerzustände verständlich anzeigen
+- [x] Die wichtigsten Sync-Flows mit echten Daten validieren und Fehler beheben

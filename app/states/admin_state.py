@@ -1,6 +1,6 @@
 import reflex as rx
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from app.supabase_client import get_supabase_client
 from app.sleeper_api import (
     get_league,
@@ -10,6 +10,8 @@ from app.sleeper_api import (
     get_matchups,
     get_league_drafts,
     get_draft,
+    get_draft_picks,
+    get_all_nfl_players,
 )
 
 
@@ -27,6 +29,63 @@ class AdminState(rx.State):
     log_entries: list[dict[str, str]] = []
     last_sync_time: str = ""
     show_confirm_sync_all: bool = False
+
+    # New: bulk data update controls
+    week_mode: str = "single"  # 'single' | 'range' | 'all'
+    week_single: int = 1
+    week_start: int = 1
+    week_end: int = 18
+    target_league_id: str = ""  # empty => all leagues
+    sync_operation: str = ""  # human-readable current op
+
+    @rx.event
+    def set_week_mode(self, val: str):
+        self.week_mode = val
+
+    @rx.event
+    def set_week_single(self, val: str):
+        try:
+            self.week_single = max(0, min(18, int(val)))
+        except Exception:
+            logging.exception("bad week single")
+
+    @rx.event
+    def set_week_start(self, val: str):
+        try:
+            self.week_start = max(0, min(18, int(val)))
+        except Exception:
+            logging.exception("bad week start")
+
+    @rx.event
+    def set_week_end(self, val: str):
+        try:
+            self.week_end = max(0, min(18, int(val)))
+        except Exception:
+            logging.exception("bad week end")
+
+    @rx.event
+    def set_target_league_id(self, val: str):
+        self.target_league_id = "" if val == "__ALL__" else val
+
+    @rx.var
+    def target_league_display(self) -> str:
+        if not self.target_league_id:
+            return "__ALL__"
+        return self.target_league_id
+
+    def _resolve_weeks(self) -> list[int]:
+        if self.week_mode == "single":
+            return [int(self.week_single)]
+        if self.week_mode == "range":
+            lo = min(self.week_start, self.week_end)
+            hi = max(self.week_start, self.week_end)
+            return list(range(lo, hi + 1))
+        return list(range(0, 19))
+
+    def _resolve_league_ids(self) -> list[str]:
+        if self.target_league_id:
+            return [self.target_league_id]
+        return [str(lg.get("league_id", "")) for lg in self.leagues]
 
     @rx.var
     def total_leagues(self) -> int:
@@ -493,6 +552,469 @@ class AdminState(rx.State):
             self.is_syncing = False
             self.sync_target = ""
             yield AdminState.load_leagues
+
+    # =========================================================
+    # New bulk sync operations (Phase 2)
+    # =========================================================
+
+    def _sync_draft_picks_for_draft(self, client, draft_id: str) -> int:
+        picks = get_draft_picks(draft_id) or []
+        try:
+            client.table("draft_picks").delete().eq(
+                "draft_id", str(draft_id)
+            ).execute()
+        except Exception as e:
+            logging.exception(f"draft_picks delete failed {draft_id}: {e}")
+            raise
+        if not picks:
+            return 0
+        rows = []
+        for p in picks:
+            rows.append(
+                {
+                    "draft_id": str(draft_id),
+                    "round": int(p.get("round") or 0),
+                    "pick_no": int(p.get("pick_no") or 0),
+                    "roster_id": int(p.get("roster_id") or 0)
+                    if p.get("roster_id") is not None
+                    else None,
+                    "player_id": str(p.get("player_id") or ""),
+                    "metadata": p.get("metadata") or {},
+                    "json_data": p,
+                }
+            )
+        # Batch insert
+        try:
+            batch = 500
+            for i in range(0, len(rows), batch):
+                client.table("draft_picks").insert(
+                    rows[i : i + batch]
+                ).execute()
+        except Exception as e:
+            logging.exception(f"draft_picks insert failed {draft_id}: {e}")
+            raise
+        return len(rows)
+
+    @rx.event
+    async def sync_all_drafts(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "Drafts scannen"
+        self.sync_target = "DRAFTS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            league_ids = self._resolve_league_ids()
+            self._log(f"Draft-Scan gestartet für {len(league_ids)} Liga(en)…")
+            total = 0
+            ok = 0
+            fail = 0
+            dtype_map = {"snake": "0", "linear": "1", "auction": "2"}
+            for lid in league_ids:
+                try:
+                    drafts = get_league_drafts(lid) or []
+                    if not drafts:
+                        continue
+                    rows = []
+                    for d in drafts:
+                        did = str(d.get("draft_id") or "")
+                        if not did:
+                            continue
+                        start_iso = ""
+                        start = d.get("start_time")
+                        if start:
+                            try:
+                                start_iso = datetime.fromtimestamp(
+                                    int(start) / 1000
+                                ).isoformat()
+                            except Exception:
+                                logging.exception("bad start")
+                        dtype_raw = d.get("type", "")
+                        dtype_val = dtype_map.get(
+                            str(dtype_raw).lower(), dtype_raw
+                        )
+                        rows.append(
+                            {
+                                "draft_id": did,
+                                "league_id": str(lid),
+                                "season": str(d.get("season") or ""),
+                                "draft_type": dtype_val,
+                                "status": str(d.get("status") or ""),
+                                "start_time": start_iso,
+                                "json_data": d,
+                            }
+                        )
+                    if rows:
+                        client.table("drafts").upsert(
+                            rows, on_conflict="draft_id"
+                        ).execute()
+                        total += len(rows)
+                    ok += 1
+                except Exception as e:
+                    fail += 1
+                    logging.exception(f"drafts sync failed {lid}: {e}")
+                    self._log(f"FEHLER Drafts {lid}: {e}", "error")
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(
+                f"Draft-Scan fertig: {total} Drafts aus {ok} Ligen ({fail} Fehler)."
+            )
+            self._set_status(
+                f"{total} Drafts synchronisiert aus {ok} Liga(en).",
+                "success" if fail == 0 else "error",
+            )
+        except Exception as e:
+            logging.exception(f"sync_all_drafts error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
+
+    @rx.event
+    async def sync_all_draft_picks(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "Draftpicks importieren"
+        self.sync_target = "PICKS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            # Load all drafts (optionally filter to target league)
+            query = client.table("drafts").select("draft_id,league_id")
+            if self.target_league_id:
+                query = query.eq("league_id", self.target_league_id)
+            res = query.execute()
+            drafts = res.data if res and res.data else []
+            self._log(f"Draftpicks-Import: {len(drafts)} Draft(s)…")
+            total = 0
+            ok = 0
+            fail = 0
+            for i, d in enumerate(drafts, 1):
+                did = str(d.get("draft_id") or "")
+                if not did:
+                    continue
+                try:
+                    n = self._sync_draft_picks_for_draft(client, did)
+                    total += n
+                    ok += 1
+                    if i % 10 == 0:
+                        self._log(f"Fortschritt: {i}/{len(drafts)} Drafts.")
+                except Exception as e:
+                    fail += 1
+                    logging.exception(f"draft picks {did} failed: {e}")
+                    self._log(f"FEHLER Picks {did}: {e}", "error")
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(
+                f"Draftpicks-Import fertig: {total} Picks ({ok} OK, {fail} Fehler)."
+            )
+            self._set_status(
+                f"{total} Draftpicks importiert.",
+                "success" if fail == 0 else "error",
+            )
+        except Exception as e:
+            logging.exception(f"sync_all_draft_picks error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
+
+    @rx.event
+    async def sync_all_managers(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "Manager aktualisieren"
+        self.sync_target = "MANAGERS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            league_ids = self._resolve_league_ids()
+            self._log(f"Manager-Sync für {len(league_ids)} Liga(en)…")
+            total = 0
+            ok = 0
+            fail = 0
+            for i, lid in enumerate(league_ids, 1):
+                try:
+                    n = self._sync_managers(client, lid)
+                    total += n
+                    ok += 1
+                    if i % 20 == 0:
+                        self._log(f"Fortschritt: {i}/{len(league_ids)}")
+                except Exception as e:
+                    fail += 1
+                    logging.exception(f"managers sync {lid} failed: {e}")
+                    self._log(f"FEHLER Manager {lid}: {e}", "error")
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(
+                f"Manager-Sync fertig: {total} Rows ({ok} OK, {fail} Fehler)."
+            )
+            self._set_status(
+                f"{total} Manager aktualisiert in {ok} Liga(en).",
+                "success" if fail == 0 else "error",
+            )
+        except Exception as e:
+            logging.exception(f"sync_all_managers error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
+
+    @rx.event
+    async def sync_nfl_players(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "NFL-Spieler synchronisieren"
+        self.sync_target = "PLAYERS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            self._log("Lade Sleeper NFL-Spielerkatalog…")
+            data = get_all_nfl_players()
+            if not data:
+                self._set_status(
+                    "Sleeper-API lieferte keine Spielerdaten.", "error"
+                )
+                return
+            now_iso = datetime.now(timezone.utc).isoformat()
+            rows = []
+            for pid, p in data.items():
+                if not pid:
+                    continue
+                first = p.get("first_name") or ""
+                last = p.get("last_name") or ""
+                full = (p.get("full_name") or f"{first} {last}").strip()
+                rows.append(
+                    {
+                        "player_id": str(pid),
+                        "name": full or f"Player {pid}",
+                        "team": p.get("team"),
+                        "position": p.get("position"),
+                        "json_data": p,
+                        "updated_at": now_iso,
+                    }
+                )
+            self._log(f"Upsert {len(rows)} NFL-Spieler in nfl_players…")
+            batch = 500
+            for i in range(0, len(rows), batch):
+                chunk = rows[i : i + batch]
+                try:
+                    client.table("nfl_players").upsert(
+                        chunk, on_conflict="player_id"
+                    ).execute()
+                except Exception as e:
+                    logging.exception(f"nfl_players batch failed: {e}")
+                    self._log(
+                        f"FEHLER Batch {i}: {e}",
+                        "error",
+                    )
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(f"NFL-Spieler-Sync abgeschlossen ({len(rows)} Rows).")
+            self._set_status(
+                f"{len(rows)} NFL-Spieler synchronisiert.", "success"
+            )
+        except Exception as e:
+            logging.exception(f"sync_nfl_players error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
+
+    def _sync_matchups_for_week(self, client, league_id: str, week: int) -> int:
+        try:
+            data = get_matchups(league_id, week)
+        except Exception as e:
+            logging.exception(f"matchups fetch {league_id} w{week}: {e}")
+            return 0
+        if not data:
+            return 0
+        rows = []
+        for m in data:
+            pts = m.get("points")
+            try:
+                pts_val = float(pts) if pts is not None else 0.0
+            except Exception:
+                logging.exception("bad pts")
+                pts_val = 0.0
+            rows.append(
+                {
+                    "league_id": str(league_id),
+                    "week": int(week),
+                    "matchup_id": int(m.get("matchup_id") or 0),
+                    "roster_id": int(m.get("roster_id") or 0),
+                    "points": round(pts_val, 2),
+                    "json_data": m,
+                }
+            )
+        if not rows:
+            return 0
+        try:
+            client.table("matchup_week_stats").upsert(
+                rows, on_conflict="league_id,week,roster_id"
+            ).execute()
+        except Exception as e:
+            logging.exception(f"matchups upsert {league_id} w{week}: {e}")
+            raise
+        return len(rows)
+
+    @rx.event
+    async def sync_matchups_bulk(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "Matchups synchronisieren"
+        self.sync_target = "MATCHUPS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            league_ids = self._resolve_league_ids()
+            weeks = self._resolve_weeks()
+            self._log(
+                f"Matchup-Sync: {len(league_ids)} Liga(en) × {len(weeks)} Woche(n)…"
+            )
+            total = 0
+            ok = 0
+            fail = 0
+            for lid in league_ids:
+                for w in weeks:
+                    try:
+                        n = self._sync_matchups_for_week(client, lid, w)
+                        total += n
+                        ok += 1
+                    except Exception as e:
+                        fail += 1
+                        logging.exception(f"matchup err {lid} w{w}: {e}")
+                        self._log(f"FEHLER Matchup {lid} W{w}: {e}", "error")
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(
+                f"Matchup-Sync fertig: {total} Rows ({ok} OK, {fail} Fehler)."
+            )
+            self._set_status(
+                f"{total} Matchup-Einträge synchronisiert.",
+                "success" if fail == 0 else "error",
+            )
+        except Exception as e:
+            logging.exception(f"sync_matchups_bulk error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
+
+    def _sync_rosters_for_week(self, client, league_id: str, week: int) -> int:
+        rosters = get_rosters(league_id) or []
+        if not rosters:
+            return 0
+        rows = []
+        for r in rosters:
+            settings = r.get("settings", {}) or {}
+            fpts = (
+                float(settings.get("fpts", 0) or 0)
+                + float(settings.get("fpts_decimal", 0) or 0) / 100.0
+            )
+            fpts_ag = (
+                float(settings.get("fpts_against", 0) or 0)
+                + float(settings.get("fpts_against_decimal", 0) or 0) / 100.0
+            )
+            ppts = (
+                float(settings.get("ppts", 0) or 0)
+                + float(settings.get("ppts_decimal", 0) or 0) / 100.0
+            )
+            rows.append(
+                {
+                    "league_id": str(league_id),
+                    "roster_id": int(r.get("roster_id") or 0),
+                    "week": int(week),
+                    "wins": int(settings.get("wins") or 0),
+                    "losses": int(settings.get("losses") or 0),
+                    "ties": int(settings.get("ties") or 0),
+                    "fpts_for": round(fpts, 2),
+                    "fpts_against": round(fpts_ag, 2),
+                    "ppts": round(ppts, 2),
+                    "json_data": {
+                        "players": r.get("players") or [],
+                        "starters": r.get("starters") or [],
+                        "reserve": r.get("reserve") or [],
+                        "taxi": r.get("taxi") or [],
+                        "settings": settings,
+                    },
+                }
+            )
+        try:
+            client.table("rosters").upsert(
+                rows, on_conflict="league_id,roster_id,week"
+            ).execute()
+        except Exception as e:
+            logging.exception(f"rosters upsert {league_id} w{week}: {e}")
+            raise
+        return len(rows)
+
+    @rx.event
+    async def sync_rosters_bulk(self):
+        if not await self._require_auth():
+            return
+        self.is_syncing = True
+        self.sync_operation = "Roster synchronisieren"
+        self.sync_target = "ROSTERS"
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self._set_status("Supabase nicht verfügbar.", "error")
+                return
+            league_ids = self._resolve_league_ids()
+            weeks = self._resolve_weeks()
+            self._log(
+                f"Roster-Sync: {len(league_ids)} Liga(en) × {len(weeks)} Woche(n)…"
+            )
+            total = 0
+            ok = 0
+            fail = 0
+            for lid in league_ids:
+                for w in weeks:
+                    try:
+                        n = self._sync_rosters_for_week(client, lid, w)
+                        total += n
+                        ok += 1
+                    except Exception as e:
+                        fail += 1
+                        logging.exception(f"roster err {lid} w{w}: {e}")
+                        self._log(f"FEHLER Roster {lid} W{w}: {e}", "error")
+            self.last_sync_time = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            self._log(
+                f"Roster-Sync fertig: {total} Rows ({ok} OK, {fail} Fehler)."
+            )
+            self._set_status(
+                f"{total} Roster-Einträge synchronisiert.",
+                "success" if fail == 0 else "error",
+            )
+        except Exception as e:
+            logging.exception(f"sync_rosters_bulk error: {e}")
+            self._set_status(f"Fehler: {e}", "error")
+        finally:
+            self.is_syncing = False
+            self.sync_operation = ""
+            self.sync_target = ""
 
     @rx.event
     async def add_league(self):
