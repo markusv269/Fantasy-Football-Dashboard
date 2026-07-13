@@ -12,6 +12,7 @@ class AppState(rx.State):
     selected_league_id: str = ""
     trending_adds: list[dict[str, str | int]] = []
     is_loading: bool = False
+    is_full_loaded: bool = False
     search_query: str = ""
     filter_type: str = "All"
 
@@ -99,12 +100,57 @@ class AppState(rx.State):
                     self.configured_league_ids = [
                         lg["league_id"] for lg in normalized
                     ]
+                    self.is_full_loaded = True
                 else:
                     self.leagues_data = []
                     self.configured_league_ids = []
             except Exception as e:
                 logging.exception(f"Error fetching leagues from Supabase: {e}")
         self.is_loading = False
+
+    @rx.event
+    def fetch_current_season_leagues(self):
+        """Load only the leagues of the current (max) season. Fast initial load."""
+        self.is_loading = True
+        yield
+        client = get_supabase_client()
+        if client:
+            try:
+                max_res = (
+                    client.table("leagues")
+                    .select("league_season")
+                    .order("league_season", desc=True)
+                    .limit(1)
+                    .execute()
+                )
+                max_season = None
+                if max_res and max_res.data:
+                    max_season = max_res.data[0].get("league_season")
+                if max_season is not None:
+                    res = (
+                        client.table("leagues")
+                        .select("*")
+                        .eq("league_season", max_season)
+                        .execute()
+                    )
+                    raw_leagues = res.data if res and res.data else []
+                    normalized = [
+                        self._normalize_league(lg) for lg in raw_leagues
+                    ]
+                    self.leagues_data = normalized
+                    self.configured_league_ids = [
+                        lg["league_id"] for lg in normalized
+                    ]
+                    self.is_full_loaded = False
+            except Exception as e:
+                logging.exception(f"Error fetching current season: {e}")
+        self.is_loading = False
+
+    @rx.event
+    def ensure_all_leagues_loaded(self):
+        """Trigger full load if not already loaded."""
+        if not self.is_full_loaded:
+            yield AppState.fetch_all_leagues_data
 
     @rx.event
     def select_league(self, league_id: str):
@@ -114,7 +160,7 @@ class AppState(rx.State):
     def init_app(self):
         yield AppState.fetch_nfl_state
         yield AppState.fetch_trending
-        yield AppState.fetch_all_leagues_data
+        yield AppState.fetch_current_season_leagues
 
     @rx.var
     def current_season(self) -> str:

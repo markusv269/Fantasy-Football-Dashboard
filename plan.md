@@ -1,17 +1,16 @@
-# Admin-Synchronisierung: Drafts, Picks, Manager, Player, Matchups und Roster
+# Home- und Ligen-Performance-Erweiterung
 
-## Phase 1: Datenbasis und Sync-Ziele prüfen ✅
-- [x] Verfügbare Datenbanktabellen und Spalten für Drafts, Draftpicks, Manager, NFL-Player, Matchups und Roster prüfen
-- [x] Sleeper-Datenquellen und benötigte League-/Draft-IDs aus bestehenden Daten ableiten
-- [x] Wochenauswahl für einzelne Woche, Wochenbereich und alle Wochen festlegen
+## Phase 1: Home-Nutzerbereich und eigene Ligen ✅
+- [x] Abmeldeaktion für den gespeicherten Sleeper-Namen auf der Home-Seite ergänzen
+- [x] Übersicht der eigenen Ligen auf der Home-Seite im Stil der bestehenden Liga-Sektionen ergänzen
+- [x] Leere Zustände für nicht angemeldete Nutzer und Nutzer ohne eigene Ligen verständlich anzeigen
 
-## Phase 2: Admin-Sync-Aktionen implementieren ✅
-- [x] Admin-Aktionen für Draft-Scan, Draftpicks-Import, Manager-Update und NFL-Player-Sync ergänzen
-- [x] Admin-Aktionen für Matchup-Sync mit Wochenmodus ergänzen
-- [x] Admin-Aktionen für Roster-Sync mit Wochenmodus ergänzen
-- [x] Statusmeldungen, Fortschrittslog und Sperrzustände während laufender Updates pflegen
+## Phase 2: Ladezeitoptimierung für aktuelle Saison ✅
+- [x] Initial nur aktuelle Saisondaten für Startseite und Ligenübersicht laden
+- [x] Erweiterte Liga- und Managerdaten erst bei Archiv-/Saison-/Manager-/Suchbedarf laden
+- [x] Bestehende Filter- und Sortierlogik so anpassen, dass vollständige Daten bei Bedarf nachgeladen werden
 
-## Phase 3: Admin-Oberfläche erweitern und validieren ✅
-- [x] Update-Buttons und Wochensteuerung sichtbar in die Adminseite integrieren
-- [x] Ergebnisfeedback und Fehlerzustände verständlich anzeigen
-- [x] Die wichtigsten Sync-Flows mit echten Daten validieren und Fehler beheben
+## Phase 3: Validierung und Fehlerbehebung ✅
+- [x] Persönliche Ligaübersicht, Logout und lokale Nutzerzustände testen
+- [x] Managerfilter-Beispiele mit vollständigem Nachladen erneut validieren
+- [x] Aktuelle-Saison-Ladepfade und erweiterte Filterpfade gegen echte Daten prüfen

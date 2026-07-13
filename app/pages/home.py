@@ -170,7 +170,14 @@ def _section(
 def _login_card() -> rx.Component:
     return rx.card(
         rx.vstack(
-            rx.heading("Melde dich mit Sleeper an", size="4", weight="bold"),
+            rx.hstack(
+                rx.icon("user-plus", size=22, color="#DC2626"),
+                rx.heading(
+                    "Melde dich mit Sleeper an", size="4", weight="bold"
+                ),
+                spacing="2",
+                align="center",
+            ),
             rx.text(
                 "Gib deinen Sleeper-Namen ein, um deine Ligen zu sehen.",
                 size="2",
@@ -193,6 +200,151 @@ def _login_card() -> rx.Component:
                 width="100%",
             ),
             spacing="3",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
+def _user_profile_card() -> rx.Component:
+    return rx.card(
+        rx.hstack(
+            rx.cond(
+                UserState.sleeper_avatar != "",
+                rx.image(
+                    src=f"https://sleepercdn.com/avatars/{UserState.sleeper_avatar}",
+                    width="56px",
+                    height="56px",
+                    border_radius="9999px",
+                    class_name="object-cover",
+                ),
+                rx.box(
+                    rx.icon("user", size=28, color="#DC2626"),
+                    class_name="w-14 h-14 rounded-full flex items-center justify-center "
+                    + t("bg-white/5", "bg-gray-100"),
+                ),
+            ),
+            rx.vstack(
+                rx.text(
+                    "Angemeldet als",
+                    size="1",
+                    weight="bold",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                ),
+                rx.heading(
+                    UserState.sleeper_display_name,
+                    size="5",
+                    weight="bold",
+                ),
+                rx.hstack(
+                    rx.icon("trophy", size=14, color="#DC2626"),
+                    rx.text(
+                        f"{UserState.my_leagues_count} Ligen gefunden",
+                        size="2",
+                        weight="medium",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="2",
+                    align="center",
+                ),
+                spacing="1",
+                align="start",
+                flex="1",
+                min_width="0",
+            ),
+            rx.spacer(),
+            rx.button(
+                rx.icon("log-out", size=14),
+                "Abmelden",
+                on_click=UserState.clear_username,
+                variant="soft",
+                color_scheme="red",
+                size="2",
+            ),
+            spacing="3",
+            align="center",
+            width="100%",
+            wrap="wrap",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
+def _my_leagues_section() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("star", size=22, color="#DC2626"),
+                rx.heading("Meine Ligen", size="5", weight="bold"),
+                rx.badge(
+                    UserState.my_leagues_count.to_string(),
+                    color_scheme="red",
+                    variant="soft",
+                    size="2",
+                ),
+                rx.spacer(),
+                rx.cond(
+                    UserState.is_loading_my_leagues,
+                    rx.spinner(size="2"),
+                    rx.fragment(),
+                ),
+                rx.link(
+                    rx.button(
+                        "Alle Ligen",
+                        rx.icon("arrow-right", size=14),
+                        variant="soft",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    href="/leagues",
+                    underline="none",
+                ),
+                spacing="3",
+                align="center",
+                width="100%",
+                wrap="wrap",
+            ),
+            rx.cond(
+                UserState.my_leagues_count > 0,
+                rx.scroll_area(
+                    rx.grid(
+                        rx.foreach(UserState.my_leagues_data, league_card),
+                        columns=rx.breakpoints(
+                            initial="1", sm="2", md="3", lg="3", xl="4"
+                        ),
+                        spacing="4",
+                        width="100%",
+                        padding_right="8px",
+                    ),
+                    type="hover",
+                    scrollbars="vertical",
+                    class_name="h-[420px] w-full",
+                ),
+                rx.box(
+                    rx.vstack(
+                        rx.icon("search-x", size=32, color="gray"),
+                        rx.text(
+                            "Für deinen Sleeper-Account wurden keine Ligen in unserer Datenbank gefunden.",
+                            size="2",
+                            color_scheme="gray",
+                            align="center",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="32px",
+                        width="100%",
+                    ),
+                    class_name="border border-dashed rounded-xl "
+                    + t("border-gray-800", "border-gray-200"),
+                    width="100%",
+                ),
+            ),
+            spacing="4",
             width="100%",
             align="stretch",
         ),
@@ -669,7 +821,17 @@ def home_page() -> rx.Component:
     return layout(
         rx.vstack(
             _hero(),
-            rx.cond(~UserState.has_username, _login_card()),
+            rx.cond(
+                UserState.is_logged_in,
+                rx.vstack(
+                    _user_profile_card(),
+                    _my_leagues_section(),
+                    spacing="4",
+                    width="100%",
+                    align="stretch",
+                ),
+                _login_card(),
+            ),
             _section(
                 f"Dynasty Ligen {AppState.current_season}",
                 "crown",

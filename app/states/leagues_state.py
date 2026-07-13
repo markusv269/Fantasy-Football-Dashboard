@@ -3,8 +3,61 @@ import logging
 from app.supabase_client import get_supabase_client
 
 
+PAGE_SIZE = 1000
+
+
+def _paginated_in_query(
+    client,
+    table: str,
+    select_cols: str,
+    filter_col: str,
+    filter_values: list[str],
+    extra_eq: dict | None = None,
+    id_batch: int = 100,
+) -> list[dict]:
+    """Fetch all rows matching an IN (...) filter, paginating past Supabase's
+    default row limit. Batches the IN clause to avoid overly large lists and
+    uses range() to page through each chunk until an empty page is returned.
+    """
+    out: list[dict] = []
+    if not filter_values:
+        return out
+    for i in range(0, len(filter_values), id_batch):
+        chunk = filter_values[i : i + id_batch]
+        if not chunk:
+            continue
+        offset = 0
+        while True:
+            try:
+                q = (
+                    client.table(table)
+                    .select(select_cols)
+                    .in_(filter_col, chunk)
+                )
+                if extra_eq:
+                    for k, v in extra_eq.items():
+                        q = q.eq(k, v)
+                res = q.range(offset, offset + PAGE_SIZE - 1).execute()
+                rows = res.data if res and res.data else []
+            except Exception as e:
+                logging.exception(
+                    f"paginated fetch failed table={table} offset={offset}: {e}"
+                )
+                rows = []
+                break
+            if not rows:
+                break
+            out.extend(rows)
+            if len(rows) < PAGE_SIZE:
+                break
+            offset += PAGE_SIZE
+    return out
+
+
 class LeaguesState(rx.State):
     is_loading: bool = False
+    is_full_loaded: bool = False
+    current_season: str = ""
     all_leagues: list[dict[str, str | int | list[str]]] = []
     available_seasons: list[str] = []
     available_types: list[str] = []
@@ -21,6 +74,7 @@ class LeaguesState(rx.State):
 
     @rx.event
     def load_leagues(self):
+        """Initial load: only current season. Full data loads on demand."""
         self.is_loading = True
         yield
         try:
@@ -28,84 +82,78 @@ class LeaguesState(rx.State):
             if not client:
                 self.is_loading = False
                 return
+            max_res = (
+                client.table("leagues")
+                .select("league_season")
+                .order("league_season", desc=True)
+                .limit(1)
+                .execute()
+            )
+            current_season_val = None
+            if max_res and max_res.data:
+                current_season_val = max_res.data[0].get("league_season")
+            if current_season_val is None:
+                self.is_loading = False
+                return
+            self.current_season = str(current_season_val)
             res = (
                 client.table("leagues")
                 .select("league_id,league_name,league_season,league_type")
-                .order("league_season", desc=True)
+                .eq("league_season", current_season_val)
                 .execute()
             )
             leagues_rows = res.data if res and res.data else []
+            self._populate_from_rows(client, leagues_rows)
+            self.is_full_loaded = False
+        except Exception as e:
+            logging.exception(f"Error loading current-season leagues: {e}")
+        finally:
+            self.is_loading = False
+
+    def _populate_from_rows(
+        self,
+        client,
+        leagues_rows: list[dict],
+        include_week_metadata: bool = True,
+    ):
+        """Populate all state fields from a list of league rows.
+
+        When ``include_week_metadata`` is False, skip the expensive
+        per-week availability scan across all 19 weeks × all leagues.
+        Week availability is then loaded lazily on demand when the
+        user selects a specific week filter.
+        """
+        try:
             all_ids = [str(lg.get("league_id", "")) for lg in leagues_rows]
 
+            # Paginate managers query so all rows are loaded (Supabase's
+            # default row cap is 1000 per request).
             mgr_map: dict[str, list[dict]] = {}
-            try:
-                batch = 200
-                for i in range(0, len(all_ids), batch):
-                    chunk = all_ids[i : i + batch]
-                    if not chunk:
-                        continue
-                    mres = (
-                        client.table("managers")
-                        .select("league_id,display_name,team_name")
-                        .in_("league_id", chunk)
-                        .execute()
-                    )
-                    if mres and mres.data:
-                        for m in mres.data:
-                            lid = str(m.get("league_id", ""))
-                            mgr_map.setdefault(lid, []).append(m)
-            except Exception as e:
-                logging.exception(f"managers fetch failed: {e}")
+            mgr_rows = _paginated_in_query(
+                client,
+                "managers",
+                "league_id,display_name,team_name",
+                "league_id",
+                all_ids,
+                id_batch=100,
+            )
+            for m in mgr_rows:
+                lid = str(m.get("league_id", ""))
+                mgr_map.setdefault(lid, []).append(m)
 
+            # Build week availability using a bounded per-week existence
+            # strategy. Only executed when include_week_metadata is True
+            # (current-season fast path). For broad full loads, this is
+            # skipped entirely to avoid timeouts; week metadata is loaded
+            # lazily on demand.
             weeks_by_league: dict[str, set[int]] = {}
-            try:
-                batch = 100
-                for i in range(0, len(all_ids), batch):
-                    chunk = all_ids[i : i + batch]
-                    if not chunk:
-                        continue
-                    try:
-                        wres = (
-                            client.table("matchup_week_stats")
-                            .select("league_id,week")
-                            .in_("league_id", chunk)
-                            .execute()
-                        )
-                        if wres and wres.data:
-                            for row in wres.data:
-                                lid = str(row.get("league_id", ""))
-                                w = row.get("week")
-                                if w is not None:
-                                    try:
-                                        weeks_by_league.setdefault(
-                                            lid, set()
-                                        ).add(int(w))
-                                    except Exception:
-                                        logging.exception("bad week")
-                    except Exception as e:
-                        logging.exception(f"matchup weeks fetch failed: {e}")
-                    try:
-                        rres = (
-                            client.table("rosters")
-                            .select("league_id,week")
-                            .in_("league_id", chunk)
-                            .execute()
-                        )
-                        if rres and rres.data:
-                            for row in rres.data:
-                                lid = str(row.get("league_id", ""))
-                                w = row.get("week")
-                                if w is not None:
-                                    try:
-                                        weeks_by_league.setdefault(
-                                            lid, set()
-                                        ).add(int(w))
-                                    except Exception:
-                                        logging.exception("bad week r")
-                    except Exception as e:
-                        logging.exception(f"roster weeks fetch failed: {e}")
-            except Exception as e:
-                logging.exception(f"weeks batch loop failed: {e}")
+            if include_week_metadata:
+                self._collect_week_availability(
+                    client, "matchup_week_stats", all_ids, weeks_by_league
+                )
+                self._collect_week_availability(
+                    client, "rosters", all_ids, weeks_by_league
+                )
 
             manager_to_leagues: dict[str, list[str]] = {}
             all_manager_names: set[str] = set()
@@ -156,13 +204,222 @@ class LeaguesState(rx.State):
                 all_manager_names, key=lambda x: x.lower()
             )
         except Exception as e:
-            logging.exception(f"Error loading leagues page: {e}")
+            logging.exception(f"Error populating leagues: {e}")
+
+    def _collect_week_availability(
+        self,
+        client,
+        table: str,
+        league_ids: list[str],
+        weeks_by_league: dict[str, set[int]],
+    ) -> None:
+        """Populate weeks_by_league using a bounded per-week query.
+
+        For each week in 0..18, query the given table filtered by
+        (league_id IN chunk) AND (week = w), selecting only
+        league_id,week. This keeps the returned row volume small and
+        avoids scanning per-roster/per-matchup detail rows. Pages
+        through with range() until fewer than PAGE_SIZE rows are
+        returned in a page.
+        """
+        if not league_ids:
+            return
+        id_batch = 100
+        for w in range(0, 19):
+            for i in range(0, len(league_ids), id_batch):
+                chunk = league_ids[i : i + id_batch]
+                if not chunk:
+                    continue
+                offset = 0
+                while True:
+                    try:
+                        res = (
+                            client.table(table)
+                            .select("league_id,week")
+                            .in_("league_id", chunk)
+                            .eq("week", w)
+                            .range(offset, offset + PAGE_SIZE - 1)
+                            .execute()
+                        )
+                        rows = res.data if res and res.data else []
+                    except Exception as e:
+                        logging.exception(
+                            f"week availability fetch failed {table} w={w}: {e}"
+                        )
+                        rows = []
+                        break
+                    if not rows:
+                        break
+                    for r in rows:
+                        lid = str(r.get("league_id", ""))
+                        if not lid:
+                            continue
+                        weeks_by_league.setdefault(lid, set()).add(w)
+                    if len(rows) < PAGE_SIZE:
+                        break
+                    offset += PAGE_SIZE
+
+    def _load_full_leagues_sync(self) -> None:
+        """Synchronous helper: load ALL seasons + full paginated metadata.
+
+        Called inline from setter events so filters that require the full
+        dataset (search, non-current season, specific manager) get the data
+        loaded within the same event tick rather than a yielded follow-up.
+        Idempotent — no-op when full data is already loaded.
+
+        Week availability is intentionally skipped here — computing it
+        across all historical leagues and all 19 weeks times out on
+        large inventories. It is loaded lazily via
+        :py:meth:`set_selected_week` when a specific week filter is
+        applied.
+        """
+        if self.is_full_loaded:
+            return
+        self.is_loading = True
+        try:
+            client = get_supabase_client()
+            if not client:
+                return
+            res = (
+                client.table("leagues")
+                .select("league_id,league_name,league_season,league_type")
+                .order("league_season", desc=True)
+                .execute()
+            )
+            leagues_rows = res.data if res and res.data else []
+            self._populate_from_rows(
+                client, leagues_rows, include_week_metadata=False
+            )
+            self.is_full_loaded = True
+        except Exception as e:
+            logging.exception(f"Error loading full leagues (sync): {e}")
         finally:
             self.is_loading = False
+
+    def _ensure_week_metadata_for_selected(self, week: int) -> None:
+        """Lazy-load week availability for a specific week across all
+        currently loaded leagues that don't yet have any week metadata.
+
+        This queries only the selected week (from matchup_week_stats and
+        rosters) filtered to the currently loaded league IDs — a cheap
+        bounded query — instead of the full 19-week × N-league scan.
+        """
+        if not self.all_leagues:
+            return
+        try:
+            w = int(week)
+        except Exception:
+            logging.exception("bad week")
+            return
+        # Consider a league as "missing week metadata" if its
+        # available_weeks list is empty. Under the lazy-load regime,
+        # historical leagues will start empty and only accrue weeks as
+        # the user selects them.
+        missing_ids = [
+            str(lg.get("league_id", ""))
+            for lg in self.all_leagues
+            if not lg.get("available_weeks")
+        ]
+        if not missing_ids:
+            return
+        client = get_supabase_client()
+        if not client:
+            return
+        found: set[str] = set()
+        for table in ("matchup_week_stats", "rosters"):
+            id_batch = 100
+            for i in range(0, len(missing_ids), id_batch):
+                chunk = missing_ids[i : i + id_batch]
+                if not chunk:
+                    continue
+                offset = 0
+                while True:
+                    try:
+                        res = (
+                            client.table(table)
+                            .select("league_id,week")
+                            .in_("league_id", chunk)
+                            .eq("week", w)
+                            .range(offset, offset + PAGE_SIZE - 1)
+                            .execute()
+                        )
+                        rows = res.data if res and res.data else []
+                    except Exception as e:
+                        logging.exception(
+                            f"lazy week metadata fetch failed {table}: {e}"
+                        )
+                        rows = []
+                        break
+                    if not rows:
+                        break
+                    for r in rows:
+                        lid = str(r.get("league_id", ""))
+                        if lid:
+                            found.add(lid)
+                    if len(rows) < PAGE_SIZE:
+                        break
+                    offset += PAGE_SIZE
+        if not found:
+            return
+        # Update each matching league row with the newly discovered week.
+        w_str = str(w)
+        updated = []
+        for lg in self.all_leagues:
+            lid = str(lg.get("league_id", ""))
+            if lid in found:
+                new_lg = dict(lg)
+                weeks = list(new_lg.get("available_weeks") or [])
+                if w_str not in weeks:
+                    weeks.append(w_str)
+                    try:
+                        weeks_sorted = sorted(
+                            weeks,
+                            key=lambda x: int(x) if str(x).isdigit() else 0,
+                        )
+                    except Exception:
+                        logging.exception("weeks sort")
+                        weeks_sorted = weeks
+                    new_lg["available_weeks"] = weeks_sorted
+                cur_latest = int(new_lg.get("latest_week") or 0)
+                if w > cur_latest:
+                    new_lg["latest_week"] = w
+                updated.append(new_lg)
+            else:
+                updated.append(lg)
+        self.all_leagues = updated
+
+    @rx.event
+    def load_full_leagues(self):
+        """Load ALL seasons and full manager/week metadata. Idempotent."""
+        if self.is_full_loaded:
+            return
+        yield
+        self._load_full_leagues_sync()
+
+    def _needs_full_data(self) -> bool:
+        """Any filter that could reference non-current-season data."""
+        if self.is_full_loaded:
+            return False
+        if (
+            self.selected_season != "all"
+            and self.selected_season != self.current_season
+        ):
+            return True
+        if self.selected_manager != "all":
+            return True
+        if self.search_query.strip() != "":
+            return True
+        return False
 
     @rx.event
     def set_selected_season(self, val: str):
         self.selected_season = val
+        if (
+            val != "all"
+            and val != self.current_season
+            and not self.is_full_loaded
+        ):
+            self._load_full_leagues_sync()
 
     @rx.event
     def set_selected_type(self, val: str):
@@ -171,10 +428,19 @@ class LeaguesState(rx.State):
     @rx.event
     def set_selected_manager(self, val: str):
         self.selected_manager = val
+        if val != "all" and not self.is_full_loaded:
+            self._load_full_leagues_sync()
 
     @rx.event
     def set_selected_week(self, val: str):
         self.selected_week = val
+        if val and val != "all":
+            try:
+                w = int(val)
+            except Exception:
+                logging.exception("bad selected week")
+                return
+            self._ensure_week_metadata_for_selected(w)
 
     @rx.event
     def set_selected_scope(self, val: str):
@@ -183,10 +449,17 @@ class LeaguesState(rx.State):
     @rx.event
     def set_search_query(self, val: str):
         self.search_query = val
+        if val.strip() != "" and not self.is_full_loaded:
+            self._load_full_leagues_sync()
 
     @rx.event
     def set_sort_by(self, val: str):
         self.sort_by = val
+
+    @rx.event
+    def ensure_full_loaded(self):
+        if not self.is_full_loaded:
+            self._load_full_leagues_sync()
 
     @rx.event
     def reset_filters(self):
