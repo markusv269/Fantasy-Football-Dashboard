@@ -44,24 +44,30 @@ class AdminState(rx.State):
 
     @rx.event
     def set_week_single(self, val: str):
+        if val is None or str(val).strip() == "":
+            return
         try:
             self.week_single = max(0, min(18, int(val)))
-        except Exception:
-            logging.exception("bad week single")
+        except (ValueError, TypeError):
+            pass
 
     @rx.event
     def set_week_start(self, val: str):
+        if val is None or str(val).strip() == "":
+            return
         try:
             self.week_start = max(0, min(18, int(val)))
-        except Exception:
-            logging.exception("bad week start")
+        except (ValueError, TypeError):
+            pass
 
     @rx.event
     def set_week_end(self, val: str):
+        if val is None or str(val).strip() == "":
+            return
         try:
             self.week_end = max(0, min(18, int(val)))
-        except Exception:
-            logging.exception("bad week end")
+        except (ValueError, TypeError):
+            pass
 
     @rx.event
     def set_target_league_id(self, val: str):
