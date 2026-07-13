@@ -130,11 +130,26 @@ def _hero() -> rx.Component:
                 rx.icon("trophy", size=28, color="#DC2626"),
                 rx.heading("Ligen", size="7", weight="bold"),
                 rx.spacer(),
-                rx.badge(
-                    f"{LeaguesState.total_count} Ligen gesamt",
-                    color_scheme="red",
-                    variant="solid",
-                    size="2",
+                rx.hstack(
+                    rx.cond(
+                        ~LeaguesState.is_full_loaded,
+                        rx.button(
+                            rx.icon("download", size=16),
+                            "Alle Ligen laden",
+                            on_click=LeaguesState.load_full_leagues,
+                            disabled=LeaguesState.is_loading,
+                            size="2",
+                            style={"background_color": "#DC2626"},
+                        ),
+                    ),
+                    rx.badge(
+                        f"{LeaguesState.total_count} Ligen",
+                        color_scheme="red",
+                        variant="solid",
+                        size="2",
+                    ),
+                    spacing="3",
+                    align="center",
                 ),
                 spacing="3",
                 align="center",
