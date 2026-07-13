@@ -22,7 +22,9 @@ class LeaguePageState(rx.State):
     champion: dict[str, str] = {}
     top_standings: list[dict[str, str | int | float]] = []
     full_standings: list[dict[str, str | int | float]] = []
-    matchup_pairs: list[dict[str, str | int | float]] = []
+    matchup_pairs: list[
+        dict[str, str | int | float | bool | list[dict[str, str | float]]]
+    ] = []
     manager_cards: list[dict[str, str | int]] = []
     roster_cards: list[dict[str, str | int | float | list[dict[str, str]]]] = []
     trades: list[dict[str, str]] = []
@@ -462,10 +464,102 @@ class LeaguePageState(rx.State):
         finally:
             self.loading = False
 
+    def _build_lineup(self, row: dict) -> dict:
+        """Extract starters, bench, and reserve/IR lineups with points."""
+        jd = row.get("json_data") or {}
+        if not isinstance(jd, dict):
+            jd = {}
+        starters = [
+            str(p)
+            for p in (jd.get("starters") or [])
+            if p not in (None, "0", 0)
+        ]
+        players = [
+            str(p) for p in (jd.get("players") or []) if p not in (None, "0", 0)
+        ]
+        reserve = [
+            str(p) for p in (jd.get("reserve") or []) if p not in (None, "0", 0)
+        ]
+        taxi = [
+            str(p) for p in (jd.get("taxi") or []) if p not in (None, "0", 0)
+        ]
+        reserve_all: list[str] = []
+        for pid in reserve + taxi:
+            if pid not in reserve_all:
+                reserve_all.append(pid)
+        starter_set = set(starters)
+        reserve_set = set(reserve_all)
+        bench = [
+            p for p in players if p not in starter_set and p not in reserve_set
+        ]
+
+        # Points sources per Sleeper: players_points (primary),
+        # starters_points (list matching starters order), custom_points.
+        players_points_raw = jd.get("players_points")
+        players_points: dict[str, float] = {}
+        if isinstance(players_points_raw, dict):
+            for k, v in players_points_raw.items():
+                try:
+                    players_points[str(k)] = float(v or 0)
+                except Exception:
+                    logging.exception("bad players_points value")
+
+        starters_points_list = jd.get("starters_points") or []
+        starter_pts_map: dict[str, float] = {}
+        if isinstance(starters_points_list, list):
+            for i, sid in enumerate(starters):
+                if i < len(starters_points_list):
+                    try:
+                        starter_pts_map[sid] = float(
+                            starters_points_list[i] or 0
+                        )
+                    except Exception:
+                        logging.exception("bad starters_points value")
+
+        custom_points_raw = jd.get("custom_points")
+        custom_points: dict[str, float] = {}
+        if isinstance(custom_points_raw, dict):
+            for k, v in custom_points_raw.items():
+                try:
+                    custom_points[str(k)] = float(v or 0)
+                except Exception:
+                    logging.exception("bad custom_points value")
+
+        def _get_pts(pid: str) -> float:
+            if pid in players_points:
+                return round(players_points[pid], 2)
+            if pid in starter_pts_map:
+                return round(starter_pts_map[pid], 2)
+            if pid in custom_points:
+                return round(custom_points[pid], 2)
+            return 0.0
+
+        def _enrich(pids: list[str]) -> list[dict]:
+            base = enrich_roster_players(pids)
+            out = []
+            for p in base:
+                pid = str(p.get("player_id", ""))
+                out.append(
+                    {
+                        "player_id": pid,
+                        "full_name": str(p.get("full_name", "")),
+                        "position": str(p.get("position", "") or "?"),
+                        "team": str(p.get("team", "") or "FA"),
+                        "points": _get_pts(pid),
+                    }
+                )
+            return out
+
+        return {
+            "starters": _enrich(starters),
+            "bench": _enrich(bench),
+            "reserve": _enrich(reserve_all),
+        }
+
     def _fetch_matchup_pairs(
         self, client, league_id: str, week: int, mgr_map: dict
     ) -> list[dict]:
-        """Load and pair matchups for a given week."""
+        """Load and pair matchups for a given week, including lineups."""
         try:
             mres = (
                 client.table("matchup_week_stats")
@@ -480,54 +574,55 @@ class LeaguePageState(rx.State):
                 mid = m.get("matchup_id")
                 pairs.setdefault(mid, []).append(m)
             paired = []
+
+            def _team_entry(row: dict, prefix: str, mgr: dict) -> dict:
+                lineup = self._build_lineup(row)
+                return {
+                    f"{prefix}_name": str(
+                        mgr.get("team_name")
+                        or mgr.get("display_name")
+                        or f"Team {row.get('roster_id')}"
+                    ),
+                    f"{prefix}_manager": str(mgr.get("display_name") or ""),
+                    f"{prefix}_points": round(
+                        float(row.get("points") or 0.0), 2
+                    ),
+                    f"{prefix}_starters": lineup["starters"],
+                    f"{prefix}_bench": lineup["bench"],
+                    f"{prefix}_reserve": lineup["reserve"],
+                }
+
             for mid, teams in pairs.items():
                 if len(teams) >= 2:
                     t1, t2 = teams[0], teams[1]
                     m1 = mgr_map.get(t1.get("roster_id"), {})
                     m2 = mgr_map.get(t2.get("roster_id"), {})
-                    paired.append(
-                        {
-                            "matchup_id": int(mid) if mid is not None else 0,
-                            "team_a_name": str(
-                                m1.get("team_name")
-                                or m1.get("display_name")
-                                or f"Team {t1.get('roster_id')}"
-                            ),
-                            "team_a_manager": str(m1.get("display_name") or ""),
-                            "team_a_points": round(
-                                float(t1.get("points") or 0.0), 2
-                            ),
-                            "team_b_name": str(
-                                m2.get("team_name")
-                                or m2.get("display_name")
-                                or f"Team {t2.get('roster_id')}"
-                            ),
-                            "team_b_manager": str(m2.get("display_name") or ""),
-                            "team_b_points": round(
-                                float(t2.get("points") or 0.0), 2
-                            ),
-                        }
-                    )
+                    entry = {
+                        "matchup_id": int(mid) if mid is not None else 0,
+                        "is_bye": False,
+                    }
+                    entry.update(_team_entry(t1, "team_a", m1))
+                    entry.update(_team_entry(t2, "team_b", m2))
+                    paired.append(entry)
                 elif len(teams) == 1:
                     t1 = teams[0]
                     m1 = mgr_map.get(t1.get("roster_id"), {})
-                    paired.append(
+                    entry = {
+                        "matchup_id": int(mid) if mid is not None else 0,
+                        "is_bye": True,
+                    }
+                    entry.update(_team_entry(t1, "team_a", m1))
+                    entry.update(
                         {
-                            "matchup_id": int(mid) if mid is not None else 0,
-                            "team_a_name": str(
-                                m1.get("team_name")
-                                or m1.get("display_name")
-                                or f"Team {t1.get('roster_id')}"
-                            ),
-                            "team_a_manager": str(m1.get("display_name") or ""),
-                            "team_a_points": round(
-                                float(t1.get("points") or 0.0), 2
-                            ),
                             "team_b_name": "BYE",
                             "team_b_manager": "",
                             "team_b_points": 0.0,
+                            "team_b_starters": [],
+                            "team_b_bench": [],
+                            "team_b_reserve": [],
                         }
                     )
+                    paired.append(entry)
             paired.sort(key=lambda x: x["matchup_id"])
             return paired
         except Exception as e:

@@ -497,76 +497,231 @@ def _full_standings_section() -> rx.Component:
     )
 
 
-def _matchup_card(m: rx.Var) -> rx.Component:
-    a = m["team_a_points"].to(float)
-    b = m["team_b_points"].to(float)
-    is_bye = m["team_b_name"].to(str) == "BYE"
-    return rx.card(
+def _pos_badge_color(pos: rx.Var) -> rx.Var:
+    return rx.match(
+        pos.to(str),
+        ("QB", "red"),
+        ("RB", "blue"),
+        ("WR", "green"),
+        ("TE", "orange"),
+        ("K", "gray"),
+        ("DEF", "purple"),
+        "gray",
+    )
+
+
+def _matchup_player_row(p: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.badge(
+            p["position"].to(str),
+            color_scheme=_pos_badge_color(p["position"]),
+            variant="soft",
+            size="1",
+        ),
         rx.vstack(
+            rx.text(
+                p["full_name"].to(str),
+                size="1",
+                weight="bold",
+                class_name="truncate " + TEXT_PRIMARY,
+            ),
+            rx.text(
+                p["team"].to(str),
+                size="1",
+                class_name=TEXT_SECONDARY,
+            ),
+            spacing="0",
+            align="start",
+            flex="1",
+            min_width="0",
+        ),
+        rx.text(
+            p["points"].to(str),
+            size="1",
+            weight="bold",
+            class_name="text-[#DC2626] tabular-nums",
+        ),
+        spacing="2",
+        align="center",
+        width="100%",
+        padding_y="4px",
+        padding_x="8px",
+        class_name="border-b last:border-0 "
+        + t("border-white/5", "border-gray-100"),
+    )
+
+
+def _matchup_player_section(
+    label: str, players: rx.Var, accent_class: str
+) -> rx.Component:
+    # Explicitly cast to list of dicts to satisfy strong typing requirements in foreach/indexing
+    players_list = players.to(list[dict[str, str | float]])
+    return rx.vstack(
+        rx.hstack(
+            rx.text(
+                label,
+                size="1",
+                weight="bold",
+                class_name="uppercase tracking-wide " + accent_class,
+            ),
             rx.badge(
-                f"Matchup {m['matchup_id']}",
+                players_list.length().to_string(),
                 color_scheme="gray",
                 variant="soft",
                 size="1",
             ),
-            rx.hstack(
-                rx.vstack(
-                    rx.text(
-                        m["team_a_name"].to(str),
-                        size="2",
-                        weight="bold",
-                        class_name="truncate max-w-[140px] " + TEXT_PRIMARY,
-                    ),
-                    rx.text(
-                        m["team_a_manager"].to(str),
-                        size="1",
-                        class_name="truncate max-w-[140px] " + TEXT_SECONDARY,
-                    ),
-                    rx.text(
-                        m["team_a_points"].to(str),
-                        size="5",
-                        weight="bold",
-                        class_name=rx.cond(
-                            a > b, "text-[#DC2626]", TEXT_SECONDARY
-                        ),
-                    ),
-                    spacing="1",
-                    align="center",
-                    flex="1",
+            spacing="2",
+            align="center",
+        ),
+        rx.cond(
+            players_list.length() > 0,
+            rx.box(
+                rx.foreach(players_list, _matchup_player_row),
+                width="100%",
+                border_radius="8px",
+                class_name="border overflow-hidden "
+                + t(
+                    "bg-[#08090D] border-white/5",
+                    "bg-white border-gray-200",
                 ),
+            ),
+            rx.text(
+                "—",
+                size="1",
+                class_name="italic " + TEXT_SECONDARY,
+            ),
+        ),
+        spacing="1",
+        width="100%",
+        align="stretch",
+    )
+
+
+def _matchup_team_column(
+    name: rx.Var,
+    manager: rx.Var,
+    points: rx.Var,
+    starters: rx.Var,
+    bench: rx.Var,
+    reserve: rx.Var,
+    is_winner: rx.Var,
+) -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.vstack(
+                rx.text(
+                    name.to(str),
+                    size="2",
+                    weight="bold",
+                    class_name="truncate " + TEXT_PRIMARY,
+                ),
+                rx.text(
+                    manager.to(str),
+                    size="1",
+                    class_name="truncate " + TEXT_SECONDARY,
+                ),
+                spacing="0",
+                align="start",
+                flex="1",
+                min_width="0",
+            ),
+            rx.text(
+                points.to(str),
+                size="6",
+                weight="bold",
+                class_name=rx.cond(is_winner, "text-[#DC2626]", TEXT_SECONDARY)
+                + " tabular-nums",
+            ),
+            spacing="2",
+            align="center",
+            width="100%",
+            padding="10px 12px",
+            border_radius="10px",
+            class_name="border "
+            + t(
+                "bg-[#08090D] border-white/5",
+                "bg-gray-50 border-gray-200",
+            ),
+        ),
+        _matchup_player_section("Starter", starters, "text-[#DC2626]"),
+        _matchup_player_section("Bank", bench, TEXT_SECONDARY),
+        _matchup_player_section("Reserve / IR", reserve, "text-amber-500"),
+        spacing="3",
+        width="100%",
+        align="stretch",
+    )
+
+
+def _matchup_card(m: rx.Var) -> rx.Component:
+    a = m["team_a_points"].to(float)
+    b = m["team_b_points"].to(float)
+    is_bye = m["is_bye"].to(bool)
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
                 rx.badge(
-                    rx.cond(is_bye, "BYE", "VS"),
+                    f"Matchup {m['matchup_id']}",
                     color_scheme="gray",
                     variant="soft",
+                    size="1",
                 ),
-                rx.vstack(
-                    rx.text(
-                        m["team_b_name"].to(str),
-                        size="2",
-                        weight="bold",
-                        class_name="truncate max-w-[140px] " + TEXT_PRIMARY,
-                    ),
-                    rx.text(
-                        m["team_b_manager"].to(str),
-                        size="1",
-                        class_name="truncate max-w-[140px] " + TEXT_SECONDARY,
-                    ),
-                    rx.text(
-                        m["team_b_points"].to(str),
-                        size="5",
-                        weight="bold",
-                        class_name=rx.cond(
-                            b > a, "text-[#DC2626]", TEXT_SECONDARY
-                        ),
-                    ),
-                    spacing="1",
-                    align="center",
-                    flex="1",
+                rx.spacer(),
+                rx.badge(
+                    rx.cond(is_bye, "BYE", "VS"),
+                    color_scheme=rx.cond(is_bye, "gray", "red"),
+                    variant="soft",
+                    size="1",
                 ),
-                spacing="3",
-                align="center",
                 width="100%",
-                justify="between",
+                align="center",
+            ),
+            rx.grid(
+                _matchup_team_column(
+                    m["team_a_name"],
+                    m["team_a_manager"],
+                    m["team_a_points"],
+                    m["team_a_starters"],
+                    m["team_a_bench"],
+                    m["team_a_reserve"],
+                    a > b,
+                ),
+                rx.cond(
+                    is_bye,
+                    rx.center(
+                        rx.vstack(
+                            rx.icon("moon", size=28, color="gray"),
+                            rx.text(
+                                "BYE-Woche",
+                                size="2",
+                                weight="bold",
+                                class_name=TEXT_SECONDARY,
+                            ),
+                            rx.text(
+                                "Kein Gegner in dieser Woche",
+                                size="1",
+                                class_name="italic " + TEXT_SECONDARY,
+                            ),
+                            spacing="2",
+                            align="center",
+                        ),
+                        padding="24px",
+                        width="100%",
+                        class_name="border border-dashed rounded-xl "
+                        + t("border-white/10", "border-gray-200"),
+                    ),
+                    _matchup_team_column(
+                        m["team_b_name"],
+                        m["team_b_manager"],
+                        m["team_b_points"],
+                        m["team_b_starters"],
+                        m["team_b_bench"],
+                        m["team_b_reserve"],
+                        b > a,
+                    ),
+                ),
+                columns=rx.breakpoints(initial="1", md="2"),
+                spacing="4",
+                width="100%",
             ),
             spacing="3",
             width="100%",
@@ -640,15 +795,27 @@ def _matchups_section() -> rx.Component:
                 LeaguePageState.matchup_pairs.length() > 0,
                 rx.grid(
                     rx.foreach(LeaguePageState.matchup_pairs, _matchup_card),
-                    columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                    columns=rx.breakpoints(initial="1", xl="2"),
                     spacing="4",
                     width="100%",
                 ),
-                rx.text(
-                    "Keine Matchups für diese Woche verfügbar.",
-                    size="2",
-                    color_scheme="gray",
-                    class_name="italic",
+                rx.box(
+                    rx.vstack(
+                        rx.icon("calendar-x", size=32, color="gray"),
+                        rx.text(
+                            "Keine Matchups für diese Woche verfügbar.",
+                            size="2",
+                            color_scheme="gray",
+                            class_name="italic",
+                        ),
+                        spacing="2",
+                        align="center",
+                        padding="32px",
+                        width="100%",
+                    ),
+                    class_name="border border-dashed rounded-xl "
+                    + t("border-white/10", "border-gray-200"),
+                    width="100%",
                 ),
             ),
             spacing="3",
@@ -1112,8 +1279,8 @@ def _content() -> rx.Component:
         _top_standings_card(),
         _full_standings_section(),
         _matchups_section(),
-        _managers_section(),
         _rosters_section(),
+        _managers_section(),
         _drafts_section(),
         _trades_section(),
         _roster_positions_card(),
