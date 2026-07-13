@@ -187,13 +187,7 @@ def _quick_stats() -> rx.Component:
             "calendar",
             "#10B981",
         ),
-        _stat_card(
-            "Roster-Plätze",
-            LeaguePageState.roster_positions.length().to_string(),
-            "list",
-            "#F59E0B",
-        ),
-        columns=rx.breakpoints(initial="2", md="4"),
+        columns=rx.breakpoints(initial="1", sm="3"),
         spacing="4",
         width="100%",
     )
@@ -236,139 +230,6 @@ def _champion_card() -> rx.Component:
                 "border-l-4 border-l-yellow-500 bg-yellow-500/5",
                 "border-l-4 border-l-yellow-500 bg-yellow-50",
             ),
-        ),
-    )
-
-
-def _roster_positions_card() -> rx.Component:
-    return rx.cond(
-        LeaguePageState.roster_positions.length() > 0,
-        rx.card(
-            rx.vstack(
-                rx.hstack(
-                    rx.icon("layout-grid", size=18, color="#DC2626"),
-                    rx.heading("Roster-Konfiguration", size="4", weight="bold"),
-                    spacing="2",
-                    align="center",
-                ),
-                rx.flex(
-                    rx.foreach(
-                        LeaguePageState.roster_positions,
-                        lambda pos: rx.badge(
-                            pos,
-                            color_scheme="gray",
-                            variant="soft",
-                            size="2",
-                        ),
-                    ),
-                    wrap="wrap",
-                    gap="2",
-                ),
-                spacing="3",
-                width="100%",
-                align="stretch",
-            ),
-            size="3",
-            width="100%",
-        ),
-    )
-
-
-def _standings_row(team: rx.Var) -> rx.Component:
-    return rx.table.row(
-        rx.table.cell(
-            rx.text(
-                team["rank"].to(str),
-                size="2",
-                weight="bold",
-                class_name=TEXT_SECONDARY,
-            ),
-        ),
-        rx.table.cell(
-            rx.vstack(
-                rx.text(
-                    team["team_name"].to(str),
-                    size="2",
-                    weight="bold",
-                    class_name=TEXT_PRIMARY,
-                ),
-                rx.text(
-                    team["display_name"].to(str),
-                    size="1",
-                    class_name=TEXT_SECONDARY,
-                ),
-                spacing="0",
-                align="start",
-            ),
-        ),
-        rx.table.cell(
-            rx.text(
-                f"{team['wins']}-{team['losses']}-{team['ties']}",
-                size="2",
-                weight="medium",
-                align="center",
-            ),
-        ),
-        rx.table.cell(
-            rx.text(
-                team["fpts_for"].to(str),
-                size="2",
-                weight="bold",
-                class_name="text-[#DC2626]",
-                align="right",
-            ),
-        ),
-    )
-
-
-def _top_standings_card() -> rx.Component:
-    return rx.cond(
-        LeaguePageState.top_standings.length() > 0,
-        rx.card(
-            rx.vstack(
-                rx.hstack(
-                    rx.icon("list-ordered", size=18, color="#DC2626"),
-                    rx.heading("Top-Teams", size="4", weight="bold"),
-                    rx.spacer(),
-                    rx.badge(
-                        f"Woche {LeaguePageState.latest_week}",
-                        color_scheme="gray",
-                        variant="soft",
-                    ),
-                    width="100%",
-                    align="center",
-                ),
-                rx.box(
-                    rx.table.root(
-                        rx.table.header(
-                            rx.table.row(
-                                rx.table.column_header_cell("#"),
-                                rx.table.column_header_cell("Team"),
-                                rx.table.column_header_cell("W-L-T"),
-                                rx.table.column_header_cell("PF"),
-                            ),
-                        ),
-                        rx.table.body(
-                            rx.foreach(
-                                LeaguePageState.top_standings,
-                                _standings_row,
-                            ),
-                        ),
-                        variant="surface",
-                        size="1",
-                    ),
-                    width="100%",
-                    overflow_x="auto",
-                    border_radius="12px",
-                    class_name="border "
-                    + t("border-gray-800", "border-gray-200"),
-                ),
-                spacing="3",
-                width="100%",
-                align="stretch",
-            ),
-            size="3",
-            width="100%",
         ),
     )
 
@@ -952,135 +813,6 @@ def _player_row(p: rx.Var) -> rx.Component:
     )
 
 
-def _player_group(
-    label: str, players: rx.Var, accent_class: str
-) -> rx.Component:
-    return rx.cond(
-        players.to(list).length() > 0,
-        rx.vstack(
-            rx.hstack(
-                rx.text(
-                    label,
-                    size="1",
-                    weight="bold",
-                    class_name="uppercase tracking-wide " + accent_class,
-                ),
-                rx.badge(
-                    players.to(list).length().to_string(),
-                    color_scheme="gray",
-                    variant="soft",
-                    size="1",
-                ),
-                spacing="2",
-                align="center",
-            ),
-            rx.box(
-                rx.foreach(players.to(list[dict[str, str]]), _player_row),
-                width="100%",
-                border_radius="8px",
-                class_name="border overflow-hidden "
-                + t(
-                    "bg-[#08090D] border-white/5",
-                    "bg-gray-50 border-gray-200",
-                ),
-            ),
-            spacing="2",
-            width="100%",
-            align="stretch",
-        ),
-    )
-
-
-def _roster_card(r: rx.Var) -> rx.Component:
-    return rx.card(
-        rx.vstack(
-            rx.vstack(
-                rx.text(
-                    r["team_name"].to(str),
-                    size="2",
-                    weight="bold",
-                    class_name="truncate " + TEXT_PRIMARY,
-                ),
-                rx.text(
-                    r["display_name"].to(str),
-                    size="1",
-                    class_name="truncate " + TEXT_SECONDARY,
-                ),
-                spacing="0",
-                align="start",
-                width="100%",
-            ),
-            rx.hstack(
-                rx.text(
-                    f"{r['wins']}-{r['losses']}-{r['ties']}",
-                    size="1",
-                    weight="bold",
-                    class_name=TEXT_SECONDARY,
-                ),
-                rx.spacer(),
-                rx.text(
-                    f"PF {r['fpts_for']}",
-                    size="1",
-                    weight="bold",
-                    class_name="text-[#DC2626]",
-                ),
-                width="100%",
-                align="center",
-            ),
-            rx.divider(),
-            _player_group("Starter", r["starter_players"], "text-[#DC2626]"),
-            _player_group("Bank", r["bench_players"], TEXT_SECONDARY),
-            _player_group(
-                "Reserve / IR", r["reserve_players"], "text-amber-500"
-            ),
-            spacing="3",
-            width="100%",
-            align="stretch",
-        ),
-        size="2",
-        width="100%",
-    )
-
-
-def _rosters_section() -> rx.Component:
-    return rx.card(
-        rx.vstack(
-            rx.hstack(
-                rx.icon("layout-list", size=20, color="#DC2626"),
-                rx.heading("Roster", size="5", weight="bold"),
-                rx.spacer(),
-                rx.badge(
-                    LeaguePageState.roster_cards.length().to_string(),
-                    color_scheme="gray",
-                    variant="soft",
-                ),
-                width="100%",
-                align="center",
-            ),
-            rx.cond(
-                LeaguePageState.roster_cards.length() > 0,
-                rx.grid(
-                    rx.foreach(LeaguePageState.roster_cards, _roster_card),
-                    columns=rx.breakpoints(initial="1", md="2", lg="3"),
-                    spacing="4",
-                    width="100%",
-                ),
-                rx.text(
-                    "Keine Roster-Daten verfügbar.",
-                    size="2",
-                    color_scheme="gray",
-                    class_name="italic",
-                ),
-            ),
-            spacing="3",
-            width="100%",
-            align="stretch",
-        ),
-        size="3",
-        width="100%",
-    )
-
-
 def _trades_section() -> rx.Component:
     return rx.card(
         rx.vstack(
@@ -1276,14 +1008,11 @@ def _content() -> rx.Component:
         _header(),
         _quick_stats(),
         _champion_card(),
-        _top_standings_card(),
         _full_standings_section(),
         _matchups_section(),
-        _rosters_section(),
         _managers_section(),
         _drafts_section(),
         _trades_section(),
-        _roster_positions_card(),
         spacing="4",
         width="100%",
         align="stretch",
