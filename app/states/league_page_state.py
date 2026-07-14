@@ -30,6 +30,7 @@ class LeaguePageState(rx.State):
     trades: list[dict[str, str]] = []
     trades_available: bool = False
     drafts: list[dict[str, str | int]] = []
+    predecessor: dict[str, str] = {}
 
     def _reset_state(self):
         self.loading = True
@@ -55,6 +56,7 @@ class LeaguePageState(rx.State):
         self.trades = []
         self.trades_available = False
         self.drafts = []
+        self.predecessor = {}
 
     def _extract_route_id(self) -> str:
         """Extract the dynamic route id, supporting both `lid` and legacy `league_id`."""
@@ -125,6 +127,38 @@ class LeaguePageState(rx.State):
             self.league_season = str(lg.get("league_season") or "")
             rp = lg.get("roster_positions") or []
             self.roster_positions = [str(x) for x in rp]
+
+            # Load predecessor (previous league) information
+            raw_prev = lg.get("previous_league_id")
+            prev_id = (
+                str(raw_prev).strip()
+                if raw_prev not in (None, "", "0", "null")
+                else ""
+            )
+            if prev_id:
+                try:
+                    p_res = (
+                        client.table("leagues")
+                        .select("league_name,league_season")
+                        .eq("league_id", prev_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    if p_res and p_res.data:
+                        p_data = p_res.data[0]
+                        self.predecessor = {
+                            "league_id": prev_id,
+                            "name": str(p_data.get("league_name") or ""),
+                            "season": str(p_data.get("league_season") or ""),
+                        }
+                    else:
+                        # ID exists but no row found in DB
+                        self.predecessor = {"league_id": prev_id}
+                except Exception as e:
+                    logging.exception(
+                        f"Predecessor lookup failed for {prev_id}: {e}"
+                    )
+                    self.predecessor = {"league_id": prev_id}
 
             try:
                 mgr_res = (

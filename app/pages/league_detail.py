@@ -82,6 +82,42 @@ def _type_color(t_val: rx.Var) -> rx.Var:
     )
 
 
+def _predecessor_link() -> rx.Component:
+    pred = LeaguePageState.predecessor
+    has_details = pred.contains("name") & (pred["name"] != "")
+    return rx.cond(
+        pred.contains("league_id"),
+        rx.cond(
+            has_details,
+            rx.link(
+                rx.badge(
+                    rx.hstack(
+                        rx.icon("arrow-left-to-line", size=12),
+                        rx.text(
+                            f"Vorgängerliga: {pred['name']} ({pred['season']})"
+                        ),
+                        spacing="1",
+                        align="center",
+                    ),
+                    color_scheme="red",
+                    variant="surface",
+                    radius="full",
+                    class_name="cursor-pointer hover:bg-[#DC2626]/10 transition-colors",
+                ),
+                href=f"/leagues/{pred['league_id']}",
+                underline="none",
+            ),
+            rx.badge(
+                f"Vorgänger-ID: {pred['league_id']}",
+                color_scheme="gray",
+                variant="soft",
+                radius="full",
+            ),
+        ),
+        rx.fragment(),
+    )
+
+
 def _header() -> rx.Component:
     return rx.card(
         rx.vstack(
@@ -119,6 +155,7 @@ def _header() -> rx.Component:
                             variant="soft",
                             radius="full",
                         ),
+                        _predecessor_link(),
                         spacing="2",
                         align="center",
                         wrap="wrap",
