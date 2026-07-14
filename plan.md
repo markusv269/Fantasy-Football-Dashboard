@@ -1,16 +1,18 @@
-# Sleeper-Avatare in Supabase aktualisieren
+# Draft-Seite überarbeiten
 
-## Phase 1: Datenbank- und API-Abgleich ✅
-- [x] Supabase-Zugang und vorhandene Liga-Daten prüfen
-- [x] Sleeper-Liga-Daten für vorhandene League-IDs abrufen
-- [x] Avatar-Werte aus Sleeper den Datenbank-Ligen zuordnen
+## Phase 1: Draft-Datenlogik und Status-Kategorisierung ✅
+- [x] Aktuelle Draft-Daten aus Datenbank und Sleeper-API prüfen
+- [x] Drafts nach aktiv, geplant, abgeschlossen und sonstigem Status kategorisieren
+- [x] Statistiken saisonübergreifend korrekt berechnen
+- [x] Live-Draft-Informationen für aktive Drafts abrufen und aufbereiten
 
-## Phase 2: Datenbank aktualisieren ✅
-- [x] Vorhandene Liga-Avatar-Werte in Supabase per Sleeper-Daten updaten
-- [x] Fehlerhafte oder fehlende Sleeper-Antworten robust überspringen
-- [x] Ergebnis mit Anzahl aktualisierter und leerer Avatar-Werte dokumentieren
+## Phase 2: Draft-Übersicht und aktive Drafts neu gestalten ✅
+- [x] Aktive Drafts als vollbreite Highlight-Bereiche mit Live-Informationen anzeigen
+- [x] Statistikbereich mit korrekten Kategorien und saisonübergreifenden Zahlen überarbeiten
+- [x] Geplante und abgeschlossene Drafts klar getrennt darstellen
+- [x] Filter und leere Zustände an die neuen Kategorien anpassen
 
-## Phase 3: Website-Anzeige validieren ✅
-- [x] Sicherstellen, dass Avatar-IDs als Sleeper-CDN-Thumb-URLs dargestellt werden
-- [x] Wichtige Liga-Ladepfade mit Avatar-Feldern prüfen
-- [x] Abschlussstatus festhalten
+## Phase 3: Validierung und Abschluss ✅
+- [x] Sleeper-API-Abrufe für Drafts und Picks mit echten Daten prüfen
+- [x] Wichtige Draft-Seiten-Ereignisse mit echten Daten testen
+- [x] Sicherstellen, dass fehlende Live-Daten robuste Fallbacks nutzen
