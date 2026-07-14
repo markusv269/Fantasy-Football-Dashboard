@@ -1,19 +1,18 @@
-# ADP Draftboard erweitern
+# Redraft-Anmeldung Mitspieler-Wünsche validieren
 
-## Phase 1: Drafttyp- und Saisonlogik ✅
-- [x] Drafttyp-Filter für alle Spieler, Rookies und Veterans ergänzen
-- [x] Standardauswahl auf die aktuelle verfügbare Saison setzen
-- [x] Auswahl „Alle Saisons“ entfernen und Saisonwechsel zuverlässig neu berechnen
-- [x] Board-Modus abhängig von Ligaform und Drafttyp festlegen
+## Phase 1: Datenprüfung und Validierungslogik ✅
+- [x] Datenbankverfügbarkeit und neue Mitspieler-Spalte prüfen
+- [x] Sleeper-Prüfung für bis zu drei Mitspieler-Wünsche ergänzen
+- [x] Mitspieler-Wünsche eindeutig normalisieren und Selbst-/Doppelwünsche verhindern
+- [x] Validierungsfehler verständlich im Formularstatus anzeigen
 
-## Phase 2: ADP Rankings und Filterung ✅
-- [x] Ranking-Tabelle um Overall-Rang und Positionsrang je Spieler erweitern
-- [x] Tabellenfilter für Suchtext und Position ergänzen
-- [x] Mindestanzahl gedrafteter Picks per Slider für Board und Tabelle ergänzen
-- [x] Gefilterte Tabellenansicht konsistent mit Board- und ADP-Daten halten
-- [x] Leere Zustände für Tabellenfilter ergänzen
+## Phase 2: Speicherung und Anzeige ✅
+- [x] Anmeldung über die User-ID als eindeutigen Schlüssel speichern und aktualisieren
+- [x] Mitspieler-Wünsche zusätzlich als User-ID-Liste speichern
+- [x] Übersicht weiterhin lesbar mit Namen, Gegenseitigkeit und Commish-Informationen anzeigen
+- [x] Bestehende Einträge und Änderungscode-Flow kompatibel halten
 
 ## Phase 3: Validierung und Abschluss ✅
-- [x] Drafttyp-Verteilung und aktuelle Saison mit echten Supabase-Daten prüfen
-- [x] Board-Modus-Regeln für Redraft, Dynasty Rookie und Dynasty Veteran/Alle Spieler testen
-- [x] Tabellenfilter, Mindest-Pick-Slider und Ranking-Spalten mit echten ADP-Daten testen
+- [x] Sleeper-Validierung für Hauptnutzer und Mitspieler mit echten Antworten testen
+- [x] Speicherung mit Mitspieler-User-IDs gegen Supabase-Verhalten prüfen
+- [x] Formularfehler und erfolgreiche Aktualisierung prüfen

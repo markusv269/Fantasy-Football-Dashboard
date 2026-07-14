@@ -349,28 +349,138 @@ class RedraftRegistrationState(rx.State):
             self.is_resolving = False
 
     def _normalize_mates(self) -> list[str]:
+        """Return all non-empty teammate inputs, trimmed.
+
+        Preserves self-wishes and duplicates so the subsequent validation
+        step can reject them with clear error messages instead of silently
+        dropping them.
+        """
         raw = [
             self.teammate1_input,
             self.teammate2_input,
             self.teammate3_input,
         ]
-        seen: set[str] = set()
         result: list[str] = []
-        my_norm = _normalize_name(
-            self.resolved_display_name or self.sleeper_input
-        )
         for m in raw:
             n = str(m or "").strip()
             if not n:
                 continue
-            key = _normalize_name(n)
-            if key == my_norm:
-                continue
-            if key in seen:
-                continue
-            seen.add(key)
             result.append(n)
         return result
+
+    def _resolve_teammates(
+        self, mates: list[str]
+    ) -> tuple[list[str], list[str], str]:
+        """Validate teammate names against the Sleeper user endpoint.
+
+        Returns a tuple of (display_names, user_ids, error_message). If any
+        teammate cannot be resolved via Sleeper, the error message is
+        populated and the caller should abort the save.
+
+        - Names are normalized case-insensitively.
+        - Self-wishes are rejected (compared to the current user's
+          resolved user_id AND normalized display name / input).
+        - Duplicates (by user_id or normalized name) are rejected.
+        """
+        display_names: list[str] = []
+        user_ids: list[str] = []
+        seen_ids: set[str] = set()
+        seen_norm: set[str] = set()
+        my_id = str(self.resolved_user_id or "").strip()
+        my_norm = _normalize_name(
+            self.resolved_display_name or self.sleeper_input
+        )
+        # First pass: detect self-wishes and duplicates locally BEFORE any
+        # external Sleeper API lookups. This ensures fast, clear errors and
+        # avoids unnecessary network calls.
+        pre_seen: set[str] = set()
+        my_input_norm = _normalize_name(self.sleeper_input)
+        for m in mates:
+            name = str(m or "").strip()
+            if not name:
+                continue
+            norm = _normalize_name(name)
+            if norm and (norm == my_norm or norm == my_input_norm):
+                return (
+                    [],
+                    [],
+                    f"„{name}“ ist dein eigener Sleeper-Name. "
+                    "Bitte gib einen anderen Mitspieler an.",
+                )
+            if norm in pre_seen:
+                return (
+                    [],
+                    [],
+                    f"„{name}“ wurde mehrfach eingegeben. "
+                    "Bitte gib jeden Mitspieler nur einmal an.",
+                )
+            pre_seen.add(norm)
+
+        for m in mates:
+            name = str(m or "").strip()
+            if not name:
+                continue
+            norm = _normalize_name(name)
+            if norm == my_norm:
+                return (
+                    [],
+                    [],
+                    f"„{name}“ ist dein eigener Sleeper-Name. "
+                    "Bitte gib einen anderen Mitspieler an.",
+                )
+            if norm in seen_norm:
+                return (
+                    [],
+                    [],
+                    f"„{name}“ wurde mehrfach eingegeben. "
+                    "Bitte gib jeden Mitspieler nur einmal an.",
+                )
+            try:
+                r = requests.get(
+                    f"https://api.sleeper.app/v1/user/{name}", timeout=10
+                )
+            except Exception as e:
+                logging.exception(f"Sleeper teammate lookup failed: {e}")
+                return (
+                    [],
+                    [],
+                    "Sleeper-API nicht erreichbar. Bitte versuche es später erneut.",
+                )
+            if r.status_code != 200 or not r.json():
+                return (
+                    [],
+                    [],
+                    f"Mitspieler „{name}“ konnte auf Sleeper nicht gefunden werden.",
+                )
+            data = r.json() or {}
+            uid = str(data.get("user_id") or "").strip()
+            disp = str(data.get("display_name") or name).strip() or name
+            if not uid:
+                return (
+                    [],
+                    [],
+                    f"Mitspieler „{name}“ liefert keine gültige Sleeper-User-ID.",
+                )
+            if uid == my_id:
+                return (
+                    [],
+                    [],
+                    f"„{name}“ ist dein eigener Sleeper-Account. "
+                    "Bitte gib einen anderen Mitspieler an.",
+                )
+            if uid in seen_ids:
+                return (
+                    [],
+                    [],
+                    f"Mitspieler „{disp}“ wurde mehrfach eingegeben. "
+                    "Bitte gib jeden Mitspieler nur einmal an.",
+                )
+            seen_ids.add(uid)
+            seen_norm.add(_normalize_name(disp))
+            seen_norm.add(norm)
+            display_names.append(disp)
+            user_ids.append(uid)
+        return display_names, user_ids, ""
 
     @rx.event
     def submit_registration(self):
@@ -389,11 +499,15 @@ class RedraftRegistrationState(rx.State):
             self._set_status("Ungültige E-Mail-Adresse.", "error")
             return
 
-        mates = self._normalize_mates()
+        mates_raw = self._normalize_mates()
         new_code = _gen_code(10)
         self.is_submitting = True
         yield
         try:
+            mates, mates_ids, mates_err = self._resolve_teammates(mates_raw)
+            if mates_err:
+                self._set_status(mates_err, "error")
+                return
             client = get_supabase_client()
             if not client:
                 self._set_status("Datenbank nicht verfügbar.", "error")
@@ -467,6 +581,7 @@ class RedraftRegistrationState(rx.State):
                 "discord": discord,
                 "email": email,
                 "mitspieler": mates,
+                "mitspieler_user_ids": mates_ids,
                 "key": final_code,
             }
             # Optional columns are attempted with safe defaults
@@ -525,6 +640,7 @@ class RedraftRegistrationState(rx.State):
                             "discord",
                             "email",
                             "mitspieler",
+                            "mitspieler_user_ids",
                             "key",
                         }
                         if col and col in attempt and col not in required:
