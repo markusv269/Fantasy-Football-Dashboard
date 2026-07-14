@@ -1,16 +1,16 @@
-# previous_league_id aus Sleeper synchronisieren
+# league_sort für Dynasty-Vorgängerketten ergänzen
 
-## Phase 1: Datenprüfung und Aktualisierung ✅
-- [x] Supabase-Zugriff und vorhandene League-Daten prüfen
-- [x] Sleeper-Daten je Liga abrufen und previous_league_id normalisieren
-- [x] Supabase-Spalte previous_league_id für alle Ligen aktualisieren
+## Phase 1: Datenanalyse ✅
+- [x] Vorhandene 2025-Dynasty-Ligen mit league_sort prüfen
+- [x] Vorgängerketten über previous_league_id ermitteln
+- [x] Konflikte oder fehlende Vorgänger erkennen
 
-## Phase 2: Künftige Synchronisierung anpassen ✅
-- [x] Liga-Metadaten-Sync um previous_league_id erweitern
-- [x] Admin- und Wartungssynchronisierung konsistent halten
-- [x] Fehlerfälle ohne vorherige Liga sauber als None behandeln
+## Phase 2: Datenbankaktualisierung ✅
+- [x] league_sort der 2025-Dynasty-Basisligen als Quelle verwenden
+- [x] Alle Vorgängerligen in früheren Jahren mit derselben Nummerierung aktualisieren
+- [x] Mehrdeutige oder widersprüchliche Zuordnungen sicher behandeln
 
 ## Phase 3: Validierung ✅
-- [x] Stichproben gegen Sleeper-API und Supabase prüfen
-- [x] Sicherstellen, dass leere Werte als None gespeichert werden
-- [x] Sync-Hilfslogik mit realen Daten validieren
+- [x] Aktualisierte Vorgängerketten gegen Supabase prüfen
+- [x] Sicherstellen, dass 2025-Basisnummerierungen unverändert bleiben
+- [x] Ergebnis mit Anzahl aktualisierter und übersprungener Ligen zusammenfassen
