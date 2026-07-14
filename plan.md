@@ -1,18 +1,19 @@
-# ADP Draftboard erstellen
+# ADP Draftboard erweitern
 
-## Phase 1: Datenlogik und Aggregation ✅
-- [x] Draft- und Pick-Daten für Saisons, Formate und Liga-Typen auswerten
-- [x] Filter für Saison, Ligaform und Draft-Modus definieren
-- [x] Durchschnittliche Draftposition je Spieler über vergleichbare Drafts berechnen
-- [x] Board-Zellen für 12 Slots und Runden inklusive Picknotation ableiten
+## Phase 1: Drafttyp- und Saisonlogik ✅
+- [x] Drafttyp-Filter für alle Spieler, Rookies und Veterans ergänzen
+- [x] Standardauswahl auf die aktuelle verfügbare Saison setzen
+- [x] Auswahl „Alle Saisons“ entfernen und Saisonwechsel zuverlässig neu berechnen
+- [x] Board-Modus abhängig von Ligaform und Drafttyp festlegen
 
-## Phase 2: ADP Draftboard UI und Navigation ✅
-- [x] Neue ADP Draftboard-Seite mit konsistentem roten Akzent, hellen Karten und sauberer Typografie erstellen
-- [x] Filterbereich für Saison, Ligaform und Sortierung umsetzen
-- [x] Sleeper-ähnliches 12-Manager-Draftboard mit Picknummern und Spielerinformationen darstellen
-- [x] Neue Seite in Navigation und Routing integrieren
+## Phase 2: ADP Rankings und Filterung ✅
+- [x] Ranking-Tabelle um Overall-Rang und Positionsrang je Spieler erweitern
+- [x] Tabellenfilter für Suchtext und Position ergänzen
+- [x] Mindestanzahl gedrafteter Picks per Slider für Board und Tabelle ergänzen
+- [x] Gefilterte Tabellenansicht konsistent mit Board- und ADP-Daten halten
+- [x] Leere Zustände für Tabellenfilter ergänzen
 
 ## Phase 3: Validierung und Abschluss ✅
-- [x] Datenaggregation mit echten Supabase-Daten prüfen
-- [x] Wichtige Filter- und Ladeereignisse testen
-- [x] Leere Zustände und robuste Fallbacks für fehlende Spielerdaten sicherstellen
+- [x] Drafttyp-Verteilung und aktuelle Saison mit echten Supabase-Daten prüfen
+- [x] Board-Modus-Regeln für Redraft, Dynasty Rookie und Dynasty Veteran/Alle Spieler testen
+- [x] Tabellenfilter, Mindest-Pick-Slider und Ranking-Spalten mit echten ADP-Daten testen

@@ -72,8 +72,86 @@ def _format_btn(label: str, value: str, icon: str) -> rx.Component:
     )
 
 
+def _draft_type_btn(label: str, value: str, icon: str) -> rx.Component:
+    is_active = AdpState.selected_draft_type == value
+    return rx.button(
+        rx.hstack(
+            rx.icon(icon, size=14),
+            rx.text(label, size="2", weight="bold"),
+            spacing="2",
+            align="center",
+        ),
+        on_click=AdpState.set_selected_draft_type(value),
+        variant=rx.cond(is_active, "solid", "soft"),
+        color_scheme=rx.cond(is_active, "red", "gray"),
+        size="2",
+    )
+
+
 def _season_option(s: rx.Var) -> rx.Component:
     return rx.select.item(s.to(str), value=s.to(str))
+
+
+def _position_option(p: rx.Var) -> rx.Component:
+    return rx.select.item(p.to(str), value=p.to(str))
+
+
+def _min_pick_slider() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.text(
+                f"Mindestens {AdpState.min_pick_count} Picks",
+                size="1",
+                weight="bold",
+                class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+            ),
+            rx.spacer(),
+            rx.cond(
+                AdpState.min_pick_count > 1,
+                rx.button(
+                    rx.icon("rotate-ccw", size=12),
+                    "Reset",
+                    on_click=AdpState.reset_min_pick_count,
+                    variant="ghost",
+                    color_scheme="gray",
+                    size="1",
+                ),
+            ),
+            width="100%",
+            align="center",
+        ),
+        rx.el.input(
+            type="range",
+            min="1",
+            max=AdpState.max_pick_count.to_string(),
+            step="1",
+            default_value=AdpState.min_pick_count.to_string(),
+            key=AdpState.min_pick_reset_counter.to_string(),
+            on_change=AdpState.set_min_pick_count.throttle(100),
+            class_name="w-full accent-[#DC2626] cursor-pointer",
+        ),
+        rx.hstack(
+            rx.text("1", size="1", class_name=TEXT_SECONDARY),
+            rx.spacer(),
+            rx.text(
+                f"{AdpState.players_meeting_threshold.length()} von {AdpState.total_players} Spielern",
+                size="1",
+                weight="medium",
+                class_name="text-[#DC2626]",
+            ),
+            rx.spacer(),
+            rx.text(
+                AdpState.max_pick_count.to_string(),
+                size="1",
+                class_name=TEXT_SECONDARY,
+            ),
+            width="100%",
+            align="center",
+        ),
+        spacing="2",
+        width="100%",
+        align="stretch",
+    )
 
 
 def _filters() -> rx.Component:
@@ -107,7 +185,6 @@ def _filters() -> rx.Component:
                     rx.select.root(
                         rx.select.trigger(width="100%"),
                         rx.select.content(
-                            rx.select.item("Alle Saisons", value="all"),
                             rx.foreach(
                                 AdpState.available_seasons, _season_option
                             ),
@@ -138,10 +215,30 @@ def _filters() -> rx.Component:
                     width="100%",
                     align="stretch",
                 ),
-                columns=rx.breakpoints(initial="1", md="2"),
+                rx.vstack(
+                    rx.text(
+                        "Draft-Typ",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                    ),
+                    rx.hstack(
+                        _draft_type_btn("Alle Spieler", "0", "users"),
+                        _draft_type_btn("Rookies", "1", "sparkles"),
+                        _draft_type_btn("Veterans", "2", "shield-check"),
+                        spacing="2",
+                        wrap="wrap",
+                    ),
+                    spacing="1",
+                    width="100%",
+                    align="stretch",
+                ),
+                columns=rx.breakpoints(initial="1", md="2", lg="3"),
                 spacing="4",
                 width="100%",
             ),
+            rx.divider(),
+            _min_pick_slider(),
             spacing="3",
             width="100%",
             align="stretch",
@@ -202,7 +299,7 @@ def _board_cell(cell: rx.Var) -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.badge(
-                    f"#{cell['overall_rank']}",
+                    cell["overall_pick_rank"].to(str),
                     color_scheme="gray",
                     variant="soft",
                     size="1",
@@ -225,7 +322,7 @@ def _board_cell(cell: rx.Var) -> rx.Component:
             ),
             rx.hstack(
                 rx.badge(
-                    cell["position"].to(str),
+                    cell["positional_pick_rank"].to(str),
                     color_scheme=_pos_color(cell["position"]),
                     variant="soft",
                     size="1",
@@ -309,7 +406,7 @@ def _board_row(rnd: rx.Var) -> rx.Component:
             AdpState.slot_range,
             lambda slot: rx.box(
                 rx.foreach(
-                    AdpState.board_cells,
+                    AdpState.filtered_board_cells,
                     lambda c: rx.cond(
                         (c["round"] == rnd) & (c["column"] == slot),
                         _board_cell(c),
@@ -372,7 +469,7 @@ def _board() -> rx.Component:
                 rx.heading("Draftboard", size="5", weight="bold"),
                 rx.spacer(),
                 rx.badge(
-                    f"{AdpState.total_rounds} Runden × 12 Slots",
+                    f"{AdpState.filtered_total_rounds} Runden × 12 Slots",
                     color_scheme="gray",
                     variant="soft",
                     size="1",
@@ -381,11 +478,11 @@ def _board() -> rx.Component:
                 align="center",
             ),
             rx.cond(
-                AdpState.total_rounds > 0,
+                AdpState.filtered_total_rounds > 0,
                 rx.box(
                     rx.vstack(
                         _board_header(),
-                        rx.foreach(AdpState.round_range, _board_row),
+                        rx.foreach(AdpState.filtered_round_range, _board_row),
                         spacing="2",
                         align="stretch",
                     ),
@@ -425,7 +522,7 @@ def _table_row(p: rx.Var) -> rx.Component:
     return rx.table.row(
         rx.table.cell(
             rx.text(
-                p["overall_rank"].to(str),
+                p["overall_pick_rank"].to(str),
                 size="2",
                 weight="bold",
                 class_name=TEXT_SECONDARY,
@@ -442,6 +539,14 @@ def _table_row(p: rx.Var) -> rx.Component:
         rx.table.cell(
             rx.badge(
                 p["position"].to(str),
+                color_scheme=_pos_color(p["position"]),
+                variant="soft",
+                size="1",
+            ),
+        ),
+        rx.table.cell(
+            rx.badge(
+                p["positional_pick_rank"].to(str),
                 color_scheme=_pos_color(p["position"]),
                 variant="soft",
                 size="1",
@@ -494,6 +599,80 @@ def _table_row(p: rx.Var) -> rx.Component:
     )
 
 
+def _table_filter_bar() -> rx.Component:
+    return rx.hstack(
+        rx.input(
+            placeholder="Spieler, Team oder Position suchen…",
+            on_change=AdpState.set_table_search.debounce(300),
+            default_value=AdpState.table_search,
+            size="2",
+            class_name="flex-1 min-w-[220px]",
+        ),
+        rx.select.root(
+            rx.select.trigger(placeholder="Position"),
+            rx.select.content(
+                rx.select.item("Alle Positionen", value="all"),
+                rx.foreach(AdpState.available_positions, _position_option),
+            ),
+            value=AdpState.table_position,
+            on_change=AdpState.set_table_position,
+            size="2",
+        ),
+        rx.cond(
+            AdpState.has_table_filters,
+            rx.button(
+                rx.icon("x", size=14),
+                "Zurücksetzen",
+                on_click=AdpState.clear_table_filters,
+                variant="soft",
+                color_scheme="gray",
+                size="2",
+            ),
+        ),
+        spacing="3",
+        align="center",
+        wrap="wrap",
+        width="100%",
+    )
+
+
+def _empty_filtered_state() -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.icon("search-x", size=40, color="gray"),
+            rx.heading(
+                "Keine Treffer",
+                size="4",
+                weight="bold",
+                class_name=TEXT_PRIMARY,
+            ),
+            rx.text(
+                "Keine Spieler entsprechen deinen Filtern. Passe die Suche "
+                "oder Position an oder setze die Filter zurück.",
+                size="2",
+                color_scheme="gray",
+                align="center",
+                class_name="max-w-md",
+            ),
+            rx.button(
+                rx.icon("rotate-ccw", size=14),
+                "Filter zurücksetzen",
+                on_click=AdpState.clear_table_filters,
+                variant="soft",
+                color_scheme="red",
+                size="2",
+            ),
+            spacing="3",
+            align="center",
+            padding="48px",
+            width="100%",
+        ),
+        class_name="border border-dashed rounded-xl "
+        + t("border-gray-800", "border-gray-200"),
+        width="100%",
+    )
+
+
 def _adp_table() -> rx.Component:
     return rx.card(
         rx.vstack(
@@ -502,7 +681,7 @@ def _adp_table() -> rx.Component:
                 rx.heading("ADP Rankings", size="5", weight="bold"),
                 rx.spacer(),
                 rx.badge(
-                    AdpState.total_players.to_string(),
+                    f"{AdpState.filtered_count} / {AdpState.total_players}",
                     color_scheme="red",
                     variant="soft",
                     size="1",
@@ -510,34 +689,42 @@ def _adp_table() -> rx.Component:
                 width="100%",
                 align="center",
             ),
+            _table_filter_bar(),
             rx.cond(
                 AdpState.total_players > 0,
-                rx.box(
-                    rx.table.root(
-                        rx.table.header(
-                            rx.table.row(
-                                rx.table.column_header_cell("#"),
-                                rx.table.column_header_cell("Spieler"),
-                                rx.table.column_header_cell("Pos"),
-                                rx.table.column_header_cell("Team"),
-                                rx.table.column_header_cell("ADP"),
-                                rx.table.column_header_cell("Ø Round.Pick"),
-                                rx.table.column_header_cell("Min"),
-                                rx.table.column_header_cell("Max"),
-                                rx.table.column_header_cell("n"),
+                rx.cond(
+                    AdpState.filtered_count > 0,
+                    rx.box(
+                        rx.table.root(
+                            rx.table.header(
+                                rx.table.row(
+                                    rx.table.column_header_cell("Overall"),
+                                    rx.table.column_header_cell("Spieler"),
+                                    rx.table.column_header_cell("Pos"),
+                                    rx.table.column_header_cell("Pos-Rang"),
+                                    rx.table.column_header_cell("Team"),
+                                    rx.table.column_header_cell("ADP"),
+                                    rx.table.column_header_cell("Ø Round.Pick"),
+                                    rx.table.column_header_cell("Min"),
+                                    rx.table.column_header_cell("Max"),
+                                    rx.table.column_header_cell("n"),
+                                ),
                             ),
+                            rx.table.body(
+                                rx.foreach(
+                                    AdpState.filtered_players, _table_row
+                                ),
+                            ),
+                            variant="surface",
+                            size="1",
                         ),
-                        rx.table.body(
-                            rx.foreach(AdpState.adp_players, _table_row),
-                        ),
-                        variant="surface",
-                        size="1",
+                        width="100%",
+                        overflow_x="auto",
+                        border_radius="12px",
+                        class_name="border "
+                        + t("border-gray-800", "border-gray-200"),
                     ),
-                    width="100%",
-                    overflow_x="auto",
-                    border_radius="12px",
-                    class_name="border "
-                    + t("border-gray-800", "border-gray-200"),
+                    _empty_filtered_state(),
                 ),
                 rx.text(
                     "Keine Spielerdaten vorhanden.",

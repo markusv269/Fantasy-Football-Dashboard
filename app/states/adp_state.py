@@ -4,33 +4,110 @@ from app.supabase_client import get_supabase_client
 
 
 BOARD_SLOTS = 12
-PICKS_PAGE_SIZE = 1000
-DRAFT_ID_BATCH = 25
-LEAGUE_ID_BATCH = 100
+
+# Module-level cache keyed by (season, format, draft_type) — persists across
+# state instances within the same process. Each cache value is a dict with the
+# fully-computed result payload so setter events can restore results
+# synchronously without re-querying Supabase.
+_ADP_RESULTS_CACHE: dict[tuple[str, str, str], dict] = {}
 
 
 class AdpState(rx.State):
     is_loading: bool = False
-    selected_season: str = "all"
+    selected_season: str = ""
     selected_format: str = "redraft"
+    selected_draft_type: str = "0"  # 0=Alle Spieler, 1=Rookies, 2=Veterans
     available_seasons: list[str] = []
+
+    # Search + position filters for the ADP table
+    table_search: str = ""
+    table_position: str = "all"
+
+    # Minimum pick count threshold (filters both board and rankings table)
+    min_pick_count: int = 1
+    min_pick_reset_counter: int = 0
+
     adp_players: list[dict[str, str | int | float]] = []
     board_cells: list[dict[str, str | int | float]] = []
     total_drafts: int = 0
     total_picks: int = 0
     total_players: int = 0
 
-    # Session-scoped caches to avoid repeated full-table scans.
-    _leagues_by_format_cache: dict[str, list[str]] = {}
-    _seasons_loaded: bool = False
-    # Cache of computed ADP results keyed by "format|season".
-    # Each entry stores the full snapshot needed to repopulate the UI
-    # without re-querying Supabase or re-aggregating picks.
-    _results_cache: dict[str, dict[str, int | list]] = {}
+    @rx.var
+    def max_pick_count(self) -> int:
+        m = 1
+        for p in self.adp_players:
+            try:
+                c = int(p.get("count") or 0)
+                if c > m:
+                    m = c
+            except Exception:
+                logging.exception("bad count")
+        return m
+
+    @rx.var
+    def players_meeting_threshold(self) -> list[dict[str, str | int | float]]:
+        thr = max(1, int(self.min_pick_count))
+        out = [p for p in self.adp_players if int(p.get("count") or 0) >= thr]
+        return out
+
+    @rx.var
+    def filtered_board_cells(self) -> list[dict[str, str | int | float]]:
+        thr = max(1, int(self.min_pick_count))
+        if thr <= 1:
+            return self.board_cells
+        eligible = [
+            p for p in self.adp_players if int(p.get("count") or 0) >= thr
+        ]
+        layout = self.board_layout
+        cells: list[dict] = []
+        for i, p in enumerate(eligible):
+            rnd = i // BOARD_SLOTS
+            slot_in_round = i % BOARD_SLOTS
+            if layout == "snake" and rnd % 2 == 1:
+                col = BOARD_SLOTS - slot_in_round
+            else:
+                col = slot_in_round + 1
+            cells.append(
+                {
+                    "player_id": p.get("player_id", ""),
+                    "full_name": p.get("full_name", ""),
+                    "position": p.get("position", ""),
+                    "team": p.get("team", ""),
+                    "adp": p.get("adp", 0.0),
+                    "adp_str": p.get("adp_str", ""),
+                    "count": p.get("count", 0),
+                    "overall_rank": p.get("overall_rank", 0),
+                    "overall_pick_rank": p.get("overall_pick_rank", ""),
+                    "positional_pick_rank": p.get("positional_pick_rank", ""),
+                    "round": rnd + 1,
+                    "column": col,
+                    "pick_notation": f"{rnd + 1}.{col:02d}",
+                }
+            )
+        return cells
+
+    @rx.var
+    def filtered_total_rounds(self) -> int:
+        n = len(self.players_meeting_threshold)
+        if n == 0:
+            return 0
+        return (n + BOARD_SLOTS - 1) // BOARD_SLOTS
+
+    @rx.var
+    def filtered_round_range(self) -> list[int]:
+        return list(range(1, self.filtered_total_rounds + 1))
 
     @rx.var
     def board_layout(self) -> str:
-        return "linear" if self.selected_format != "redraft" else "snake"
+        # Redraft always snake.
+        if self.selected_format == "redraft":
+            return "snake"
+        # Dynasty / Dynasty IDP: rookie drafts are linear, all-player and
+        # veteran drafts are snake.
+        if self.selected_draft_type == "1":
+            return "linear"
+        return "snake"
 
     @rx.var
     def total_rounds(self) -> int:
@@ -47,61 +124,139 @@ class AdpState(rx.State):
     def slot_range(self) -> list[int]:
         return list(range(1, BOARD_SLOTS + 1))
 
-    def _cache_key(self) -> str:
-        return f"{self.selected_format}|{self.selected_season}"
+    @rx.var
+    def available_positions(self) -> list[str]:
+        seen: set[str] = set()
+        for p in self.adp_players:
+            pos = str(p.get("position") or "").strip()
+            if pos and pos != "?":
+                seen.add(pos)
+        return sorted(seen)
 
-    def _apply_cached(self, entry: dict) -> None:
-        self.total_drafts = int(entry.get("total_drafts", 0))
-        self.total_picks = int(entry.get("total_picks", 0))
-        self.total_players = int(entry.get("total_players", 0))
-        self.adp_players = list(entry.get("adp_players", []))
-        self.board_cells = list(entry.get("board_cells", []))
+    @rx.var
+    def filtered_players(self) -> list[dict[str, str | int | float]]:
+        q = self.table_search.strip().lower()
+        pos = self.table_position
+        thr = max(1, int(self.min_pick_count))
+        out: list[dict] = []
+        for p in self.adp_players:
+            if int(p.get("count") or 0) < thr:
+                continue
+            if pos != "all" and str(p.get("position") or "") != pos:
+                continue
+            if q:
+                hay = (
+                    f"{p.get('full_name', '')} {p.get('team', '')} "
+                    f"{p.get('position', '')}"
+                ).lower()
+                if q not in hay:
+                    continue
+            out.append(p)
+        return out
 
-    def _store_cached(self) -> None:
-        self._results_cache[self._cache_key()] = {
-            "total_drafts": self.total_drafts,
-            "total_picks": self.total_picks,
-            "total_players": self.total_players,
-            "adp_players": list(self.adp_players),
-            "board_cells": list(self.board_cells),
-        }
+    @rx.var
+    def filtered_count(self) -> int:
+        return len(self.filtered_players)
+
+    @rx.var
+    def has_table_filters(self) -> bool:
+        return (
+            self.table_search.strip() != ""
+            or self.table_position != "all"
+            or int(self.min_pick_count) > 1
+        )
+
+    @rx.event
+    def set_min_pick_count(self, val: int | str):
+        try:
+            v = int(val)
+        except (ValueError, TypeError):
+            return
+        mx = self.max_pick_count
+        if v < 1:
+            v = 1
+        if v > mx:
+            v = mx
+        self.min_pick_count = v
+
+    @rx.event
+    def reset_min_pick_count(self):
+        self.min_pick_count = 1
+        self.min_pick_reset_counter += 1
 
     @rx.event
     def set_selected_season(self, v: str):
-        if v == self.selected_season:
+        if not v:
             return
         self.selected_season = v
-        cached = self._results_cache.get(self._cache_key())
-        if cached is not None:
-            self._apply_cached(cached)
-            return
+        self._clear_table_filters()
         self._recompute_adp()
 
     @rx.event
     def set_selected_format(self, v: str):
-        if v == self.selected_format:
-            return
         self.selected_format = v
-        cached = self._results_cache.get(self._cache_key())
-        if cached is not None:
-            self._apply_cached(cached)
-            return
+        self._clear_table_filters()
         self._recompute_adp()
 
     @rx.event
-    def init_adp(self):
-        if not self._seasons_loaded:
-            self._load_seasons_sync()
-        cached = self._results_cache.get(self._cache_key())
+    def set_selected_draft_type(self, v: str):
+        self.selected_draft_type = v
+        self._clear_table_filters()
+        self._recompute_adp()
+
+    def _clear_table_filters(self):
+        self.table_search = ""
+        self.table_position = "all"
+        self.min_pick_count = 1
+        self.min_pick_reset_counter += 1
+
+    def _cache_key(self) -> tuple[str, str, str]:
+        return (
+            str(self.selected_season),
+            str(self.selected_format),
+            str(self.selected_draft_type),
+        )
+
+    def _apply_cached(self, payload: dict) -> None:
+        self.adp_players = payload.get("adp_players", [])
+        self.board_cells = payload.get("board_cells", [])
+        self.total_drafts = int(payload.get("total_drafts", 0))
+        self.total_picks = int(payload.get("total_picks", 0))
+        self.total_players = int(payload.get("total_players", 0))
+
+    def _recompute_adp(self) -> None:
+        """Synchronous recompute: use cache if available, otherwise load."""
+        if not self.selected_season:
+            return
+        key = self._cache_key()
+        cached = _ADP_RESULTS_CACHE.get(key)
         if cached is not None:
             self._apply_cached(cached)
             return
-        self._recompute_adp()
+        self._load_adp_sync()
 
-    def _load_seasons_sync(self):
-        """Load distinct completed-draft seasons once per session."""
-        if self._seasons_loaded and self.available_seasons:
-            return
+    @rx.event
+    def set_table_search(self, v: str):
+        self.table_search = v
+
+    @rx.event
+    def set_table_position(self, v: str):
+        self.table_position = v
+
+    @rx.event
+    def clear_table_filters(self):
+        self.table_search = ""
+        self.table_position = "all"
+        self.min_pick_count = 1
+        self.min_pick_reset_counter += 1
+
+    @rx.event
+    def init_adp(self):
+        yield AdpState.load_seasons
+        yield AdpState.load_adp
+
+    @rx.event
+    def load_seasons(self):
         client = get_supabase_client()
         if not client:
             return
@@ -118,90 +273,63 @@ class AdpState(rx.State):
                 reverse=True,
             )
             self.available_seasons = seasons
-            self._seasons_loaded = True
+            # Default to newest season if not set or if current selection is
+            # no longer valid.
+            if seasons and (
+                not self.selected_season or self.selected_season not in seasons
+            ):
+                self.selected_season = seasons[0]
         except Exception as e:
             logging.exception(f"load_seasons failed: {e}")
 
-    @rx.event
-    def load_seasons(self):
-        self._load_seasons_sync()
-
-    def _load_leagues_format_map(self, client) -> dict[str, list[str]]:
-        """Build and cache a format -> [league_ids] mapping.
-
-        Fetches the leagues table once per session and buckets by format.
-        Subsequent format/season switches reuse this cache instead of
-        re-scanning the leagues table.
-        """
-        if self._leagues_by_format_cache:
-            return self._leagues_by_format_cache
+    def _get_matching_league_ids(self, client) -> list[str]:
+        """Get league IDs matching the selected format filter."""
         try:
-            res = (
-                client.table("leagues")
-                .select("league_id,league_name,league_type")
-                .execute()
+            q = client.table("leagues").select(
+                "league_id,league_name,league_type"
             )
+            res = q.execute()
             rows = res.data if res and res.data else []
         except Exception as e:
             logging.exception(f"leagues fetch failed: {e}")
-            return {}
+            return []
 
-        mapping: dict[str, list[str]] = {
-            "dynasty": [],
-            "dynasty_idp": [],
-            "redraft": [],
-        }
+        fmt = self.selected_format
+        matching: list[str] = []
         for lg in rows:
-            lid = str(lg.get("league_id") or "")
-            if not lid:
-                continue
             lname = str(lg.get("league_name") or "").upper()
             ltype = str(lg.get("league_type") or "").lower()
             is_idp = "IDP" in lname
-            if ltype == "dynasty":
-                if is_idp:
-                    mapping["dynasty_idp"].append(lid)
-                else:
-                    mapping["dynasty"].append(lid)
-            elif ltype == "redraft":
-                mapping["redraft"].append(lid)
-        self._leagues_by_format_cache = mapping
-        return mapping
-
-    def _get_matching_league_ids(self, client) -> list[str]:
-        mapping = self._load_leagues_format_map(client)
-        return list(mapping.get(self.selected_format, []))
+            if fmt == "dynasty":
+                if ltype == "dynasty" and not is_idp:
+                    matching.append(lg.get("league_id") or "")
+            elif fmt == "dynasty_idp":
+                if ltype == "dynasty" and is_idp:
+                    matching.append(lg.get("league_id") or "")
+            elif fmt == "redraft":
+                if ltype == "redraft":
+                    matching.append(lg.get("league_id") or "")
+        return [x for x in matching if x]
 
     def _get_matching_draft_ids(
         self, client, league_ids: list[str]
     ) -> list[str]:
-        """Return completed draft IDs for the given leagues + season filter.
-
-        Server-side filters on league_id (batched IN), status=complete, and
-        optionally season keep the returned dataset compact.
-        """
-        if not league_ids:
+        """Get completed draft IDs for the matching leagues + season + draft_type."""
+        if not league_ids or not self.selected_season:
             return []
         draft_ids: list[str] = []
         try:
-            for i in range(0, len(league_ids), LEAGUE_ID_BATCH):
-                chunk = league_ids[i : i + LEAGUE_ID_BATCH]
-                if not chunk:
-                    continue
+            batch = 100
+            for i in range(0, len(league_ids), batch):
+                chunk = league_ids[i : i + batch]
                 q = (
                     client.table("drafts")
-                    .select("draft_id")
+                    .select("draft_id,season,league_id,status,draft_type")
                     .in_("league_id", chunk)
                     .eq("status", "complete")
+                    .eq("season", self.selected_season)
+                    .eq("draft_type", self.selected_draft_type)
                 )
-                if self.selected_season != "all":
-                    season_val = self.selected_season
-                    try:
-                        if str(season_val).lstrip("-").isdigit():
-                            season_val = int(season_val)
-                    except Exception:
-                        logging.exception("season parse")
-                    q = q.eq("season", season_val)
                 res = q.execute()
                 rows = res.data if res and res.data else []
                 for r in rows:
@@ -213,196 +341,180 @@ class AdpState(rx.State):
         return draft_ids
 
     def _fetch_picks(self, client, draft_ids: list[str]) -> list[dict]:
-        """Fetch picks in bounded batches with pagination per batch.
-
-        Uses small IN-batches of draft IDs to keep URL sizes safe, and
-        pages each batch via range() until an empty or short page returns.
-        Terminates cleanly on empty inputs or query errors.
-        """
+        """Fetch all picks for the given draft IDs."""
         all_picks: list[dict] = []
         if not draft_ids:
             return all_picks
-        for i in range(0, len(draft_ids), DRAFT_ID_BATCH):
-            chunk = draft_ids[i : i + DRAFT_ID_BATCH]
-            if not chunk:
-                continue
-            offset = 0
-            while True:
-                try:
-                    res = (
-                        client.table("draft_picks")
-                        .select("pick_no,player_id,metadata")
-                        .in_("draft_id", chunk)
-                        .range(offset, offset + PICKS_PAGE_SIZE - 1)
-                        .execute()
-                    )
-                    rows = res.data if res and res.data else []
-                except Exception as e:
-                    logging.exception(f"picks page failed offset={offset}: {e}")
-                    rows = []
-                    break
-                if not rows:
-                    break
-                all_picks.extend(rows)
-                if len(rows) < PICKS_PAGE_SIZE:
-                    break
-                offset += PICKS_PAGE_SIZE
+        try:
+            batch = 50
+            for i in range(0, len(draft_ids), batch):
+                chunk = draft_ids[i : i + batch]
+                offset = 0
+                page = 1000
+                while True:
+                    try:
+                        res = (
+                            client.table("draft_picks")
+                            .select("draft_id,pick_no,round,player_id,metadata")
+                            .in_("draft_id", chunk)
+                            .range(offset, offset + page - 1)
+                            .execute()
+                        )
+                        rows = res.data if res and res.data else []
+                    except Exception as e:
+                        logging.exception(f"picks page failed: {e}")
+                        rows = []
+                        break
+                    if not rows:
+                        break
+                    all_picks.extend(rows)
+                    if len(rows) < page:
+                        break
+                    offset += page
+        except Exception as e:
+            logging.exception(f"picks fetch failed: {e}")
         return all_picks
 
-    def _aggregate_picks(
-        self, picks: list[dict]
-    ) -> list[dict[str, str | int | float]]:
-        agg: dict[str, dict] = {}
-        for p in picks:
-            pid = str(p.get("player_id") or "")
-            if not pid:
-                continue
-            try:
-                pick_no = int(p.get("pick_no") or 0)
-            except Exception:
-                logging.exception("bad pick_no")
-                pick_no = 0
-            if pick_no <= 0:
-                continue
-            meta = p.get("metadata") or {}
-            if not isinstance(meta, dict):
-                meta = {}
-            first = str(meta.get("first_name") or "")
-            last = str(meta.get("last_name") or "")
-            full_name = f"{first} {last}".strip() or f"Player {pid}"
-            pos = str(meta.get("position") or "")
-            team = str(meta.get("team") or "")
+    @rx.event
+    def load_adp(self):
+        self.is_loading = True
+        yield
+        self._load_adp_sync()
 
-            entry = agg.get(pid)
-            if entry is None:
-                entry = {
-                    "player_id": pid,
-                    "full_name": full_name,
-                    "position": pos,
-                    "team": team,
-                    "picks": [],
-                }
-                agg[pid] = entry
-            entry["picks"].append(pick_no)
-            if not entry["full_name"] or entry["full_name"].startswith(
-                "Player "
-            ):
-                entry["full_name"] = full_name
-            if not entry["position"] and pos:
-                entry["position"] = pos
-            if not entry["team"] and team:
-                entry["team"] = team
-
-        players: list[dict] = []
-        for pid, info in agg.items():
-            pk = info["picks"]
-            if not pk:
-                continue
-            count = len(pk)
-            avg = sum(pk) / count
-            avg_round = ((avg - 1) // BOARD_SLOTS) + 1
-            avg_slot = ((avg - 1) % BOARD_SLOTS) + 1
-            players.append(
-                {
-                    "player_id": pid,
-                    "full_name": info["full_name"],
-                    "position": info["position"] or "?",
-                    "team": info["team"] or "FA",
-                    "count": count,
-                    "adp": round(avg, 2),
-                    "adp_str": f"{avg:.1f}",
-                    "min_pick": min(pk),
-                    "max_pick": max(pk),
-                    "avg_round": int(avg_round),
-                    "avg_slot": round(avg_slot, 1),
-                    "avg_display": (
-                        f"{int(avg_round)}.{int(round(avg_slot)):02d}"
-                    ),
-                }
-            )
-        players.sort(key=lambda x: x["adp"])
-        for i, p in enumerate(players):
-            p["overall_rank"] = i + 1
-        return players
-
-    def _build_board_cells(
-        self, players: list[dict]
-    ) -> list[dict[str, str | int | float]]:
-        layout = self.board_layout
-        cells: list[dict] = []
-        for i, p in enumerate(players):
-            rnd = i // BOARD_SLOTS
-            slot_in_round = i % BOARD_SLOTS
-            if layout == "snake" and rnd % 2 == 1:
-                col = BOARD_SLOTS - slot_in_round
-            else:
-                col = slot_in_round + 1
-            cells.append(
-                {
-                    "player_id": p["player_id"],
-                    "full_name": p["full_name"],
-                    "position": p["position"],
-                    "team": p["team"],
-                    "adp": p["adp"],
-                    "adp_str": p["adp_str"],
-                    "count": p["count"],
-                    "overall_rank": p["overall_rank"],
-                    "round": rnd + 1,
-                    "column": col,
-                    "pick_notation": f"{rnd + 1}.{col:02d}",
-                }
-            )
-        return cells
-
-    def _reset_results(self):
-        self.total_drafts = 0
-        self.total_picks = 0
-        self.total_players = 0
-        self.adp_players = []
-        self.board_cells = []
-
-    def _recompute_adp(self):
-        if self.is_loading:
-            return
+    def _load_adp_sync(self) -> None:
         self.is_loading = True
         try:
             client = get_supabase_client()
             if not client:
-                self._reset_results()
-                self._store_cached()
+                self.is_loading = False
                 return
 
             league_ids = self._get_matching_league_ids(client)
-            if not league_ids:
-                self._reset_results()
-                self._store_cached()
-                return
-
             draft_ids = self._get_matching_draft_ids(client, league_ids)
-            if not draft_ids:
-                self._reset_results()
-                self._store_cached()
-                return
-
             picks = self._fetch_picks(client, draft_ids)
+
             self.total_drafts = len(draft_ids)
             self.total_picks = len(picks)
 
-            players = self._aggregate_picks(picks)
+            agg: dict[str, dict] = {}
+            for p in picks:
+                pid = str(p.get("player_id") or "")
+                if not pid:
+                    continue
+                try:
+                    pick_no = int(p.get("pick_no") or 0)
+                except Exception:
+                    logging.exception("bad pick_no")
+                    pick_no = 0
+                if pick_no <= 0:
+                    continue
+                meta = p.get("metadata") or {}
+                if not isinstance(meta, dict):
+                    meta = {}
+                first = str(meta.get("first_name") or "")
+                last = str(meta.get("last_name") or "")
+                full_name = f"{first} {last}".strip() or f"Player {pid}"
+                pos = str(meta.get("position") or "")
+                team = str(meta.get("team") or "")
+
+                if pid not in agg:
+                    agg[pid] = {
+                        "player_id": pid,
+                        "full_name": full_name,
+                        "position": pos,
+                        "team": team,
+                        "picks": [],
+                    }
+                agg[pid]["picks"].append(pick_no)
+                if not agg[pid]["full_name"] or agg[pid][
+                    "full_name"
+                ].startswith("Player "):
+                    agg[pid]["full_name"] = full_name
+                if not agg[pid]["position"]:
+                    agg[pid]["position"] = pos
+                if not agg[pid]["team"]:
+                    agg[pid]["team"] = team
+
+            players: list[dict] = []
+            for pid, info in agg.items():
+                pk = info["picks"]
+                if not pk:
+                    continue
+                count = len(pk)
+                avg = sum(pk) / count
+                mn = min(pk)
+                mx = max(pk)
+                avg_round = ((avg - 1) // BOARD_SLOTS) + 1
+                avg_slot = ((avg - 1) % BOARD_SLOTS) + 1
+                players.append(
+                    {
+                        "player_id": pid,
+                        "full_name": info["full_name"],
+                        "position": info["position"] or "?",
+                        "team": info["team"] or "FA",
+                        "count": count,
+                        "adp": round(avg, 2),
+                        "adp_str": f"{avg:.1f}",
+                        "min_pick": mn,
+                        "max_pick": mx,
+                        "avg_round": int(avg_round),
+                        "avg_slot": round(avg_slot, 1),
+                        "avg_display": f"{int(avg_round)}.{int(round(avg_slot)):02d}",
+                    }
+                )
+
+            players.sort(key=lambda x: x["adp"])
+
+            # Positional ranking based on ADP order within position.
+            pos_counter: dict[str, int] = {}
+            for i, p in enumerate(players):
+                p["overall_rank"] = i + 1
+                p["overall_pick_rank"] = f"#{i + 1}"
+                pos = str(p.get("position") or "?")
+                pos_counter[pos] = pos_counter.get(pos, 0) + 1
+                p["positional_rank"] = pos_counter[pos]
+                p["positional_pick_rank"] = f"{pos}#{pos_counter[pos]}"
+
             self.adp_players = players
             self.total_players = len(players)
-            self.board_cells = self._build_board_cells(players)
-            self._store_cached()
+
+            layout = self.board_layout
+            cells: list[dict] = []
+            for i, p in enumerate(players):
+                rnd = i // BOARD_SLOTS
+                slot_in_round = i % BOARD_SLOTS
+                if layout == "snake" and rnd % 2 == 1:
+                    col = BOARD_SLOTS - slot_in_round
+                else:
+                    col = slot_in_round + 1
+                pick_in_round = col
+                cells.append(
+                    {
+                        "player_id": p["player_id"],
+                        "full_name": p["full_name"],
+                        "position": p["position"],
+                        "team": p["team"],
+                        "adp": p["adp"],
+                        "adp_str": p["adp_str"],
+                        "count": p["count"],
+                        "overall_rank": p["overall_rank"],
+                        "overall_pick_rank": p["overall_pick_rank"],
+                        "positional_pick_rank": p["positional_pick_rank"],
+                        "round": rnd + 1,
+                        "column": col,
+                        "pick_notation": f"{rnd + 1}.{pick_in_round:02d}",
+                    }
+                )
+            self.board_cells = cells
+
+            _ADP_RESULTS_CACHE[self._cache_key()] = {
+                "adp_players": list(self.adp_players),
+                "board_cells": list(self.board_cells),
+                "total_drafts": self.total_drafts,
+                "total_picks": self.total_picks,
+                "total_players": self.total_players,
+            }
         except Exception as e:
             logging.exception(f"load_adp failed: {e}")
-            self._reset_results()
         finally:
             self.is_loading = False
-
-    @rx.event
-    def load_adp(self):
-        cached = self._results_cache.get(self._cache_key())
-        if cached is not None:
-            self._apply_cached(cached)
-            return
-        self._recompute_adp()
