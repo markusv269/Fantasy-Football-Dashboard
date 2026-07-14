@@ -211,6 +211,27 @@ class AdminState(rx.State):
         auth = await self.get_state(AdminAuthState)
         return bool(auth.is_authenticated)
 
+    def _admin_sort_key(self, x_sort: dict) -> tuple:
+        s_sort = str(x_sort.get("league_season") or "0")
+        try:
+            si_sort = int(s_sort) if s_sort.lstrip("-").isdigit() else 0
+        except Exception:
+            logging.exception("Unexpected error")
+            si_sort = 0
+        v_sort = x_sort.get("league_sort")
+        try:
+            iv_sort = int(v_sort) if v_sort is not None else None
+        except Exception:
+            logging.exception("Unexpected error")
+            iv_sort = None
+        is_null_sort = iv_sort is None or iv_sort < 0
+        return (
+            -si_sort,
+            is_null_sort,
+            iv_sort if iv_sort is not None else 10**9,
+            str(x_sort.get("league_name") or "").lower(),
+        )
+
     @rx.event
     async def load_leagues(self):
         if not await self._require_auth():
@@ -227,14 +248,18 @@ class AdminState(rx.State):
                 client.table("leagues")
                 .select("*")
                 .order("league_season", desc=True)
+                .order("league_sort", desc=False)
                 .execute()
             )
             data = res.data if res and res.data else []
             leagues = []
             for lg in data:
-                # `avatar` is intentionally not read from Supabase — the
-                # column does not exist. UI fallbacks handle the missing
-                # value via a default Sleeper league placeholder.
+                raw_sort = lg.get("league_sort")
+                try:
+                    ls_val = int(raw_sort) if raw_sort is not None else -1
+                except Exception:
+                    logging.exception("Unexpected error")
+                    ls_val = -1
                 leagues.append(
                     {
                         "league_id": str(lg.get("league_id", "")),
@@ -242,13 +267,18 @@ class AdminState(rx.State):
                         "league_season": str(lg.get("league_season", "")),
                         "league_type": str(lg.get("league_type", "")),
                         "avatar": "",
+                        "league_sort": ls_val,
                     }
                 )
+
+            leagues.sort(key=self._admin_sort_key)
             self.leagues = leagues
             self._log(f"{len(leagues)} Ligen geladen.")
         except Exception as e:
             logging.exception(f"Error loading admin leagues: {e}")
             self._set_status(f"Fehler beim Laden: {e}", "error")
+        finally:
+            self.is_loading = False
 
     @rx.event
     async def init_admin(self):
@@ -264,9 +294,6 @@ class AdminState(rx.State):
         season_val = (
             int(season_raw) if str(season_raw).isdigit() else season_raw
         )
-        # Preserve existing league_type — the leagues.league_type column is
-        # NOT NULL on many rows and Sleeper does not return it. Fall back
-        # to a safe default only when the row is brand new.
         existing_type = ""
         try:
             existing = (
@@ -313,7 +340,6 @@ class AdminState(rx.State):
             owner_id = r.get("owner_id")
             u = user_map.get(owner_id, {})
             meta = u.get("metadata", {}) or {}
-            # Only include columns that exist on the `managers` table.
             rows.append(
                 {
                     "league_id": str(league_id),
@@ -388,7 +414,6 @@ class AdminState(rx.State):
     def _sync_matchup_weeks(
         self, client, league_id: str, up_to_week: int
     ) -> int:
-        """Sync matchup data for weeks 1..up_to_week into matchup_week_stats."""
         total_rows = 0
         for week in range(1, max(up_to_week, 1) + 1):
             try:
@@ -404,7 +429,7 @@ class AdminState(rx.State):
                 try:
                     pts_val = float(pts) if pts is not None else 0.0
                 except Exception:
-                    logging.exception("Invalid matchup points")
+                    logging.exception("Unexpected error")
                     pts_val = 0.0
                 rows.append(
                     {
@@ -427,7 +452,6 @@ class AdminState(rx.State):
         return total_rows
 
     def _sync_drafts(self, client, league_id: str) -> int:
-        """Sync all drafts for a league into the drafts table."""
         try:
             drafts = get_league_drafts(league_id) or []
         except Exception as e:
@@ -448,7 +472,7 @@ class AdminState(rx.State):
                         int(start) / 1000
                     ).isoformat()
                 except Exception:
-                    logging.exception("Invalid draft start_time")
+                    logging.exception("Unexpected error")
                     start_time_iso = ""
             dtype_raw = d.get("type", "")
             dtype_map = {"snake": "0", "linear": "1", "auction": "2"}
@@ -566,10 +590,6 @@ class AdminState(rx.State):
             self.sync_target = ""
             yield AdminState.load_leagues
 
-    # =========================================================
-    # New bulk sync operations (Phase 2)
-    # =========================================================
-
     def _sync_draft_picks_for_draft(self, client, draft_id: str) -> int:
         picks = get_draft_picks(draft_id) or []
         try:
@@ -596,7 +616,6 @@ class AdminState(rx.State):
                     "json_data": p,
                 }
             )
-        # Batch insert
         try:
             batch = 500
             for i in range(0, len(rows), batch):
@@ -645,7 +664,7 @@ class AdminState(rx.State):
                                     int(start) / 1000
                                 ).isoformat()
                             except Exception:
-                                logging.exception("bad start")
+                                logging.exception("Unexpected error")
                         dtype_raw = d.get("type", "")
                         dtype_val = dtype_map.get(
                             str(dtype_raw).lower(), dtype_raw
@@ -700,7 +719,6 @@ class AdminState(rx.State):
             if not client:
                 self._set_status("Supabase nicht verfügbar.", "error")
                 return
-            # Load all drafts (optionally filter to target league)
             query = client.table("drafts").select("draft_id,league_id")
             if self.target_league_id:
                 query = query.eq("league_id", self.target_league_id)
@@ -864,7 +882,7 @@ class AdminState(rx.State):
             try:
                 pts_val = float(pts) if pts is not None else 0.0
             except Exception:
-                logging.exception("bad pts")
+                logging.exception("Unexpected error")
                 pts_val = 0.0
             rows.append(
                 {
@@ -1100,7 +1118,6 @@ class AdminState(rx.State):
                 if prev_raw not in (None, "", "null")
                 else None
             )
-            # Only include columns present in the `leagues` schema.
             payload = {
                 "league_id": raw,
                 "league_name": data.get("name", "") or f"Liga {raw}",
@@ -1121,10 +1138,6 @@ class AdminState(rx.State):
                 self._log(f"DB-Fehler beim Speichern: {e}", "error")
                 return
 
-            season_raw = data.get("season", "")
-            season_val = (
-                int(season_raw) if str(season_raw).isdigit() else season_raw
-            )
             league_name = str(data.get("name") or f"Liga {raw}")
             action_verb = "aktualisiert" if is_duplicate else "hinzugefügt"
             self._log(

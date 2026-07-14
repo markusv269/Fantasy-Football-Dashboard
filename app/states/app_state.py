@@ -5,6 +5,29 @@ import logging
 from app.supabase_client import get_supabase_client
 
 
+def league_sort_key(lg: dict) -> tuple:
+    """Consistent league ordering: season DESC, league_sort ASC (nulls last), name ASC.
+
+    Works for both AppState-normalized dicts (season/name/league_sort keys)
+    and Supabase raw rows (league_season/league_name/league_sort).
+    """
+    season_raw = lg.get("season", lg.get("league_season", ""))
+    try:
+        season_int = int(season_raw)
+    except Exception:
+        logging.exception("Unexpected error")
+        season_int = 0
+    ls_raw = lg.get("league_sort")
+    try:
+        ls_int = int(ls_raw) if ls_raw is not None else None
+    except Exception:
+        logging.exception("Unexpected error")
+        ls_int = None
+    is_null = ls_int is None or ls_int < 0
+    name = str(lg.get("name", lg.get("league_name", "")) or "").lower()
+    return (-season_int, is_null, ls_int if ls_int is not None else 10**9, name)
+
+
 class AppState(rx.State):
     configured_league_ids: list[str] = []
     nfl_state: dict[str, str | int | bool] = {}
@@ -53,6 +76,12 @@ class AppState(rx.State):
         status = str(lg.get("league_type") or lg.get("status") or "unknown")
         avatar = ""
         total_rosters = ""
+        raw_sort = lg.get("league_sort")
+        try:
+            league_sort = int(raw_sort) if raw_sort is not None else -1
+        except Exception:
+            logging.exception("Unexpected error")
+            league_sort = -1
         if live_data:
             name = str(live_data.get("name") or name)
             live_season = live_data.get("season")
@@ -72,6 +101,7 @@ class AppState(rx.State):
             "status": status,
             "total_rosters": total_rosters,
             "avatar": avatar,
+            "league_sort": league_sort,
         }
 
     @rx.event
@@ -96,6 +126,7 @@ class AppState(rx.State):
                                     f"Failed to fetch live league data: {e}"
                                 )
                         normalized.append(self._normalize_league(lg, live_data))
+                    normalized.sort(key=league_sort_key)
                     self.leagues_data = normalized
                     self.configured_league_ids = [
                         lg["league_id"] for lg in normalized
@@ -137,6 +168,7 @@ class AppState(rx.State):
                     normalized = [
                         self._normalize_league(lg) for lg in raw_leagues
                     ]
+                    normalized.sort(key=league_sort_key)
                     self.leagues_data = normalized
                     self.configured_league_ids = [
                         lg["league_id"] for lg in normalized

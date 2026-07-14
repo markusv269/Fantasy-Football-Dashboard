@@ -90,7 +90,9 @@ class UserState(rx.State):
                     continue
                 res = (
                     client.table("leagues")
-                    .select("league_id,league_name,league_season,league_type")
+                    .select(
+                        "league_id,league_name,league_season,league_type,league_sort"
+                    )
                     .in_("league_id", chunk)
                     .execute()
                 )
@@ -99,6 +101,12 @@ class UserState(rx.State):
             normalized = []
             for lg in all_rows:
                 lid = str(lg.get("league_id", "") or "").strip('"').strip()
+                raw_sort = lg.get("league_sort")
+                try:
+                    ls_val = int(raw_sort) if raw_sort is not None else -1
+                except Exception:
+                    logging.exception("Unexpected error")
+                    ls_val = -1
                 normalized.append(
                     {
                         "league_id": lid,
@@ -107,6 +115,7 @@ class UserState(rx.State):
                         "status": str(lg.get("league_type") or "unknown"),
                         "total_rosters": "",
                         "avatar": "",
+                        "league_sort": ls_val,
                     }
                 )
 
@@ -114,9 +123,20 @@ class UserState(rx.State):
                 s = str(x.get("season") or "0")
                 return int(s) if s.isdigit() else 0
 
+            def _ls_key(x) -> tuple:
+                v = x.get("league_sort")
+                try:
+                    iv = int(v) if v is not None else None
+                except Exception:
+                    logging.exception("Unexpected error")
+                    iv = None
+                is_null = iv is None or iv < 0
+                return (is_null, iv if iv is not None else 10**9)
+
             normalized.sort(
                 key=lambda x: (
                     -_season_key(x),
+                    *_ls_key(x),
                     str(x.get("name") or "").lower(),
                 )
             )

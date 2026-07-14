@@ -55,7 +55,7 @@ def _nav_link(item: dict) -> rx.Component:
     return rx.link(
         rx.hstack(
             rx.icon(item["icon"], size=18),
-            rx.text(item["label"], size="2", weight="medium"),
+            rx.text(item["label"], size="2", weight="bold"),
             spacing="3",
             align="center",
             width="100%",
@@ -65,10 +65,10 @@ def _nav_link(item: dict) -> rx.Component:
         width="100%",
         padding_x="12px",
         padding_y="10px",
-        border_radius="8px",
+        border_radius="10px",
         class_name=t(
-            "text-slate-400 hover:bg-white/5 hover:text-[#DC2626] transition-all",
-            "text-gray-700 hover:bg-gray-100 hover:text-[#DC2626] transition-all",
+            "text-slate-300 hover:bg-[#DC2626]/10 hover:text-[#DC2626] transition-all duration-200",
+            "text-gray-800 hover:bg-gray-200 hover:text-[#DC2626] transition-all duration-200",
         ),
     )
 
@@ -86,13 +86,23 @@ def sidebar_std() -> rx.Component:
                 "border-b border-white/5 shadow-sm", "border-b border-gray-200"
             ),
         ),
-        rx.vstack(
-            *[_nav_link(item) for item in nav_items],
-            spacing="1",
+        rx.box(
+            rx.vstack(
+                *[_nav_link(item) for item in nav_items],
+                spacing="1",
+                width="100%",
+                padding="10px",
+                border_radius="16px",
+                class_name=t(
+                    "bg-[#0D1117] border border-white/10 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]",
+                    "bg-gray-50 border border-gray-200 shadow-[inset_0_2px_4px_rgba(0,0,0,0.03)]",
+                ),
+            ),
             width="100%",
-            padding="12px",
+            padding="16px",
             flex="1",
             overflow_y="auto",
+            class_name="no-scrollbar",
         ),
         rx.box(
             rx.cond(
@@ -215,36 +225,46 @@ def mobile_drawer_std() -> rx.Component:
                     "border-b border-gray-300 bg-gray-50 text-gray-900",
                 ),
             ),
-            rx.vstack(
-                *[
-                    rx.link(
-                        rx.hstack(
-                            rx.icon(item["icon"], size=20),
-                            rx.text(item["label"], size="4", weight="bold"),
-                            rx.spacer(),
-                            rx.icon(
-                                "chevron-right",
-                                size=16,
-                                class_name="opacity-80",
+            rx.box(
+                rx.vstack(
+                    *[
+                        rx.link(
+                            rx.hstack(
+                                rx.icon(item["icon"], size=20),
+                                rx.text(item["label"], size="4", weight="bold"),
+                                rx.spacer(),
+                                rx.icon(
+                                    "chevron-right",
+                                    size=16,
+                                    class_name="opacity-60",
+                                ),
+                                spacing="4",
+                                align="center",
+                                width="100%",
                             ),
-                            spacing="4",
-                            align="center",
+                            href=item["href"],
+                            on_click=ThemeState.close_mobile_sidebar,
+                            underline="none",
                             width="100%",
-                        ),
-                        href=item["href"],
-                        on_click=ThemeState.close_mobile_sidebar,
-                        underline="none",
-                        width="100%",
-                        padding_x="24px",
-                        padding_y="20px",
-                        class_name=t(
-                            "text-white border-b border-white/10 hover:bg-white/10 active:bg-white/20 transition-colors",
-                            "text-gray-900 border-b border-gray-200 hover:bg-gray-100 active:bg-gray-200 transition-colors",
-                        ),
-                    )
-                    for item in nav_items
-                ],
-                spacing="0",
+                            padding_x="20px",
+                            padding_y="18px",
+                            class_name=t(
+                                "text-white border-b border-white/10 last:border-0 hover:bg-white/5 active:bg-white/10 transition-colors",
+                                "text-gray-900 border-b border-gray-200 last:border-0 hover:bg-gray-50 active:bg-gray-100 transition-colors",
+                            ),
+                        )
+                        for item in nav_items
+                    ],
+                    spacing="0",
+                    width="100%",
+                    border_radius="24px",
+                    overflow="hidden",
+                    class_name=t(
+                        "bg-[#161B22] border border-white/10 shadow-xl",
+                        "bg-white border border-gray-200 shadow-md",
+                    ),
+                ),
+                padding="20px",
                 width="100%",
                 overflow_y="auto",
                 flex="1",

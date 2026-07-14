@@ -1,16 +1,16 @@
-# league_sort für 2026-Dynasty-Ketten ergänzen
+# Einheitliche Sortierung nach Jahr und league_sort
 
-## Phase 1: Datenanalyse ✅
-- [x] Vorhandene 2026-Dynasty-Ligen und league_sort-Werte prüfen
-- [x] Vorgängerbeziehungen zu 2025 und früheren Jahren auswerten
-- [x] Konflikte zwischen bestehenden und abgeleiteten Nummerierungen erkennen
+## Phase 1: Sortierregeln und Datenbasis ✅
+- [x] Bestehende Übersichten mit Liga-, Draft- und Archivdaten identifizieren
+- [x] Sortierregel Jahr absteigend und league_sort aufsteigend festlegen
+- [x] Datenabfragen um die benötigte Sortierinformation erweitern
 
-## Phase 2: Datenbankaktualisierung ✅
-- [x] Fehlende 2026-Nummerierungen aus vorhandenen Vorgängerketten ableiten
-- [x] Vorgängerketten der 2026-Dynasty-Ligen konsistent nummerieren
-- [x] Konfliktfreie Änderungen in Supabase speichern
+## Phase 2: Übersichten aktualisieren ✅
+- [x] Ligen- und Startseitenübersichten konsistent sortieren
+- [x] Archiv-, Draft- und Admin-Übersichten konsistent sortieren
+- [x] Nutzerbezogene und Auswahl-Listen mit derselben Sortierlogik angleichen
 
 ## Phase 3: Validierung ✅
-- [x] Aktualisierte 2026-Ketten gegen Supabase prüfen
-- [x] Sicherstellen, dass bestehende korrekte Nummerierungen unverändert bleiben
-- [x] Ergebnis mit aktualisierten, unveränderten und übersprungenen Ligen zusammenfassen
+- [x] Datenbankgestützte Ladepfade mit echten Daten prüfen
+- [x] Sortierung für mehrere Übersichten gegen erwartete Reihenfolge validieren
+- [x] Planabschluss mit bestätigtem Ergebnis dokumentieren

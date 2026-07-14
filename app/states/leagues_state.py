@@ -3,6 +3,25 @@ import logging
 from app.supabase_client import get_supabase_client
 
 
+def _lg_sort_key(lg: dict) -> tuple:
+    """Season DESC, league_sort ASC (nulls last), name ASC."""
+    s = str(lg.get("season", "") or "0")
+    try:
+        season_int = int(s) if s.lstrip("-").isdigit() else 0
+    except Exception:
+        logging.exception("Unexpected error")
+        season_int = 0
+    ls_raw = lg.get("league_sort")
+    try:
+        ls_int = int(ls_raw) if ls_raw is not None else None
+    except Exception:
+        logging.exception("Unexpected error")
+        ls_int = None
+    is_null = ls_int is None or ls_int < 0
+    name = str(lg.get("league_name") or "").lower()
+    return (-season_int, is_null, ls_int if ls_int is not None else 10**9, name)
+
+
 PAGE_SIZE = 1000
 
 
@@ -98,7 +117,9 @@ class LeaguesState(rx.State):
             self.current_season = str(current_season_val)
             res = (
                 client.table("leagues")
-                .select("league_id,league_name,league_season,league_type")
+                .select(
+                    "league_id,league_name,league_season,league_type,league_sort"
+                )
                 .eq("league_season", current_season_val)
                 .execute()
             )
@@ -175,6 +196,14 @@ class LeaguesState(rx.State):
                 weeks_set = weeks_by_league.get(lid, set())
                 weeks_sorted = sorted(weeks_set)
                 latest_week = max(weeks_sorted) if weeks_sorted else 0
+                raw_sort = lg.get("league_sort")
+                try:
+                    league_sort_val = (
+                        int(raw_sort) if raw_sort is not None else -1
+                    )
+                except Exception:
+                    logging.exception("Unexpected error")
+                    league_sort_val = -1
                 leagues_out.append(
                     {
                         "league_id": lid,
@@ -188,8 +217,10 @@ class LeaguesState(rx.State):
                         "manager_names": unique_names,
                         "available_weeks": [str(w) for w in weeks_sorted],
                         "latest_week": latest_week,
+                        "league_sort": league_sort_val,
                     }
                 )
+            leagues_out.sort(key=_lg_sort_key)
 
             self.all_leagues = leagues_out
             self.manager_to_leagues = manager_to_leagues
@@ -282,8 +313,11 @@ class LeaguesState(rx.State):
                 return
             res = (
                 client.table("leagues")
-                .select("league_id,league_name,league_season,league_type")
+                .select(
+                    "league_id,league_name,league_season,league_type,league_sort"
+                )
                 .order("league_season", desc=True)
+                .order("league_sort", desc=False)
                 .execute()
             )
             leagues_rows = res.data if res and res.data else []
@@ -610,11 +644,22 @@ class LeaguesState(rx.State):
                 logging.exception("bad season sort")
                 return 0
 
+        def _ls_key(x) -> tuple:
+            v = x.get("league_sort")
+            try:
+                iv = int(v) if v is not None else None
+            except Exception:
+                logging.exception("Unexpected error")
+                iv = None
+            is_null = iv is None or iv < 0
+            return (is_null, iv if iv is not None else 10**9)
+
         sort_by = self.sort_by
         if sort_by == "season_desc":
             result.sort(
                 key=lambda x: (
                     -_season_int(x),
+                    *_ls_key(x),
                     str(x.get("league_name") or "").lower(),
                 )
             )
@@ -622,6 +667,7 @@ class LeaguesState(rx.State):
             result.sort(
                 key=lambda x: (
                     _season_int(x),
+                    *_ls_key(x),
                     str(x.get("league_name") or "").lower(),
                 )
             )

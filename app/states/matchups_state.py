@@ -69,7 +69,7 @@ class MatchupsState(rx.State):
         try:
             res = (
                 client.table("leagues")
-                .select("league_id,league_name,league_season")
+                .select("league_id,league_name,league_season,league_sort")
                 .execute()
             )
             rows = res.data if res and res.data else []
@@ -90,6 +90,22 @@ class MatchupsState(rx.State):
         current_leagues = [
             lg for lg in rows if str(lg.get("league_season", "")) == current
         ]
+
+        def _sk(lg: dict) -> tuple:
+            v = lg.get("league_sort")
+            try:
+                iv = int(v) if v is not None else None
+            except Exception:
+                logging.exception("Unexpected error")
+                iv = None
+            is_null = iv is None or iv < 0
+            return (
+                is_null,
+                iv if iv is not None else 10**9,
+                str(lg.get("league_name") or "").lower(),
+            )
+
+        current_leagues.sort(key=_sk)
         ids = [str(lg.get("league_id", "")) for lg in current_leagues]
         meta = [
             {
@@ -334,8 +350,7 @@ class MatchupsState(rx.State):
         mgr_map: dict,
         league_id: str,
     ) -> dict:
-        @rx.event
-        def team_dict(row: dict) -> dict:
+        def _team_dict(row: dict) -> dict:
             rid = int(row.get("roster_id") or 0)
             mgr = mgr_map.get((league_id, rid), {})
             team_name = (
@@ -356,8 +371,8 @@ class MatchupsState(rx.State):
                 "avatar": "",
             }
 
-        a = team_dict(team_a_row)
-        b = team_dict(team_b_row) if team_b_row else None
+        a = _team_dict(team_a_row)
+        b = _team_dict(team_b_row) if team_b_row else None
 
         return {
             "matchup_id": matchup_id,

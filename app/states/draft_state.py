@@ -22,9 +22,10 @@ class DraftState(rx.State):
             if client:
                 dynasty_res = (
                     client.table("leagues")
-                    .select("league_id")
+                    .select("league_id,league_sort,league_name")
                     .eq("league_season", 2026)
                     .eq("league_type", "dynasty")
+                    .order("league_sort", desc=False)
                     .execute()
                 )
                 if dynasty_res and dynasty_res.data:
@@ -33,21 +34,26 @@ class DraftState(rx.State):
                     ]
                 redraft_res = (
                     client.table("leagues")
-                    .select("league_id")
+                    .select("league_id,league_sort,league_name")
                     .eq("league_season", 2026)
                     .eq("league_type", "redraft")
+                    .order("league_sort", desc=False)
                     .execute()
                 )
                 if redraft_res and redraft_res.data:
                     self.redraft_league_ids_2026 = [
                         str(lg["league_id"]) for lg in redraft_res.data
                     ]
-            all_2026_ids = self.dynasty_league_ids_2026 + self.redraft_league_ids_2026
+            all_2026_ids = (
+                self.dynasty_league_ids_2026 + self.redraft_league_ids_2026
+            )
             upcoming = []
             for lid in all_2026_ids:
                 league = get_league(lid)
                 league_name = (
-                    league.get("name", f"League {lid}") if league else f"League {lid}"
+                    league.get("name", f"League {lid}")
+                    if league
+                    else f"League {lid}"
                 )
                 drafts = get_league_drafts(lid)
                 if drafts:
@@ -69,19 +75,30 @@ class DraftState(rx.State):
                                 "status": d.get("status", ""),
                                 "start_time": int(start) if start else 0,
                                 "start_date_str": dt_str,
-                                "rounds": d.get("settings", {}).get("rounds", 0),
+                                "rounds": d.get("settings", {}).get(
+                                    "rounds", 0
+                                ),
                                 "teams": d.get("settings", {}).get("teams", 0),
-                                "metadata_name": d.get("metadata", {}).get("name", ""),
-                                "is_dynasty": lid in self.dynasty_league_ids_2026,
+                                "metadata_name": d.get("metadata", {}).get(
+                                    "name", ""
+                                ),
+                                "is_dynasty": lid
+                                in self.dynasty_league_ids_2026,
                                 "is_idp": "IDP" in league_name.upper()
                                 or "IDP"
-                                in d.get("metadata", {}).get("name", "").upper(),
+                                in d.get("metadata", {})
+                                .get("name", "")
+                                .upper(),
                                 "is_bestball": "BESTBALL" in league_name.upper()
                                 or "BB" in league_name.upper(),
                             }
                         )
             upcoming.sort(
-                key=lambda x: (x["start_time"] == 0, x["start_time"], x["league_name"])
+                key=lambda x: (
+                    x["start_time"] == 0,
+                    x["start_time"],
+                    x["league_name"],
+                )
             )
             self.upcoming_drafts = upcoming
             client = get_supabase_client()
@@ -90,7 +107,10 @@ class DraftState(rx.State):
                 drafts_res = client.table("drafts").select("*").execute()
                 leagues_res = (
                     client.table("leagues")
-                    .select("league_id, league_name, league_type")
+                    .select(
+                        "league_id, league_name, league_type,"
+                        " league_season, league_sort"
+                    )
                     .execute()
                 )
                 league_map = {
@@ -113,8 +133,10 @@ class DraftState(rx.State):
                                 logging.exception("Unexpected error")
                                 start_date_str = start_ts[:10]
                         raw_dt_type = d.get("draft_type")
-                        dt_type = str(raw_dt_type) if raw_dt_type is not None else ""
-                        type_str = (
+                        dt_type = (
+                            str(raw_dt_type) if raw_dt_type is not None else ""
+                        )
+                        dtype_str = (
                             "Snake"
                             if dt_type == "0"
                             else "Linear"
@@ -123,20 +145,53 @@ class DraftState(rx.State):
                             if dt_type == "2"
                             else "Unknown"
                         )
+                        raw_sort = lg.get("league_sort")
+                        try:
+                            ls_val = (
+                                int(raw_sort) if raw_sort is not None else -1
+                            )
+                        except Exception:
+                            logging.exception("Unexpected error")
+                            ls_val = -1
                         historical.append(
                             {
                                 "draft_id": d.get("draft_id"),
                                 "league_id": lid,
-                                "league_name": lg.get("league_name", f"League {lid}"),
+                                "league_name": lg.get(
+                                    "league_name", f"League {lid}"
+                                ),
                                 "league_type": lg.get("league_type", ""),
                                 "season": d.get("season", ""),
-                                "draft_type": type_str,
+                                "draft_type": dtype_str,
                                 "status": d.get("status", ""),
                                 "start_time": start_ts if start_ts else "",
                                 "start_date_str": start_date_str,
+                                "league_sort": ls_val,
                             }
                         )
-                historical.sort(key=lambda x: x["start_time"], reverse=True)
+
+                def _hist_key(x: dict) -> tuple:
+                    s = str(x.get("season") or "0")
+                    try:
+                        si = int(s) if s.lstrip("-").isdigit() else 0
+                    except Exception:
+                        logging.exception("Unexpected error")
+                        si = 0
+                    v = x.get("league_sort")
+                    try:
+                        iv = int(v) if v is not None else None
+                    except Exception:
+                        logging.exception("Unexpected error")
+                        iv = None
+                    is_null = iv is None or iv < 0
+                    return (
+                        -si,
+                        is_null,
+                        iv if iv is not None else 10**9,
+                        str(x.get("league_name") or "").lower(),
+                    )
+
+                historical.sort(key=_hist_key)
                 self.historical_drafts = historical
         except Exception as e:
             logging.exception(f"Error initializing drafts: {e}")
@@ -152,7 +207,9 @@ class DraftState(rx.State):
         self.show_all_historical = not self.show_all_historical
 
     @rx.var
-    def filtered_upcoming(self) -> list[dict[str, str | int | float | bool | None]]:
+    def filtered_upcoming(
+        self,
+    ) -> list[dict[str, str | int | float | bool | None]]:
         res = []
         for d in self.upcoming_drafts:
             if self.draft_filter == "Scheduled" and int(d["start_time"]) == 0:
@@ -170,8 +227,12 @@ class DraftState(rx.State):
 
     @rx.var
     def scheduled_count(self) -> int:
-        return sum((1 for d in self.upcoming_drafts if int(d["start_time"]) > 0))
+        return sum(
+            (1 for d in self.upcoming_drafts if int(d["start_time"]) > 0)
+        )
 
     @rx.var
     def unscheduled_count(self) -> int:
-        return sum((1 for d in self.upcoming_drafts if int(d["start_time"]) == 0))
+        return sum(
+            (1 for d in self.upcoming_drafts if int(d["start_time"]) == 0)
+        )
