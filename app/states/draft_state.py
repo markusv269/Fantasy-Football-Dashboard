@@ -1,7 +1,7 @@
 import reflex as rx
 import logging
 from datetime import datetime
-from app.sleeper_api import get_draft, get_draft_picks
+from app.sleeper_api import get_draft, get_draft_picks, get_league
 from app.supabase_client import get_supabase_client
 
 
@@ -112,6 +112,11 @@ class DraftState(rx.State):
             "next_roster_id": 0,
             "next_manager_name": "",
             "next_team_name": "",
+            "next_user_id": "",
+            "on_clock_source": "",
+            "last_picked_by_user_id": "",
+            "last_picked_by_manager": "",
+            "last_picked_by_team": "",
             "total_picks": 0,
             "total_slots": 0,
             "progress_pct": 0,
@@ -132,9 +137,22 @@ class DraftState(rx.State):
             return "COMPLETED"
         return s.upper() or "UNKNOWN"
 
-    def _enrich_live_draft(self, base: dict, managers_by_league: dict) -> dict:
-        """Fetch live Sleeper data and derive live fields."""
+    def _enrich_live_draft(
+        self,
+        base: dict,
+        managers_by_league: dict,
+        managers_by_user: dict,
+    ) -> dict:
+        """Fetch live Sleeper data and derive live fields.
+
+        For active drafts, prefer `metadata.on_the_clock_user_id` from the
+        Sleeper league endpoint to identify the on-clock manager, and use
+        `picked_by` from the final pick to identify who made the last pick.
+        Fall back to slot/roster calculation when on_the_clock_user_id is
+        unavailable.
+        """
         draft_id = base["draft_id"]
+        league_id = base["league_id"]
         if not draft_id:
             return base
         try:
@@ -147,6 +165,13 @@ class DraftState(rx.State):
         except Exception as e:
             logging.exception(f"get_draft_picks failed for {draft_id}: {e}")
             picks = []
+        league_live = {}
+        if league_id:
+            try:
+                league_live = get_league(league_id) or {}
+            except Exception as e:
+                logging.exception(f"get_league failed for {league_id}: {e}")
+                league_live = {}
         if not live:
             return base
 
@@ -162,6 +187,7 @@ class DraftState(rx.State):
         last_name = ""
         last_team = ""
         last_pos = ""
+        last_picked_by = ""
         if picks:
             try:
                 sorted_picks = sorted(
@@ -178,8 +204,28 @@ class DraftState(rx.State):
                 )
                 last_team = str(meta.get("team") or "")
                 last_pos = str(meta.get("position") or "")
+                last_picked_by = str(last.get("picked_by") or "")
             except Exception as e:
                 logging.exception(f"last pick parse failed: {e}")
+
+        # Resolve last picked-by manager via Supabase managers (by user_id).
+        last_picked_by_manager = ""
+        last_picked_by_team = ""
+        if last_picked_by:
+            users_by_uid = managers_by_user.get(league_id, {})
+            m = users_by_uid.get(last_picked_by) or {}
+            last_picked_by_manager = str(m.get("display_name") or "")
+            last_picked_by_team = str(
+                m.get("team_name") or last_picked_by_manager or ""
+            )
+
+        # Preferred on-clock resolution: league metadata.on_the_clock_user_id.
+        on_clock_user_id = ""
+        league_meta = league_live.get("metadata") or {}
+        if isinstance(league_meta, dict):
+            on_clock_user_id = str(
+                league_meta.get("on_the_clock_user_id") or ""
+            )
 
         next_pick_no = last_pick_no + 1 if last_pick_no > 0 else 1
         next_round = 0
@@ -193,19 +239,35 @@ class DraftState(rx.State):
                 next_slot = teams - pos_in_round + 1
             else:
                 next_slot = pos_in_round
-            next_roster_id = int(
-                slot_to_roster.get(next_slot)
-                or slot_to_roster.get(next_slot)
-                or 0
-            )
+            next_roster_id = int(slot_to_roster.get(next_slot) or 0)
 
         next_manager_name = ""
         next_team_name = ""
-        if next_roster_id > 0:
-            mgrs = managers_by_league.get(base["league_id"], {})
+        on_clock_source = ""
+
+        if on_clock_user_id:
+            users_by_uid = managers_by_user.get(league_id, {})
+            m = users_by_uid.get(on_clock_user_id) or {}
+            if m:
+                next_manager_name = str(m.get("display_name") or "")
+                next_team_name = str(
+                    m.get("team_name") or next_manager_name or ""
+                )
+                try:
+                    rid = int(m.get("roster_id") or 0)
+                    if rid > 0:
+                        next_roster_id = rid
+                except Exception:
+                    logging.exception("bad roster_id from managers")
+                on_clock_source = "on_the_clock_user_id"
+
+        if not next_manager_name and next_roster_id > 0:
+            mgrs = managers_by_league.get(league_id, {})
             m = mgrs.get(next_roster_id) or {}
             next_manager_name = str(m.get("display_name") or "")
             next_team_name = str(m.get("team_name") or next_manager_name or "")
+            if next_manager_name and not on_clock_source:
+                on_clock_source = "slot_calculation"
 
         progress_pct = 0
         if total_slots > 0:
@@ -228,6 +290,9 @@ class DraftState(rx.State):
                 "last_player_name": last_name,
                 "last_player_team": last_team,
                 "last_player_pos": last_pos,
+                "last_picked_by_user_id": last_picked_by,
+                "last_picked_by_manager": last_picked_by_manager,
+                "last_picked_by_team": last_picked_by_team,
                 "next_pick_no": next_pick_no
                 if next_pick_no <= total_slots or total_slots == 0
                 else 0,
@@ -236,6 +301,8 @@ class DraftState(rx.State):
                 "next_roster_id": next_roster_id,
                 "next_manager_name": next_manager_name,
                 "next_team_name": next_team_name,
+                "next_user_id": on_clock_user_id,
+                "on_clock_source": on_clock_source,
                 "progress_pct": progress_pct,
                 "progress_str": progress_str,
             }
@@ -280,6 +347,7 @@ class DraftState(rx.State):
                         active_league_ids.add(lid)
 
             managers_by_league: dict[str, dict[int, dict]] = {}
+            managers_by_user: dict[str, dict[str, dict]] = {}
             if active_league_ids:
                 try:
                     ids = list(active_league_ids)
@@ -291,7 +359,8 @@ class DraftState(rx.State):
                         mres = (
                             client.table("managers")
                             .select(
-                                "league_id,roster_id,display_name,team_name"
+                                "league_id,roster_id,user_id,"
+                                "display_name,team_name"
                             )
                             .in_("league_id", chunk)
                             .execute()
@@ -303,8 +372,11 @@ class DraftState(rx.State):
                             except Exception:
                                 logging.exception("bad roster_id")
                                 rid = 0
+                            uid = str(m.get("user_id") or "")
                             if lid and rid:
                                 managers_by_league.setdefault(lid, {})[rid] = m
+                            if lid and uid:
+                                managers_by_user.setdefault(lid, {})[uid] = m
                 except Exception as e:
                     logging.exception(f"managers fetch failed: {e}")
 
@@ -320,7 +392,9 @@ class DraftState(rx.State):
                 base = self._build_base_draft(d, lg)
                 st = base["status"]
                 if st in ACTIVE_STATUSES:
-                    enriched = self._enrich_live_draft(base, managers_by_league)
+                    enriched = self._enrich_live_draft(
+                        base, managers_by_league, managers_by_user
+                    )
                     active.append(enriched)
                     all_entries.append(enriched)
                 elif st in SCHEDULED_STATUSES:

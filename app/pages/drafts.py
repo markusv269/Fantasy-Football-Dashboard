@@ -224,6 +224,55 @@ def _active_draft_card(draft: rx.Var) -> rx.Component:
                                 spacing="2",
                                 align="center",
                             ),
+                            rx.cond(
+                                draft["last_picked_by_manager"].to(str) != "",
+                                rx.hstack(
+                                    rx.icon(
+                                        "user-round",
+                                        size=12,
+                                        color="#94A3B8",
+                                    ),
+                                    rx.text(
+                                        "von",
+                                        size="1",
+                                        class_name=TEXT_SECONDARY,
+                                    ),
+                                    rx.text(
+                                        draft["last_picked_by_team"].to(str),
+                                        size="1",
+                                        weight="bold",
+                                        class_name=TEXT_PRIMARY,
+                                    ),
+                                    rx.cond(
+                                        (
+                                            draft["last_picked_by_manager"].to(
+                                                str
+                                            )
+                                            != draft["last_picked_by_team"].to(
+                                                str
+                                            )
+                                        )
+                                        & (
+                                            draft["last_picked_by_manager"].to(
+                                                str
+                                            )
+                                            != ""
+                                        ),
+                                        rx.text(
+                                            "("
+                                            + draft[
+                                                "last_picked_by_manager"
+                                            ].to(str)
+                                            + ")",
+                                            size="1",
+                                            class_name=TEXT_SECONDARY,
+                                        ),
+                                    ),
+                                    spacing="1",
+                                    align="center",
+                                    wrap="wrap",
+                                ),
+                            ),
                             spacing="1",
                             align="start",
                         ),
