@@ -38,6 +38,7 @@ nav_items = [
     {"icon": "list-ordered", "label": "Standings", "href": "/standings"},
     {"icon": "users", "label": "Rosters", "href": "/rosters"},
     {"icon": "file-text", "label": "Drafts", "href": "/drafts"},
+    {"icon": "layout-grid", "label": "ADP Board", "href": "/adp"},
     {"icon": "trending-up", "label": "Trending", "href": "/trending"},
     {"icon": "mic", "label": "Community", "href": "/community"},
     {"icon": "archive", "label": "Archiv", "href": "/archive"},

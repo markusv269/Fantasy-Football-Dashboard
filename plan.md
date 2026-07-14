@@ -1,18 +1,18 @@
-# Draft-Seite überarbeiten
+# ADP Draftboard erstellen
 
-## Phase 1: Draft-Datenlogik und Status-Kategorisierung ✅
-- [x] Aktuelle Draft-Daten aus Datenbank und Sleeper-API prüfen
-- [x] Drafts nach aktiv, geplant, abgeschlossen und sonstigem Status kategorisieren
-- [x] Statistiken saisonübergreifend korrekt berechnen
-- [x] Live-Draft-Informationen für aktive Drafts abrufen und aufbereiten
+## Phase 1: Datenlogik und Aggregation ✅
+- [x] Draft- und Pick-Daten für Saisons, Formate und Liga-Typen auswerten
+- [x] Filter für Saison, Ligaform und Draft-Modus definieren
+- [x] Durchschnittliche Draftposition je Spieler über vergleichbare Drafts berechnen
+- [x] Board-Zellen für 12 Slots und Runden inklusive Picknotation ableiten
 
-## Phase 2: Draft-Übersicht und aktive Drafts neu gestalten ✅
-- [x] Aktive Drafts als vollbreite Highlight-Bereiche mit Live-Informationen anzeigen
-- [x] Statistikbereich mit korrekten Kategorien und saisonübergreifenden Zahlen überarbeiten
-- [x] Geplante und abgeschlossene Drafts klar getrennt darstellen
-- [x] Filter und leere Zustände an die neuen Kategorien anpassen
+## Phase 2: ADP Draftboard UI und Navigation ✅
+- [x] Neue ADP Draftboard-Seite mit konsistentem roten Akzent, hellen Karten und sauberer Typografie erstellen
+- [x] Filterbereich für Saison, Ligaform und Sortierung umsetzen
+- [x] Sleeper-ähnliches 12-Manager-Draftboard mit Picknummern und Spielerinformationen darstellen
+- [x] Neue Seite in Navigation und Routing integrieren
 
 ## Phase 3: Validierung und Abschluss ✅
-- [x] Sleeper-API-Abrufe für Drafts und Picks mit echten Daten prüfen
-- [x] Wichtige Draft-Seiten-Ereignisse mit echten Daten testen
-- [x] Sicherstellen, dass fehlende Live-Daten robuste Fallbacks nutzen
+- [x] Datenaggregation mit echten Supabase-Daten prüfen
+- [x] Wichtige Filter- und Ladeereignisse testen
+- [x] Leere Zustände und robuste Fallbacks für fehlende Spielerdaten sicherstellen
