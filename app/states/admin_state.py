@@ -281,12 +281,19 @@ class AdminState(rx.State):
         except Exception as e:
             logging.exception(f"Existing league_type lookup failed: {e}")
         safe_type = existing_type or "dynasty"
+        prev_raw = data.get("previous_league_id")
+        prev_val = (
+            str(prev_raw).strip()
+            if prev_raw not in (None, "", "null")
+            else None
+        )
         payload = {
             "league_id": str(league_id),
             "league_name": data.get("name", "") or f"Liga {league_id}",
             "league_season": season_val,
             "league_type": safe_type,
             "roster_positions": data.get("roster_positions") or [],
+            "previous_league_id": prev_val,
         }
         try:
             client.table("leagues").upsert(
@@ -1087,6 +1094,12 @@ class AdminState(rx.State):
             season_val = (
                 int(season_raw) if str(season_raw).isdigit() else season_raw
             )
+            prev_raw = data.get("previous_league_id")
+            prev_val = (
+                str(prev_raw).strip()
+                if prev_raw not in (None, "", "null")
+                else None
+            )
             # Only include columns present in the `leagues` schema.
             payload = {
                 "league_id": raw,
@@ -1094,6 +1107,7 @@ class AdminState(rx.State):
                 "league_season": season_val,
                 "league_type": self.add_league_type,
                 "roster_positions": data.get("roster_positions") or [],
+                "previous_league_id": prev_val,
             }
             try:
                 client.table("leagues").upsert(
@@ -1107,6 +1121,10 @@ class AdminState(rx.State):
                 self._log(f"DB-Fehler beim Speichern: {e}", "error")
                 return
 
+            season_raw = data.get("season", "")
+            season_val = (
+                int(season_raw) if str(season_raw).isdigit() else season_raw
+            )
             league_name = str(data.get("name") or f"Liga {raw}")
             action_verb = "aktualisiert" if is_duplicate else "hinzugefügt"
             self._log(

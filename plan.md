@@ -1,16 +1,16 @@
-# Ligadetail-Matchup-Aufstellungen
+# previous_league_id aus Sleeper synchronisieren
 
-## Phase 1: Datenanalyse und Aufstellungsdaten ✅
-- [x] Echte Matchup-Wochenstruktur inklusive Starter- und Punktefeldern prüfen
-- [x] Ligadetail-Datenmodell um wöchentliche Team-Aufstellungen je Matchup erweitern
-- [x] Spielerinformationen mit Name, Team und Position aus vorhandenen Quellen anreichern
+## Phase 1: Datenprüfung und Aktualisierung ✅
+- [x] Supabase-Zugriff und vorhandene League-Daten prüfen
+- [x] Sleeper-Daten je Liga abrufen und previous_league_id normalisieren
+- [x] Supabase-Spalte previous_league_id für alle Ligen aktualisieren
 
-## Phase 2: Ligadetail-UI anpassen ✅
-- [x] Matchup-Bereich um Starter-, Bank- und Reserve/IR-Listen mit Spielerpunkten erweitern
-- [x] Top-Teams-Bereich aus der Ligadetailseite entfernen
-- [x] Roster-Bereich aus der Ligadetailseite entfernen
+## Phase 2: Künftige Synchronisierung anpassen ✅
+- [x] Liga-Metadaten-Sync um previous_league_id erweitern
+- [x] Admin- und Wartungssynchronisierung konsistent halten
+- [x] Fehlerfälle ohne vorherige Liga sauber als None behandeln
 
 ## Phase 3: Validierung ✅
-- [x] Ligadetail-Ladevorgang mit echter Liga und Matchup-Daten testen
-- [x] Wochenwechsel für Matchups mit Aufstellungsdaten testen
-- [x] Sicherstellen, dass entfernte Bereiche nicht mehr im Seiteninhalt verwendet werden
+- [x] Stichproben gegen Sleeper-API und Supabase prüfen
+- [x] Sicherstellen, dass leere Werte als None gespeichert werden
+- [x] Sync-Hilfslogik mit realen Daten validieren

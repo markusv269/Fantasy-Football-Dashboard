@@ -101,12 +101,17 @@ def _sync_league_metadata(client, league_id: str) -> tuple[dict, str]:
     except Exception as e:
         logging.exception(f"League_type lookup failed for {league_id}: {e}")
     safe_type = existing_type or "dynasty"
+    prev_raw = data.get("previous_league_id")
+    prev_val = (
+        str(prev_raw).strip() if prev_raw not in (None, "", "null") else None
+    )
     payload = {
         "league_id": str(league_id),
         "league_name": data.get("name", "") or f"Liga {league_id}",
         "league_season": season_val,
         "league_type": safe_type,
         "roster_positions": data.get("roster_positions") or [],
+        "previous_league_id": prev_val,
     }
     client.table("leagues").upsert(payload, on_conflict="league_id").execute()
     return data, safe_type
