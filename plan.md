@@ -1,16 +1,16 @@
-# Liga-Avatare aus Supabase anzeigen
+# Sleeper-Avatare in Supabase aktualisieren
 
-## Phase 1: Datenbasis und Avatar-Quellen ✅
-- [x] Avatar-Spalte und vorhandene Werte in der Datenbank prüfen
-- [x] Bestehende Liga-Ladepfade für Karten und Übersichten identifizieren
-- [x] Einheitliche Avatar-Fallback-Regel für fehlende Werte festlegen
+## Phase 1: Datenbank- und API-Abgleich ✅
+- [x] Supabase-Zugang und vorhandene Liga-Daten prüfen
+- [x] Sleeper-Liga-Daten für vorhandene League-IDs abrufen
+- [x] Avatar-Werte aus Sleeper den Datenbank-Ligen zuordnen
 
-## Phase 2: Avatar-Daten in Übersichten integrieren ✅
-- [x] Liga-Übersichten um Avatar-Daten erweitern
-- [x] Startseite, Nutzerligen und Archivkarten mit Avatar-Anzeige ausstatten
-- [x] Detail- und Auswahlbereiche mit konsistenter Avatar-Nutzung aktualisieren
+## Phase 2: Datenbank aktualisieren ✅
+- [x] Vorhandene Liga-Avatar-Werte in Supabase per Sleeper-Daten updaten
+- [x] Fehlerhafte oder fehlende Sleeper-Antworten robust überspringen
+- [x] Ergebnis mit Anzahl aktualisierter und leerer Avatar-Werte dokumentieren
 
-## Phase 3: Validierung ✅
-- [x] Datenbankgestützte Avatar-Ladepfade mit echten Daten prüfen
-- [x] Sicherstellen, dass fehlende Avatare robuste Fallbacks nutzen
-- [x] Planabschluss mit bestätigtem Ergebnis dokumentieren
+## Phase 3: Website-Anzeige validieren ✅
+- [x] Sicherstellen, dass Avatar-IDs als Sleeper-CDN-Thumb-URLs dargestellt werden
+- [x] Wichtige Liga-Ladepfade mit Avatar-Feldern prüfen
+- [x] Abschlussstatus festhalten
