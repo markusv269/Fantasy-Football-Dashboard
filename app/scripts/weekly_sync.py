@@ -105,6 +105,12 @@ def _sync_league_metadata(client, league_id: str) -> tuple[dict, str]:
     prev_val = (
         str(prev_raw).strip() if prev_raw not in (None, "", "null") else None
     )
+    avatar_raw = data.get("avatar")
+    avatar_val = (
+        str(avatar_raw).strip()
+        if avatar_raw not in (None, "", "null")
+        else None
+    )
     payload = {
         "league_id": str(league_id),
         "league_name": data.get("name", "") or f"Liga {league_id}",
@@ -112,8 +118,24 @@ def _sync_league_metadata(client, league_id: str) -> tuple[dict, str]:
         "league_type": safe_type,
         "roster_positions": data.get("roster_positions") or [],
         "previous_league_id": prev_val,
+        "avatar": avatar_val,
     }
-    client.table("leagues").upsert(payload, on_conflict="league_id").execute()
+    try:
+        client.table("leagues").upsert(
+            payload, on_conflict="league_id"
+        ).execute()
+    except Exception as e:
+        msg = str(e)
+        if "avatar" in msg and ("column" in msg or "PGRST204" in msg):
+            logging.exception(
+                f"League upsert with avatar failed, retrying without: {e}"
+            )
+            payload.pop("avatar", None)
+            client.table("leagues").upsert(
+                payload, on_conflict="league_id"
+            ).execute()
+        else:
+            raise
     return data, safe_type
 
 

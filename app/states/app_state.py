@@ -74,7 +74,7 @@ class AppState(rx.State):
         )
         season = str(lg.get("league_season") or lg.get("season") or "")
         status = str(lg.get("league_type") or lg.get("status") or "unknown")
-        avatar = ""
+        avatar = str(lg.get("avatar") or "")
         total_rosters = ""
         raw_sort = lg.get("league_sort")
         try:
@@ -90,7 +90,9 @@ class AppState(rx.State):
             live_status = live_data.get("status")
             if live_status:
                 status = str(live_status)
-            avatar = str(live_data.get("avatar") or "")
+            live_avatar = str(live_data.get("avatar") or "")
+            if live_avatar:
+                avatar = live_avatar
             live_total = live_data.get("total_rosters")
             if live_total not in (None, ""):
                 total_rosters = str(live_total)
@@ -111,7 +113,9 @@ class AppState(rx.State):
         client = get_supabase_client()
         if client:
             try:
-                result = client.table("leagues").select("*").execute()
+                result = (
+                    client.table("leagues").select("*").execute()
+                )  # includes avatar
                 if result and result.data:
                     raw_leagues = result.data
                     use_live = len(raw_leagues) <= 10

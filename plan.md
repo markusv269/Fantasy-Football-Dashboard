@@ -1,16 +1,16 @@
-# Einheitliche Sortierung nach Jahr und league_sort
+# Liga-Avatare aus Supabase anzeigen
 
-## Phase 1: Sortierregeln und Datenbasis ✅
-- [x] Bestehende Übersichten mit Liga-, Draft- und Archivdaten identifizieren
-- [x] Sortierregel Jahr absteigend und league_sort aufsteigend festlegen
-- [x] Datenabfragen um die benötigte Sortierinformation erweitern
+## Phase 1: Datenbasis und Avatar-Quellen ✅
+- [x] Avatar-Spalte und vorhandene Werte in der Datenbank prüfen
+- [x] Bestehende Liga-Ladepfade für Karten und Übersichten identifizieren
+- [x] Einheitliche Avatar-Fallback-Regel für fehlende Werte festlegen
 
-## Phase 2: Übersichten aktualisieren ✅
-- [x] Ligen- und Startseitenübersichten konsistent sortieren
-- [x] Archiv-, Draft- und Admin-Übersichten konsistent sortieren
-- [x] Nutzerbezogene und Auswahl-Listen mit derselben Sortierlogik angleichen
+## Phase 2: Avatar-Daten in Übersichten integrieren ✅
+- [x] Liga-Übersichten um Avatar-Daten erweitern
+- [x] Startseite, Nutzerligen und Archivkarten mit Avatar-Anzeige ausstatten
+- [x] Detail- und Auswahlbereiche mit konsistenter Avatar-Nutzung aktualisieren
 
 ## Phase 3: Validierung ✅
-- [x] Datenbankgestützte Ladepfade mit echten Daten prüfen
-- [x] Sortierung für mehrere Übersichten gegen erwartete Reihenfolge validieren
+- [x] Datenbankgestützte Avatar-Ladepfade mit echten Daten prüfen
+- [x] Sicherstellen, dass fehlende Avatare robuste Fallbacks nutzen
 - [x] Planabschluss mit bestätigtem Ergebnis dokumentieren

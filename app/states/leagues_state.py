@@ -118,7 +118,7 @@ class LeaguesState(rx.State):
             res = (
                 client.table("leagues")
                 .select(
-                    "league_id,league_name,league_season,league_type,league_sort"
+                    "league_id,league_name,league_season,league_type,league_sort,avatar"
                 )
                 .eq("league_season", current_season_val)
                 .execute()
@@ -218,6 +218,7 @@ class LeaguesState(rx.State):
                         "available_weeks": [str(w) for w in weeks_sorted],
                         "latest_week": latest_week,
                         "league_sort": league_sort_val,
+                        "avatar": str(lg.get("avatar") or ""),
                     }
                 )
             leagues_out.sort(key=_lg_sort_key)
@@ -314,7 +315,7 @@ class LeaguesState(rx.State):
             res = (
                 client.table("leagues")
                 .select(
-                    "league_id,league_name,league_season,league_type,league_sort"
+                    "league_id,league_name,league_season,league_type,league_sort,avatar"
                 )
                 .order("league_season", desc=True)
                 .order("league_sort", desc=False)

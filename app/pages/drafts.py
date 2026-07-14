@@ -2,6 +2,7 @@ import reflex as rx
 from app.states.draft_state import DraftState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+from app.avatar_utils import league_avatar_image
 
 
 def stat_card(
@@ -46,11 +47,17 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
     return rx.link(
         rx.card(
             rx.vstack(
-                rx.heading(
-                    draft["league_name"].to(str),
-                    size="4",
-                    weight="bold",
-                    class_name="line-clamp-1",
+                rx.hstack(
+                    league_avatar_image(draft["league_avatar"], size="36px"),
+                    rx.heading(
+                        draft["league_name"].to(str),
+                        size="4",
+                        weight="bold",
+                        class_name="line-clamp-1 flex-1 min-w-0",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
                 ),
                 rx.hstack(
                     rx.badge(
@@ -144,20 +151,25 @@ def upcoming_draft_card(draft: dict) -> rx.Component:
 def historical_draft_row(draft: dict) -> rx.Component:
     return rx.table.row(
         rx.table.cell(
-            rx.vstack(
-                rx.text(
-                    draft["league_name"].to(str),
-                    size="2",
-                    weight="bold",
-                    class_name=TEXT_PRIMARY,
+            rx.hstack(
+                league_avatar_image(draft["league_avatar"], size="28px"),
+                rx.vstack(
+                    rx.text(
+                        draft["league_name"].to(str),
+                        size="2",
+                        weight="bold",
+                        class_name=TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        f"Season {draft['season'].to(str)}",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    spacing="0",
+                    align="start",
                 ),
-                rx.text(
-                    f"Season {draft['season'].to(str)}",
-                    size="1",
-                    class_name=TEXT_SECONDARY,
-                ),
-                spacing="0",
-                align="start",
+                spacing="2",
+                align="center",
             ),
         ),
         rx.table.cell(

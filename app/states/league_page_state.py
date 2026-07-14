@@ -13,6 +13,7 @@ class LeaguePageState(rx.State):
     league_type: str = ""
     league_season: str = ""
     league_avatar: str = ""
+    # league_avatar populated from leagues.avatar (Sleeper id or full URL).
     total_rosters: int = 0
     manager_count: int = 0
     latest_week: int = 0
@@ -125,6 +126,7 @@ class LeaguePageState(rx.State):
             self.league_name = str(lg.get("league_name") or f"Liga {clean_id}")
             self.league_type = str(lg.get("league_type") or "")
             self.league_season = str(lg.get("league_season") or "")
+            self.league_avatar = str(lg.get("avatar") or "")
             rp = lg.get("roster_positions") or []
             self.roster_positions = [str(x) for x in rp]
 

@@ -3,6 +3,7 @@ from app.states.admin_state import AdminState
 from app.states.admin_auth_state import AdminAuthState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+from app.avatar_utils import league_avatar_image
 
 
 def _login_form() -> rx.Component:
@@ -335,11 +336,16 @@ def _league_row(lg: dict) -> rx.Component:
             ),
         ),
         rx.table.cell(
-            rx.text(
-                lg["league_name"].to(str),
-                size="2",
-                weight="bold",
-                class_name=TEXT_PRIMARY,
+            rx.hstack(
+                league_avatar_image(lg["avatar"], size="28px"),
+                rx.text(
+                    lg["league_name"].to(str),
+                    size="2",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
+                ),
+                spacing="2",
+                align="center",
             ),
         ),
         rx.table.cell(_type_badge(lg["league_type"])),

@@ -3,6 +3,7 @@ from app.states.leagues_state import LeaguesState
 from app.states.user_state import UserState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+from app.avatar_utils import league_avatar_image
 
 
 def _type_color(t_val: rx.Var) -> rx.Var:
@@ -20,6 +21,7 @@ def _league_card(lg: dict) -> rx.Component:
         rx.card(
             rx.vstack(
                 rx.hstack(
+                    league_avatar_image(lg["avatar"], size="44px"),
                     rx.vstack(
                         rx.heading(
                             lg["league_name"].to(str),
@@ -44,8 +46,8 @@ def _league_card(lg: dict) -> rx.Component:
                         radius="full",
                         size="1",
                     ),
-                    spacing="2",
-                    align="start",
+                    spacing="3",
+                    align="center",
                     width="100%",
                 ),
                 rx.hstack(

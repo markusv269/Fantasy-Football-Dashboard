@@ -2,6 +2,7 @@ import reflex as rx
 from app.states.league_page_state import LeaguePageState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+from app.avatar_utils import league_avatar_image
 
 
 def _back_button() -> rx.Component:
@@ -134,6 +135,7 @@ def _header() -> rx.Component:
                 align="center",
             ),
             rx.hstack(
+                league_avatar_image(LeaguePageState.league_avatar, size="64px"),
                 rx.vstack(
                     rx.heading(
                         LeaguePageState.league_name,
@@ -162,6 +164,8 @@ def _header() -> rx.Component:
                     ),
                     spacing="2",
                     align="start",
+                    flex="1",
+                    min_width="0",
                 ),
                 spacing="4",
                 align="center",

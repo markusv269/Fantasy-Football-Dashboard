@@ -91,7 +91,7 @@ class UserState(rx.State):
                 res = (
                     client.table("leagues")
                     .select(
-                        "league_id,league_name,league_season,league_type,league_sort"
+                        "league_id,league_name,league_season,league_type,league_sort,avatar"
                     )
                     .in_("league_id", chunk)
                     .execute()
@@ -114,7 +114,7 @@ class UserState(rx.State):
                         "season": str(lg.get("league_season") or ""),
                         "status": str(lg.get("league_type") or "unknown"),
                         "total_rosters": "",
-                        "avatar": "",
+                        "avatar": str(lg.get("avatar") or ""),
                         "league_sort": ls_val,
                     }
                 )

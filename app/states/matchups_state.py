@@ -69,7 +69,9 @@ class MatchupsState(rx.State):
         try:
             res = (
                 client.table("leagues")
-                .select("league_id,league_name,league_season,league_sort")
+                .select(
+                    "league_id,league_name,league_season,league_sort,avatar"
+                )
                 .execute()
             )
             rows = res.data if res and res.data else []
@@ -114,6 +116,7 @@ class MatchupsState(rx.State):
                     lg.get("league_name", "")
                     or f"Liga {lg.get('league_id', '')}"
                 ),
+                "avatar": str(lg.get("avatar") or ""),
             }
             for lg in current_leagues
         ]
@@ -143,6 +146,7 @@ class MatchupsState(rx.State):
                         "name": str(
                             lg.get("name", "") or f"Liga {lg['league_id']}"
                         ),
+                        "avatar": str(lg.get("avatar") or ""),
                     }
                     for lg in current_leagues
                 ]

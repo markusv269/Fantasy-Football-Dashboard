@@ -4,6 +4,7 @@ from app.states.user_state import UserState
 from app.states.community_state import CommunityState
 from app.theme import t, TEXT_PRIMARY, TEXT_SECONDARY
 from app.components.layout import layout
+from app.avatar_utils import league_avatar_src
 
 
 def _status_color(status: rx.Var) -> rx.Var:
@@ -20,13 +21,7 @@ def _status_color(status: rx.Var) -> rx.Var:
 
 
 def league_card(league: dict) -> rx.Component:
-    avatar_url = rx.cond(
-        (league["avatar"] != None)
-        & (league["avatar"] != "")
-        & (league["avatar"] != "null"),
-        f"https://sleepercdn.com/avatars/thumbs/{league['avatar']}",
-        "https://sleepercdn.com/images/v2/icons/league/nfl/purple.png",
-    )
+    avatar_url = league_avatar_src(league["avatar"])
     return rx.card(
         rx.vstack(
             rx.hstack(

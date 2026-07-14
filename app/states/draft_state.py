@@ -8,6 +8,7 @@ from app.supabase_client import get_supabase_client
 class DraftState(rx.State):
     dynasty_league_ids_2026: list[str] = []
     redraft_league_ids_2026: list[str] = []
+    league_avatars: dict[str, str] = {}
     upcoming_drafts: list[dict[str, str | int | float | bool | None]] = []
     historical_drafts: list[dict[str, str | int | float | bool | None]] = []
     is_loading: bool = False
@@ -22,7 +23,7 @@ class DraftState(rx.State):
             if client:
                 dynasty_res = (
                     client.table("leagues")
-                    .select("league_id,league_sort,league_name")
+                    .select("league_id,league_sort,league_name,avatar")
                     .eq("league_season", 2026)
                     .eq("league_type", "dynasty")
                     .order("league_sort", desc=False)
@@ -32,9 +33,13 @@ class DraftState(rx.State):
                     self.dynasty_league_ids_2026 = [
                         str(lg["league_id"]) for lg in dynasty_res.data
                     ]
+                    for lg in dynasty_res.data:
+                        av = str(lg.get("avatar") or "")
+                        if av:
+                            self.league_avatars[str(lg["league_id"])] = av
                 redraft_res = (
                     client.table("leagues")
-                    .select("league_id,league_sort,league_name")
+                    .select("league_id,league_sort,league_name,avatar")
                     .eq("league_season", 2026)
                     .eq("league_type", "redraft")
                     .order("league_sort", desc=False)
@@ -44,6 +49,10 @@ class DraftState(rx.State):
                     self.redraft_league_ids_2026 = [
                         str(lg["league_id"]) for lg in redraft_res.data
                     ]
+                    for lg in redraft_res.data:
+                        av = str(lg.get("avatar") or "")
+                        if av:
+                            self.league_avatars[str(lg["league_id"])] = av
             all_2026_ids = (
                 self.dynasty_league_ids_2026 + self.redraft_league_ids_2026
             )
@@ -68,8 +77,12 @@ class DraftState(rx.State):
                         )
                         upcoming.append(
                             {
-                                "league_id": lid,
                                 "league_name": league_name,
+                                "league_avatar": (
+                                    str(league.get("avatar") or "")
+                                    if league
+                                    else self.league_avatars.get(lid, "")
+                                ),
                                 "draft_id": d.get("draft_id"),
                                 "draft_type": d.get("type", ""),
                                 "status": d.get("status", ""),
@@ -109,7 +122,7 @@ class DraftState(rx.State):
                     client.table("leagues")
                     .select(
                         "league_id, league_name, league_type,"
-                        " league_season, league_sort"
+                        " league_season, league_sort, avatar"
                     )
                     .execute()
                 )
@@ -155,11 +168,11 @@ class DraftState(rx.State):
                             ls_val = -1
                         historical.append(
                             {
-                                "draft_id": d.get("draft_id"),
                                 "league_id": lid,
                                 "league_name": lg.get(
                                     "league_name", f"League {lid}"
                                 ),
+                                "league_avatar": str(lg.get("avatar") or ""),
                                 "league_type": lg.get("league_type", ""),
                                 "season": d.get("season", ""),
                                 "draft_type": dtype_str,

@@ -17,6 +17,8 @@ from app.sleeper_api import (
 
 class AdminState(rx.State):
     leagues: list[dict[str, str | int | bool]] = []
+    # NOTE: leagues rows also include a string "avatar" key. Kept in the
+    # generic str|int|bool type; UI reads it via lg.get("avatar", "").
     is_loading: bool = False
     is_syncing: bool = False
     sync_target: str = ""
@@ -266,7 +268,7 @@ class AdminState(rx.State):
                         "league_name": str(lg.get("league_name", "")),
                         "league_season": str(lg.get("league_season", "")),
                         "league_type": str(lg.get("league_type", "")),
-                        "avatar": "",
+                        "avatar": str(lg.get("avatar") or ""),
                         "league_sort": ls_val,
                     }
                 )
@@ -314,6 +316,12 @@ class AdminState(rx.State):
             if prev_raw not in (None, "", "null")
             else None
         )
+        avatar_val = data.get("avatar")
+        avatar_str = (
+            str(avatar_val).strip()
+            if avatar_val not in (None, "", "null")
+            else None
+        )
         payload = {
             "league_id": str(league_id),
             "league_name": data.get("name", "") or f"Liga {league_id}",
@@ -321,14 +329,30 @@ class AdminState(rx.State):
             "league_type": safe_type,
             "roster_positions": data.get("roster_positions") or [],
             "previous_league_id": prev_val,
+            "avatar": avatar_str,
         }
         try:
             client.table("leagues").upsert(
                 payload, on_conflict="league_id"
             ).execute()
         except Exception as e:
-            logging.exception(f"Metadata upsert failed: {e}")
-            raise
+            # Silently retry without avatar if column missing (shouldn't happen post-migration).
+            msg = str(e)
+            if "avatar" in msg and ("column" in msg or "PGRST204" in msg):
+                logging.exception(
+                    f"Metadata upsert failed with avatar, retrying without: {e}"
+                )
+                payload.pop("avatar", None)
+                try:
+                    client.table("leagues").upsert(
+                        payload, on_conflict="league_id"
+                    ).execute()
+                except Exception as e2:
+                    logging.exception(f"Metadata upsert retry failed: {e2}")
+                    raise
+            else:
+                logging.exception(f"Metadata upsert failed: {e}")
+                raise
         return data
 
     def _sync_managers(self, client, league_id: str) -> int:
@@ -1118,6 +1142,12 @@ class AdminState(rx.State):
                 if prev_raw not in (None, "", "null")
                 else None
             )
+            avatar_raw = data.get("avatar")
+            avatar_val = (
+                str(avatar_raw).strip()
+                if avatar_raw not in (None, "", "null")
+                else None
+            )
             payload = {
                 "league_id": raw,
                 "league_name": data.get("name", "") or f"Liga {raw}",
@@ -1125,18 +1155,34 @@ class AdminState(rx.State):
                 "league_type": self.add_league_type,
                 "roster_positions": data.get("roster_positions") or [],
                 "previous_league_id": prev_val,
+                "avatar": avatar_val,
             }
             try:
                 client.table("leagues").upsert(
                     payload, on_conflict="league_id"
                 ).execute()
             except Exception as e:
-                logging.exception(f"League upsert failed: {e}")
-                self._set_status(
-                    f"Fehler beim Speichern der Liga: {e}", "error"
-                )
-                self._log(f"DB-Fehler beim Speichern: {e}", "error")
-                return
+                msg = str(e)
+                if "avatar" in msg and ("column" in msg or "PGRST204" in msg):
+                    payload.pop("avatar", None)
+                    try:
+                        client.table("leagues").upsert(
+                            payload, on_conflict="league_id"
+                        ).execute()
+                    except Exception as e2:
+                        logging.exception(f"League upsert retry failed: {e2}")
+                        self._set_status(
+                            f"Fehler beim Speichern der Liga: {e2}", "error"
+                        )
+                        self._log(f"DB-Fehler beim Speichern: {e2}", "error")
+                        return
+                else:
+                    logging.exception(f"League upsert failed: {e}")
+                    self._set_status(
+                        f"Fehler beim Speichern der Liga: {e}", "error"
+                    )
+                    self._log(f"DB-Fehler beim Speichern: {e}", "error")
+                    return
 
             league_name = str(data.get("name") or f"Liga {raw}")
             action_verb = "aktualisiert" if is_duplicate else "hinzugefügt"

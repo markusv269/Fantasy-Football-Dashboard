@@ -31,7 +31,7 @@ class ArchiveState(rx.State):
             res = (
                 client.table("leagues")
                 .select(
-                    "league_id,league_name,league_season,league_type,league_sort"
+                    "league_id,league_name,league_season,league_type,league_sort,avatar"
                 )
                 .order("league_season", desc=True)
                 .order("league_sort", desc=False)
@@ -114,6 +114,7 @@ class ArchiveState(rx.State):
                         "season": season_str,
                         "type": str(lg.get("league_type") or "unknown"),
                         "league_sort": ls_val,
+                        "avatar": str(lg.get("avatar") or ""),
                     }
                 )
 
@@ -247,6 +248,7 @@ class ArchiveState(rx.State):
                         self.manager_samples.get(lid, [])
                     ),
                     "league_sort": lg.get("league_sort", -1),
+                    "avatar": lg.get("avatar", ""),
                 }
             )
 
