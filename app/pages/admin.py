@@ -114,10 +114,21 @@ def _type_badge(t_val: rx.Var) -> rx.Component:
             ("dynasty", "purple"),
             ("redraft", "blue"),
             ("bestball", "orange"),
+            ("idp", "red"),
+            ("idp_only", "red"),
             "gray",
         ),
         variant="soft",
         size="1",
+    )
+
+
+def _type_badges(types: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.foreach(types, _type_badge),
+        spacing="1",
+        wrap="wrap",
+        align="center",
     )
 
 
@@ -348,7 +359,7 @@ def _league_row(lg: dict) -> rx.Component:
                 align="center",
             ),
         ),
-        rx.table.cell(_type_badge(lg["league_type"])),
+        rx.table.cell(_type_badges(lg["league_types"].to(list[str]))),
         rx.table.cell(
             rx.text(lg["league_season"].to(str), size="2", weight="medium"),
         ),

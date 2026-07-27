@@ -3,6 +3,11 @@ import logging
 from datetime import datetime
 from app.sleeper_api import get_draft, get_draft_picks, get_league
 from app.supabase_client import get_supabase_client
+from app.league_types import (
+    add_types_col,
+    is_missing_league_types_column_error,
+    normalize_league_types,
+)
 
 
 ACTIVE_STATUSES = {"drafting", "paused"}
@@ -35,15 +40,30 @@ def _format_start_time(raw) -> tuple[str, int]:
         return str(raw)[:16], 0
 
 
-def _detect_flags(league_name: str, league_type: str) -> dict:
+def _detect_flags(
+    league_name: str,
+    league_type: str,
+    types_list: list[str] | None = None,
+) -> dict:
+    """Detect league form flags using the normalized ``types_list`` with
+    membership semantics, falling back to the legacy scalar ``league_type``
+    only when the normalized list is empty. League-name heuristics remain
+    as a last-resort signal for bestball / IDP forms so historical rows
+    without structured type data still surface correctly.
+    """
     ln = (league_name or "").upper()
-    lt = (league_type or "").lower()
+    lt = (league_type or "").strip().lower()
+    norm_types = {
+        str(t).strip().lower() for t in (types_list or []) if str(t).strip()
+    }
+    if not norm_types and lt:
+        norm_types = {lt}
+    is_dynasty = "dynasty" in norm_types
+    is_redraft = "redraft" in norm_types
     is_bestball = (
-        ("BESTBALL" in ln) or ("BEST BALL" in ln) or (lt == "bestball")
+        "bestball" in norm_types or "BESTBALL" in ln or "BEST BALL" in ln
     )
-    is_idp = "IDP" in ln
-    is_dynasty = lt == "dynasty"
-    is_redraft = lt == "redraft"
+    is_idp = "idp" in norm_types or "idp_only" in norm_types or "IDP" in ln
     return {
         "is_dynasty": is_dynasty,
         "is_redraft": is_redraft,
@@ -57,11 +77,21 @@ class DraftState(rx.State):
     draft_filter: str = "All"
     show_all_completed: bool = False
 
-    all_drafts: list[dict[str, str | int | float | bool | None]] = []
-    active_drafts: list[dict[str, str | int | float | bool | None]] = []
-    scheduled_drafts: list[dict[str, str | int | float | bool | None]] = []
-    completed_drafts: list[dict[str, str | int | float | bool | None]] = []
-    other_drafts: list[dict[str, str | int | float | bool | None]] = []
+    all_drafts: list[
+        dict[str, str | int | float | bool | list[str] | None]
+    ] = []
+    active_drafts: list[
+        dict[str, str | int | float | bool | list[str] | None]
+    ] = []
+    scheduled_drafts: list[
+        dict[str, str | int | float | bool | list[str] | None]
+    ] = []
+    completed_drafts: list[
+        dict[str, str | int | float | bool | list[str] | None]
+    ] = []
+    other_drafts: list[
+        dict[str, str | int | float | bool | list[str] | None]
+    ] = []
     season_breakdown: list[dict[str, str | int]] = []
 
     @rx.event
@@ -75,8 +105,13 @@ class DraftState(rx.State):
     def _build_base_draft(self, d: dict, lg: dict) -> dict:
         lid = str(d.get("league_id", ""))
         league_name = str(lg.get("league_name") or f"League {lid}")
-        league_type = str(lg.get("league_type") or "")
-        flags = _detect_flags(league_name, league_type)
+        primary, types_list = normalize_league_types(
+            lg.get("league_types"), lg.get("league_type")
+        )
+        league_type = primary or str(lg.get("league_type") or "")
+        # Multi-form leagues (e.g. ['dynasty','bestball']) surface in every
+        # applicable filter/badge context via the normalized types list.
+        flags = _detect_flags(league_name, league_type, types_list)
         start_display, start_ts = _format_start_time(d.get("start_time"))
         draft_id = str(d.get("draft_id") or "")
         status = str(d.get("status") or "unknown").lower()
@@ -86,6 +121,7 @@ class DraftState(rx.State):
             "league_name": league_name,
             "league_avatar": str(lg.get("avatar") or ""),
             "league_type": league_type,
+            "league_types": types_list,
             "season": str(d.get("season") or ""),
             "draft_type": _dtype_label(d.get("draft_type")),
             "status": status,
@@ -324,14 +360,26 @@ class DraftState(rx.State):
                 drafts_res.data if drafts_res and drafts_res.data else []
             )
 
-            leagues_res = (
-                client.table("leagues")
-                .select(
-                    "league_id,league_name,league_type,league_season,"
-                    "league_sort,avatar"
-                )
-                .execute()
+            base_cols = (
+                "league_id,league_name,league_type,league_season,"
+                "league_sort,avatar"
             )
+            try:
+                leagues_res = (
+                    client.table("leagues")
+                    .select(add_types_col(base_cols))
+                    .execute()
+                )
+            except Exception as e:
+                if is_missing_league_types_column_error(e):
+                    # Expected fallback: `league_types` column not yet
+                    # deployed. Retry without it silently.
+                    leagues_res = (
+                        client.table("leagues").select(base_cols).execute()
+                    )
+                else:
+                    logging.exception(f"drafts leagues select failed: {e}")
+                    raise
             leagues_rows = (
                 leagues_res.data if leagues_res and leagues_res.data else []
             )

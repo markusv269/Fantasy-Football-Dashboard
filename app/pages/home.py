@@ -7,16 +7,32 @@ from app.components.layout import layout
 from app.avatar_utils import league_avatar_src
 
 
-def _status_color(status: rx.Var) -> rx.Var:
+def _type_color(t_val: rx.Var) -> rx.Var:
     return rx.match(
-        status,
+        t_val,
         ("dynasty", "purple"),
         ("redraft", "blue"),
-        ("in_season", "green"),
-        ("complete", "gray"),
-        ("drafting", "blue"),
-        ("pre_draft", "yellow"),
+        ("bestball", "orange"),
+        ("idp", "red"),
+        ("idp_only", "red"),
         "gray",
+    )
+
+
+def _type_badges(types: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.foreach(
+            types,
+            lambda t: rx.badge(
+                t.upper(),
+                color_scheme=_type_color(t),
+                variant="soft",
+                radius="full",
+            ),
+        ),
+        spacing="1",
+        wrap="wrap",
+        align="center",
     )
 
 
@@ -54,12 +70,7 @@ def league_card(league: dict) -> rx.Component:
                 width="100%",
             ),
             rx.hstack(
-                rx.badge(
-                    league["status"],
-                    color_scheme=_status_color(league["status"]),
-                    variant="soft",
-                    radius="full",
-                ),
+                _type_badges(league["types"].to(list[str])),
                 rx.spacer(),
                 rx.cond(
                     (league["total_rosters"].to(str) != "")

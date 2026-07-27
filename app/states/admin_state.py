@@ -2,6 +2,7 @@ import reflex as rx
 import logging
 from datetime import datetime, timezone
 from app.supabase_client import get_supabase_client
+from app.league_types import normalize_league_types
 from app.sleeper_api import (
     get_league,
     get_rosters,
@@ -16,7 +17,7 @@ from app.sleeper_api import (
 
 
 class AdminState(rx.State):
-    leagues: list[dict[str, str | int | bool]] = []
+    leagues: list[dict[str, str | int | bool | list[str]]] = []
     # NOTE: leagues rows also include a string "avatar" key. Kept in the
     # generic str|int|bool type; UI reads it via lg.get("avatar", "").
     is_loading: bool = False
@@ -99,31 +100,44 @@ class AdminState(rx.State):
     def total_leagues(self) -> int:
         return len(self.leagues)
 
+    def _lg_types(self, lg: dict) -> list[str]:
+        types = [
+            str(t).strip().lower()
+            for t in (lg.get("league_types") or [])
+            if str(t).strip()
+        ]
+        if not types:
+            legacy = str(lg.get("league_type") or "").strip().lower()
+            if legacy:
+                types = [legacy]
+        return types
+
     @rx.var
     def dynasty_count(self) -> int:
-        return sum(
-            1
-            for lg in self.leagues
-            if str(lg.get("league_type", "")) == "dynasty"
-        )
+        return sum(1 for lg in self.leagues if "dynasty" in self._lg_types(lg))
 
     @rx.var
     def redraft_count(self) -> int:
-        return sum(
-            1
-            for lg in self.leagues
-            if str(lg.get("league_type", "")) == "redraft"
-        )
+        return sum(1 for lg in self.leagues if "redraft" in self._lg_types(lg))
 
     @rx.var
     def filtered_leagues(self) -> list[dict[str, str | int | bool]]:
         leagues = self.leagues
         if self.filter_type != "all":
-            leagues = [
-                lg
-                for lg in leagues
-                if str(lg.get("league_type", "")).lower() == self.filter_type
-            ]
+            f = self.filter_type.lower()
+            if f == "idp":
+                # Accept both 'idp' and the stricter 'idp_only' variant
+                # under the single UI filter tab.
+                leagues = [
+                    lg
+                    for lg in leagues
+                    if (
+                        "idp" in self._lg_types(lg)
+                        or "idp_only" in self._lg_types(lg)
+                    )
+                ]
+            else:
+                leagues = [lg for lg in leagues if f in self._lg_types(lg)]
         if not self.search_query:
             return leagues
         q = self.search_query.lower()
@@ -137,10 +151,14 @@ class AdminState(rx.State):
 
     @rx.var
     def bestball_count(self) -> int:
+        return sum(1 for lg in self.leagues if "bestball" in self._lg_types(lg))
+
+    @rx.var
+    def idp_count(self) -> int:
         return sum(
             1
             for lg in self.leagues
-            if str(lg.get("league_type", "")) == "bestball"
+            if ("idp" in self._lg_types(lg) or "idp_only" in self._lg_types(lg))
         )
 
     @rx.var
@@ -262,12 +280,17 @@ class AdminState(rx.State):
                 except Exception:
                     logging.exception("Unexpected error")
                     ls_val = -1
+                primary, types_list = normalize_league_types(
+                    lg.get("league_types"), lg.get("league_type")
+                )
                 leagues.append(
                     {
                         "league_id": str(lg.get("league_id", "")),
                         "league_name": str(lg.get("league_name", "")),
                         "league_season": str(lg.get("league_season", "")),
-                        "league_type": str(lg.get("league_type", "")),
+                        "league_type": primary
+                        or str(lg.get("league_type", "")),
+                        "league_types": types_list,
                         "avatar": str(lg.get("avatar") or ""),
                         "league_sort": ls_val,
                     }

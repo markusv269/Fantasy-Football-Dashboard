@@ -214,7 +214,7 @@ def news_card(news: dict) -> rx.Component:
                 size="1",
                 class_name=TEXT_SECONDARY,
             ),
-            rx.text(
+            rx.markdown(
                 news["content"].to(str),
                 size="2",
                 class_name="line-clamp-3 leading-relaxed " + TEXT_PRIMARY,

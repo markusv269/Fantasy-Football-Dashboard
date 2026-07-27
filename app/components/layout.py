@@ -43,11 +43,11 @@ nav_items = [
     {"icon": "mic", "label": "Community", "href": "/community"},
     {"icon": "archive", "label": "Archiv", "href": "/archive"},
     {"icon": "clipboard-list", "label": "Warteliste", "href": "/waitinglist"},
-    {
-        "icon": "user-plus",
-        "label": "Redraft 2026",
-        "href": "/redraft-registration",
-    },
+    #{
+     #   "icon": "user-plus",
+      #  "label": "Redraft 2026",
+       # "href": "/redraft-registration",
+    #},
     {"icon": "shield", "label": "Admin", "href": "/admin"},
 ]
 

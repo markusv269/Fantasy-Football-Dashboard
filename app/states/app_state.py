@@ -3,6 +3,7 @@ from app.sleeper_api import get_nfl_state, get_league, get_trending_players
 from app.player_cache import enrich_trending
 import logging
 from app.supabase_client import get_supabase_client
+from app.league_types import normalize_league_types
 
 
 def league_sort_key(lg: dict) -> tuple:
@@ -31,7 +32,9 @@ def league_sort_key(lg: dict) -> tuple:
 class AppState(rx.State):
     configured_league_ids: list[str] = []
     nfl_state: dict[str, str | int | bool] = {}
-    leagues_data: list[dict[str, str | int | dict | list | None]] = []
+    leagues_data: list[
+        dict[str, str | int | dict | list | list[str] | None]
+    ] = []
     selected_league_id: str = ""
     trending_adds: list[dict[str, str | int]] = []
     is_loading: bool = False
@@ -73,7 +76,10 @@ class AppState(rx.State):
             lg.get("league_name") or lg.get("name") or f"League {league_id}"
         )
         season = str(lg.get("league_season") or lg.get("season") or "")
-        status = str(lg.get("league_type") or lg.get("status") or "unknown")
+        legacy_type = lg.get("league_type") or lg.get("status")
+        new_types = lg.get("league_types") or lg.get("types")
+        primary, types_list = normalize_league_types(new_types, legacy_type)
+        status = primary or str(legacy_type or "unknown")
         avatar = str(lg.get("avatar") or "")
         total_rosters = ""
         raw_sort = lg.get("league_sort")
@@ -101,6 +107,7 @@ class AppState(rx.State):
             "name": name,
             "season": season,
             "status": status,
+            "types": types_list,
             "total_rosters": total_rosters,
             "avatar": avatar,
             "league_sort": league_sort,
@@ -212,6 +219,23 @@ class AppState(rx.State):
             return str(nfl_season)
         return ""
 
+    def _lg_types_normalized(self, lg: dict) -> list[str]:
+        """Return the league's forms as a lowercased list, falling back
+        to the legacy ``status`` scalar when the structured ``types`` list
+        is missing/empty. Ensures every membership check honours the
+        legacy-first-then-normalized rule consistently.
+        """
+        types = [
+            str(t).strip().lower()
+            for t in (lg.get("types") or [])
+            if str(t).strip()
+        ]
+        if not types:
+            legacy = str(lg.get("status") or "").strip().lower()
+            if legacy:
+                types = [legacy]
+        return types
+
     @rx.var
     def current_dynasty_leagues(
         self,
@@ -221,7 +245,7 @@ class AppState(rx.State):
             lg
             for lg in self.leagues_data
             if str(lg.get("season", "")) == cs
-            and str(lg.get("status", "")).lower() == "dynasty"
+            and "dynasty" in self._lg_types_normalized(lg)
         ]
 
     @rx.var
@@ -233,7 +257,34 @@ class AppState(rx.State):
             lg
             for lg in self.leagues_data
             if str(lg.get("season", "")) == cs
-            and str(lg.get("status", "")).lower() == "redraft"
+            and "redraft" in self._lg_types_normalized(lg)
+        ]
+
+    @rx.var
+    def current_bestball_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        cs = self.current_season
+        return [
+            lg
+            for lg in self.leagues_data
+            if str(lg.get("season", "")) == cs
+            and "bestball" in self._lg_types_normalized(lg)
+        ]
+
+    @rx.var
+    def current_idp_leagues(
+        self,
+    ) -> list[dict[str, str | int | dict | list | None]]:
+        cs = self.current_season
+        return [
+            lg
+            for lg in self.leagues_data
+            if str(lg.get("season", "")) == cs
+            and (
+                "idp" in self._lg_types_normalized(lg)
+                or "idp_only" in self._lg_types_normalized(lg)
+            )
         ]
 
     @rx.var
@@ -258,7 +309,7 @@ class AppState(rx.State):
         return [
             lg
             for lg in self.archived_leagues
-            if str(lg.get("status", "")).lower() == "dynasty"
+            if "dynasty" in self._lg_types_normalized(lg)
         ]
 
     @rx.var
@@ -268,7 +319,7 @@ class AppState(rx.State):
         return [
             lg
             for lg in self.archived_leagues
-            if str(lg.get("status", "")).lower() == "redraft"
+            if "redraft" in self._lg_types_normalized(lg)
         ]
 
     @rx.var
@@ -278,5 +329,5 @@ class AppState(rx.State):
         return [
             lg
             for lg in self.archived_leagues
-            if str(lg.get("status", "")).lower() not in ("dynasty", "redraft")
+            if not (set(self._lg_types_normalized(lg)) & {"dynasty", "redraft"})
         ]

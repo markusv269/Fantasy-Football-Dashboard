@@ -1,6 +1,11 @@
 import reflex as rx
 import logging
 from app.supabase_client import get_supabase_client
+from app.league_types import (
+    add_types_col,
+    is_missing_league_types_column_error,
+    normalize_league_types,
+)
 
 
 BOARD_SLOTS = 12
@@ -284,11 +289,22 @@ class AdpState(rx.State):
 
     def _get_matching_league_ids(self, client) -> list[str]:
         """Get league IDs matching the selected format filter."""
+        base_cols = "league_id,league_name,league_type"
         try:
-            q = client.table("leagues").select(
-                "league_id,league_name,league_type"
-            )
-            res = q.execute()
+            try:
+                res = (
+                    client.table("leagues")
+                    .select(add_types_col(base_cols))
+                    .execute()
+                )
+            except Exception as e:
+                if is_missing_league_types_column_error(e):
+                    # Expected fallback: `league_types` column not yet
+                    # deployed. Retry without it silently.
+                    res = client.table("leagues").select(base_cols).execute()
+                else:
+                    logging.exception(f"adp leagues select failed: {e}")
+                    raise
             rows = res.data if res and res.data else []
         except Exception as e:
             logging.exception(f"leagues fetch failed: {e}")
@@ -298,16 +314,28 @@ class AdpState(rx.State):
         matching: list[str] = []
         for lg in rows:
             lname = str(lg.get("league_name") or "").upper()
-            ltype = str(lg.get("league_type") or "").lower()
-            is_idp = "IDP" in lname
+            primary, types_list = normalize_league_types(
+                lg.get("league_types"), lg.get("league_type")
+            )
+            norm_types = {str(t).lower() for t in types_list}
+            # Backwards-compat: when only the legacy scalar is present,
+            # ensure it participates in membership checks.
+            legacy = str(lg.get("league_type") or "").lower()
+            if legacy and not norm_types:
+                norm_types.add(legacy)
+            structured_idp = ("idp" in norm_types) or ("idp_only" in norm_types)
+            is_idp = structured_idp or "IDP" in lname
             if fmt == "dynasty":
-                if ltype == "dynasty" and not is_idp:
+                if "dynasty" in norm_types and not is_idp:
                     matching.append(lg.get("league_id") or "")
             elif fmt == "dynasty_idp":
-                if ltype == "dynasty" and is_idp:
+                if "dynasty" in norm_types and is_idp:
                     matching.append(lg.get("league_id") or "")
             elif fmt == "redraft":
-                if ltype == "redraft":
+                if "redraft" in norm_types:
+                    matching.append(lg.get("league_id") or "")
+            elif fmt == "bestball":
+                if "bestball" in norm_types:
                     matching.append(lg.get("league_id") or "")
         return [x for x in matching if x]
 

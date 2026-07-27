@@ -1,18 +1,4 @@
-# Redraft-Anmeldung Mitspieler-Wünsche validieren
-
-## Phase 1: Datenprüfung und Validierungslogik ✅
-- [x] Datenbankverfügbarkeit und neue Mitspieler-Spalte prüfen
-- [x] Sleeper-Prüfung für bis zu drei Mitspieler-Wünsche ergänzen
-- [x] Mitspieler-Wünsche eindeutig normalisieren und Selbst-/Doppelwünsche verhindern
-- [x] Validierungsfehler verständlich im Formularstatus anzeigen
-
-## Phase 2: Speicherung und Anzeige ✅
-- [x] Anmeldung über die User-ID als eindeutigen Schlüssel speichern und aktualisieren
-- [x] Mitspieler-Wünsche zusätzlich als User-ID-Liste speichern
-- [x] Übersicht weiterhin lesbar mit Namen, Gegenseitigkeit und Commish-Informationen anzeigen
-- [x] Bestehende Einträge und Änderungscode-Flow kompatibel halten
-
-## Phase 3: Validierung und Abschluss ✅
-- [x] Sleeper-Validierung für Hauptnutzer und Mitspieler mit echten Antworten testen
-- [x] Speicherung mit Mitspieler-User-IDs gegen Supabase-Verhalten prüfen
-- [x] Formularfehler und erfolgreiche Aktualisierung prüfen
+## League Types Plan
+- [x] Ligatyp-Daten normalisieren: `league_types` aus Supabase als Text oder Liste lesen, ältere `league_type`-Werte kompatibel halten und alle Typen in einheitlichen Anzeigen/Filtern verfügbar machen — Design bleibt bestehender roter Akzent mit hell/dunkel Kartenstil.
+- [x] League Cards aktualisieren: auf Home, Ligen, Archiv, Admin, Draft/ADP-Kontext alle zutreffenden Formen als Badges anzeigen und Typzählungen/Filter nach `redraft`, `dynasty`, `bestball`, `idp`, `idp_only` korrekt unterstützen.
+- [x] Redraft/Dynasty/Bestball/IDP-Logik validieren: bestehende Liga-Einteilungen, ADP-Formatfilter und Admin-Sync/Add-Flows auf mehrfache Typen umstellen und mit echten Supabase-Daten prüfen.
