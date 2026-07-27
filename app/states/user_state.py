@@ -2,6 +2,11 @@ import reflex as rx
 import requests
 import logging
 from app.supabase_client import get_supabase_client
+from app.league_types import (
+    add_types_col,
+    is_missing_league_types_column_error,
+    normalize_league_types,
+)
 
 
 class UserState(rx.State):
@@ -10,7 +15,7 @@ class UserState(rx.State):
     sleeper_display_name: str = ""
     sleeper_avatar: str = ""
     user_league_ids: list[str] = []
-    my_leagues_data: list[dict[str, str | int]] = []
+    my_leagues_data: list[dict[str, str | int | list[str]]] = []
     is_resolving: bool = False
     is_loading_my_leagues: bool = False
     username_input: str = ""
@@ -84,18 +89,36 @@ class UserState(rx.State):
             all_rows: list[dict] = []
             batch = 100
             ids = list(self.user_league_ids)
+            base_cols = (
+                "league_id,league_name,league_season,league_type,"
+                "league_sort,avatar"
+            )
             for i in range(0, len(ids), batch):
                 chunk = ids[i : i + batch]
                 if not chunk:
                     continue
-                res = (
-                    client.table("leagues")
-                    .select(
-                        "league_id,league_name,league_season,league_type,league_sort,avatar"
+                try:
+                    res = (
+                        client.table("leagues")
+                        .select(add_types_col(base_cols))
+                        .in_("league_id", chunk)
+                        .execute()
                     )
-                    .in_("league_id", chunk)
-                    .execute()
-                )
+                except Exception as e:
+                    if is_missing_league_types_column_error(e):
+                        # Expected fallback: `league_types` column not yet
+                        # deployed. Retry without it silently.
+                        res = (
+                            client.table("leagues")
+                            .select(base_cols)
+                            .in_("league_id", chunk)
+                            .execute()
+                        )
+                    else:
+                        logging.exception(
+                            f"leagues select failed for chunk: {e}"
+                        )
+                        raise
                 if res and res.data:
                     all_rows.extend(res.data)
             normalized = []
@@ -107,12 +130,17 @@ class UserState(rx.State):
                 except Exception:
                     logging.exception("Unexpected error")
                     ls_val = -1
+                primary, types_list = normalize_league_types(
+                    lg.get("league_types"), lg.get("league_type")
+                )
                 normalized.append(
                     {
                         "league_id": lid,
                         "name": str(lg.get("league_name") or f"Liga {lid}"),
                         "season": str(lg.get("league_season") or ""),
-                        "status": str(lg.get("league_type") or "unknown"),
+                        "status": primary
+                        or str(lg.get("league_type") or "unknown"),
+                        "types": types_list,
                         "total_rosters": "",
                         "avatar": str(lg.get("avatar") or ""),
                         "league_sort": ls_val,

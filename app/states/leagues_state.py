@@ -1,6 +1,12 @@
 import reflex as rx
 import logging
 from app.supabase_client import get_supabase_client
+from app.league_types import (
+    SUPPORTED_TYPES,
+    add_types_col,
+    is_missing_league_types_column_error,
+    normalize_league_types,
+)
 
 
 def _lg_sort_key(lg: dict) -> tuple:
@@ -115,14 +121,32 @@ class LeaguesState(rx.State):
                 self.is_loading = False
                 return
             self.current_season = str(current_season_val)
-            res = (
-                client.table("leagues")
-                .select(
-                    "league_id,league_name,league_season,league_type,league_sort,avatar"
-                )
-                .eq("league_season", current_season_val)
-                .execute()
+            base_cols = (
+                "league_id,league_name,league_season,league_type,"
+                "league_sort,avatar"
             )
+            try:
+                res = (
+                    client.table("leagues")
+                    .select(add_types_col(base_cols))
+                    .eq("league_season", current_season_val)
+                    .execute()
+                )
+            except Exception as e:
+                if is_missing_league_types_column_error(e):
+                    # Expected fallback: `league_types` column not yet
+                    # deployed. Retry without it silently.
+                    res = (
+                        client.table("leagues")
+                        .select(base_cols)
+                        .eq("league_season", current_season_val)
+                        .execute()
+                    )
+                else:
+                    logging.exception(
+                        f"leagues select (current season) failed: {e}"
+                    )
+                    raise
             leagues_rows = res.data if res and res.data else []
             self._populate_from_rows(client, leagues_rows)
             self.is_full_loaded = False
@@ -204,6 +228,9 @@ class LeaguesState(rx.State):
                 except Exception:
                     logging.exception("Unexpected error")
                     league_sort_val = -1
+                primary, types_list = normalize_league_types(
+                    lg.get("league_types"), lg.get("league_type")
+                )
                 leagues_out.append(
                     {
                         "league_id": lid,
@@ -211,7 +238,8 @@ class LeaguesState(rx.State):
                             lg.get("league_name") or f"Liga {lid}"
                         ),
                         "season": str(lg.get("league_season") or ""),
-                        "type": str(lg.get("league_type") or "unknown"),
+                        "type": primary,
+                        "types": types_list,
                         "manager_count": len(unique_names),
                         "manager_sample": ", ".join(unique_names[:3]),
                         "manager_names": unique_names,
@@ -229,9 +257,16 @@ class LeaguesState(rx.State):
                 {lg["season"] for lg in leagues_out if lg["season"]},
                 reverse=True,
             )
-            self.available_types = sorted(
-                {lg["type"] for lg in leagues_out if lg["type"]}
-            )
+            type_set: set[str] = set()
+            for lg in leagues_out:
+                for t in lg.get("types") or []:
+                    ts = str(t).strip().lower()
+                    if ts in SUPPORTED_TYPES:
+                        type_set.add(ts)
+                primary = str(lg.get("type") or "").strip().lower()
+                if primary in SUPPORTED_TYPES:
+                    type_set.add(primary)
+            self.available_types = sorted(type_set)
             self.available_managers = sorted(
                 all_manager_names, key=lambda x: x.lower()
             )
@@ -312,15 +347,32 @@ class LeaguesState(rx.State):
             client = get_supabase_client()
             if not client:
                 return
-            res = (
-                client.table("leagues")
-                .select(
-                    "league_id,league_name,league_season,league_type,league_sort,avatar"
-                )
-                .order("league_season", desc=True)
-                .order("league_sort", desc=False)
-                .execute()
+            base_cols = (
+                "league_id,league_name,league_season,league_type,"
+                "league_sort,avatar"
             )
+            try:
+                res = (
+                    client.table("leagues")
+                    .select(add_types_col(base_cols))
+                    .order("league_season", desc=True)
+                    .order("league_sort", desc=False)
+                    .execute()
+                )
+            except Exception as e:
+                if is_missing_league_types_column_error(e):
+                    # Expected fallback: `league_types` column not yet
+                    # deployed. Retry without it silently.
+                    res = (
+                        client.table("leagues")
+                        .select(base_cols)
+                        .order("league_season", desc=True)
+                        .order("league_sort", desc=False)
+                        .execute()
+                    )
+                else:
+                    logging.exception(f"leagues select (full) failed: {e}")
+                    raise
             leagues_rows = res.data if res and res.data else []
             self._populate_from_rows(
                 client, leagues_rows, include_week_metadata=False
@@ -610,8 +662,12 @@ class LeaguesState(rx.State):
                 and lg["season"] != self.selected_season
             ):
                 continue
-            if self.selected_type != "all" and lg["type"] != self.selected_type:
-                continue
+            if self.selected_type != "all":
+                lg_types = [str(t).lower() for t in (lg.get("types") or [])]
+                if not lg_types and lg.get("type"):
+                    lg_types = [str(lg.get("type")).lower()]
+                if self.selected_type.lower() not in lg_types:
+                    continue
             if (
                 self.selected_manager != "all"
                 and lg["league_id"] not in mgr_league_ids

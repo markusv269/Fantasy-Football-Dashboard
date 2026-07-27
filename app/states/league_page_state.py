@@ -2,6 +2,7 @@ import reflex as rx
 import logging
 from app.supabase_client import get_supabase_client
 from app.player_cache import enrich_roster_players
+from app.league_types import normalize_league_types
 
 
 class LeaguePageState(rx.State):
@@ -11,6 +12,7 @@ class LeaguePageState(rx.State):
     league_id: str = ""
     league_name: str = ""
     league_type: str = ""
+    league_types: list[str] = []
     league_season: str = ""
     league_avatar: str = ""
     # league_avatar populated from leagues.avatar (Sleeper id or full URL).
@@ -40,6 +42,7 @@ class LeaguePageState(rx.State):
         self.league_id = ""
         self.league_name = ""
         self.league_type = ""
+        self.league_types = []
         self.league_season = ""
         self.league_avatar = ""
         self.total_rosters = 0
@@ -124,7 +127,11 @@ class LeaguePageState(rx.State):
                 return
             lg = lg_res.data[0]
             self.league_name = str(lg.get("league_name") or f"Liga {clean_id}")
-            self.league_type = str(lg.get("league_type") or "")
+            primary, types_list = normalize_league_types(
+                lg.get("league_types"), lg.get("league_type")
+            )
+            self.league_type = primary or str(lg.get("league_type") or "")
+            self.league_types = types_list
             self.league_season = str(lg.get("league_season") or "")
             self.league_avatar = str(lg.get("avatar") or "")
             rp = lg.get("roster_positions") or []

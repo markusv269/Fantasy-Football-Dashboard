@@ -11,7 +11,27 @@ def _type_color(t_val: rx.Var) -> rx.Var:
         ("dynasty", "purple"),
         ("redraft", "blue"),
         ("bestball", "orange"),
+        ("idp", "red"),
+        ("idp_only", "red"),
         "gray",
+    )
+
+
+def _type_badges(types: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.foreach(
+            types,
+            lambda t: rx.badge(
+                t.upper(),
+                color_scheme=_type_color(t),
+                variant="soft",
+                radius="full",
+                size="1",
+            ),
+        ),
+        spacing="1",
+        wrap="wrap",
+        align="center",
     )
 
 
@@ -38,13 +58,7 @@ def _archive_card(lg: dict) -> rx.Component:
                         flex="1",
                         min_width="0",
                     ),
-                    rx.badge(
-                        lg["type"].to(str).upper(),
-                        color_scheme=_type_color(lg["type"]),
-                        variant="soft",
-                        radius="full",
-                        size="1",
-                    ),
+                    _type_badges(lg["types"].to(list[str])),
                     spacing="3",
                     align="center",
                     width="100%",

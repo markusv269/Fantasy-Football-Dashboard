@@ -1,11 +1,17 @@
 import reflex as rx
 import logging
 from app.supabase_client import get_supabase_client
+from app.league_types import (
+    SUPPORTED_TYPES,
+    add_types_col,
+    is_missing_league_types_column_error,
+    normalize_league_types,
+)
 
 
 class ArchiveState(rx.State):
     is_loading: bool = False
-    all_leagues: list[dict[str, str | int]] = []
+    all_leagues: list[dict[str, str | int | list[str]]] = []
     manager_counts: dict[str, int] = {}
     manager_samples: dict[str, list[str]] = {}
     available_seasons: list[str] = []
@@ -28,15 +34,32 @@ class ArchiveState(rx.State):
             if not client:
                 self.is_loading = False
                 return
-            res = (
-                client.table("leagues")
-                .select(
-                    "league_id,league_name,league_season,league_type,league_sort,avatar"
-                )
-                .order("league_season", desc=True)
-                .order("league_sort", desc=False)
-                .execute()
+            base_cols = (
+                "league_id,league_name,league_season,league_type,"
+                "league_sort,avatar"
             )
+            try:
+                res = (
+                    client.table("leagues")
+                    .select(add_types_col(base_cols))
+                    .order("league_season", desc=True)
+                    .order("league_sort", desc=False)
+                    .execute()
+                )
+            except Exception as e:
+                if is_missing_league_types_column_error(e):
+                    # Expected fallback: `league_types` column not yet
+                    # deployed. Retry without it silently.
+                    res = (
+                        client.table("leagues")
+                        .select(base_cols)
+                        .order("league_season", desc=True)
+                        .order("league_sort", desc=False)
+                        .execute()
+                    )
+                else:
+                    logging.exception(f"archive leagues select failed: {e}")
+                    raise
             leagues_rows = res.data if res and res.data else []
             seasons_int: list[int] = []
             for lg in leagues_rows:
@@ -105,6 +128,9 @@ class ArchiveState(rx.State):
                 except Exception:
                     logging.exception("Unexpected error")
                     ls_val = -1
+                primary, types_list = normalize_league_types(
+                    lg.get("league_types"), lg.get("league_type")
+                )
                 archived.append(
                     {
                         "league_id": lid,
@@ -112,7 +138,8 @@ class ArchiveState(rx.State):
                             lg.get("league_name") or f"Liga {lid}"
                         ),
                         "season": season_str,
-                        "type": str(lg.get("league_type") or "unknown"),
+                        "type": primary,
+                        "types": types_list,
                         "league_sort": ls_val,
                         "avatar": str(lg.get("avatar") or ""),
                     }
@@ -127,7 +154,16 @@ class ArchiveState(rx.State):
                 {lg["season"] for lg in archived if lg["season"]},
                 reverse=True,
             )
-            types = sorted({lg["type"] for lg in archived if lg["type"]})
+            type_set: set[str] = set()
+            for lg in archived:
+                for t in lg.get("types") or []:
+                    ts = str(t).strip().lower()
+                    if ts in SUPPORTED_TYPES:
+                        type_set.add(ts)
+                primary = str(lg.get("type") or "").strip().lower()
+                if primary in SUPPORTED_TYPES:
+                    type_set.add(primary)
+            types = sorted(type_set)
             managers_in_archive: set[str] = set()
             archive_ids = {lg["league_id"] for lg in archived}
             for name, lids in manager_to_leagues.items():
@@ -219,8 +255,12 @@ class ArchiveState(rx.State):
                 and lg["season"] != self.selected_season
             ):
                 continue
-            if self.selected_type != "all" and lg["type"] != self.selected_type:
-                continue
+            if self.selected_type != "all":
+                lg_types = [str(t).lower() for t in (lg.get("types") or [])]
+                if not lg_types and lg.get("type"):
+                    lg_types = [str(lg.get("type")).lower()]
+                if self.selected_type.lower() not in lg_types:
+                    continue
             if (
                 self.selected_manager != "all"
                 and lg["league_id"] not in manager_league_ids
@@ -243,6 +283,7 @@ class ArchiveState(rx.State):
                     "league_name": lg["league_name"],
                     "season": lg["season"],
                     "type": lg["type"],
+                    "types": lg.get("types") or [],
                     "manager_count": self.manager_counts.get(lid, 0),
                     "manager_sample": ", ".join(
                         self.manager_samples.get(lid, [])
