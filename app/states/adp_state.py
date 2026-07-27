@@ -56,41 +56,55 @@ class AdpState(rx.State):
         out = [p for p in self.adp_players if int(p.get("count") or 0) >= thr]
         return out
 
-    @rx.var
-    def filtered_board_cells(self) -> list[dict[str, str | int | float]]:
-        thr = max(1, int(self.min_pick_count))
-        if thr <= 1:
-            return self.board_cells
-        eligible = [
-            p for p in self.adp_players if int(p.get("count") or 0) >= thr
-        ]
+    def _build_board_cells(
+        self, players: list[dict[str, str | int | float]]
+    ) -> list[dict[str, str | int | float]]:
+        """Build board positions from ADP order for both full and filtered views."""
         layout = self.board_layout
-        cells: list[dict] = []
-        for i, p in enumerate(eligible):
-            rnd = i // BOARD_SLOTS
-            slot_in_round = i % BOARD_SLOTS
-            if layout == "snake" and rnd % 2 == 1:
-                col = BOARD_SLOTS - slot_in_round
-            else:
-                col = slot_in_round + 1
+        cells: list[dict[str, str | int | float]] = []
+        for index, player in enumerate(players):
+            round_index = index // BOARD_SLOTS
+            slot_index = index % BOARD_SLOTS
+            display_column = (
+                BOARD_SLOTS - slot_index
+                if layout == "snake" and round_index % 2 == 1
+                else slot_index + 1
+            )
             cells.append(
                 {
-                    "player_id": p.get("player_id", ""),
-                    "full_name": p.get("full_name", ""),
-                    "position": p.get("position", ""),
-                    "team": p.get("team", ""),
-                    "adp": p.get("adp", 0.0),
-                    "adp_str": p.get("adp_str", ""),
-                    "count": p.get("count", 0),
-                    "overall_rank": p.get("overall_rank", 0),
-                    "overall_pick_rank": p.get("overall_pick_rank", ""),
-                    "positional_pick_rank": p.get("positional_pick_rank", ""),
-                    "round": rnd + 1,
-                    "column": col,
-                    "pick_notation": f"{rnd + 1}.{col:02d}",
+                    "player_id": player.get("player_id", ""),
+                    "full_name": player.get("full_name", ""),
+                    "position": player.get("position", ""),
+                    "team": player.get("team", ""),
+                    "adp": player.get("adp", 0.0),
+                    "adp_str": player.get("adp_str", ""),
+                    "count": player.get("count", 0),
+                    "overall_rank": player.get("overall_rank", 0),
+                    "overall_pick_rank": player.get("overall_pick_rank", ""),
+                    "positional_pick_rank": player.get(
+                        "positional_pick_rank", ""
+                    ),
+                    "round": round_index + 1,
+                    "column": display_column,
+                    "display_column": display_column,
+                    "pick_notation": (
+                        f"{round_index + 1}.{slot_index + 1}"
+                        if layout == "snake"
+                        else f"{round_index + 1}.{display_column}"
+                    ),
                 }
             )
         return cells
+
+    @rx.var
+    def filtered_board_cells(self) -> list[dict[str, str | int | float]]:
+        threshold = max(1, int(self.min_pick_count))
+        eligible = [
+            player
+            for player in self.adp_players
+            if int(player.get("count") or 0) >= threshold
+        ]
+        return self._build_board_cells(eligible)
 
     @rx.var
     def filtered_total_rounds(self) -> int:
@@ -506,34 +520,7 @@ class AdpState(rx.State):
             self.adp_players = players
             self.total_players = len(players)
 
-            layout = self.board_layout
-            cells: list[dict] = []
-            for i, p in enumerate(players):
-                rnd = i // BOARD_SLOTS
-                slot_in_round = i % BOARD_SLOTS
-                if layout == "snake" and rnd % 2 == 1:
-                    col = BOARD_SLOTS - slot_in_round
-                else:
-                    col = slot_in_round + 1
-                pick_in_round = col
-                cells.append(
-                    {
-                        "player_id": p["player_id"],
-                        "full_name": p["full_name"],
-                        "position": p["position"],
-                        "team": p["team"],
-                        "adp": p["adp"],
-                        "adp_str": p["adp_str"],
-                        "count": p["count"],
-                        "overall_rank": p["overall_rank"],
-                        "overall_pick_rank": p["overall_pick_rank"],
-                        "positional_pick_rank": p["positional_pick_rank"],
-                        "round": rnd + 1,
-                        "column": col,
-                        "pick_notation": f"{rnd + 1}.{pick_in_round:02d}",
-                    }
-                )
-            self.board_cells = cells
+            self.board_cells = self._build_board_cells(players)
 
             _ADP_RESULTS_CACHE[self._cache_key()] = {
                 "adp_players": list(self.adp_players),
