@@ -1,18 +1,4 @@
-# Redraft-Anmeldung Mitspieler-Wünsche validieren
-
-## Phase 1: Datenprüfung und Validierungslogik ✅
-- [x] Datenbankverfügbarkeit und neue Mitspieler-Spalte prüfen
-- [x] Sleeper-Prüfung für bis zu drei Mitspieler-Wünsche ergänzen
-- [x] Mitspieler-Wünsche eindeutig normalisieren und Selbst-/Doppelwünsche verhindern
-- [x] Validierungsfehler verständlich im Formularstatus anzeigen
-
-## Phase 2: Speicherung und Anzeige ✅
-- [x] Anmeldung über die User-ID als eindeutigen Schlüssel speichern und aktualisieren
-- [x] Mitspieler-Wünsche zusätzlich als User-ID-Liste speichern
-- [x] Übersicht weiterhin lesbar mit Namen, Gegenseitigkeit und Commish-Informationen anzeigen
-- [x] Bestehende Einträge und Änderungscode-Flow kompatibel halten
-
-## Phase 3: Validierung und Abschluss ✅
-- [x] Sleeper-Validierung für Hauptnutzer und Mitspieler mit echten Antworten testen
-- [x] Speicherung mit Mitspieler-User-IDs gegen Supabase-Verhalten prüfen
-- [x] Formularfehler und erfolgreiche Aktualisierung prüfen
+## ADP Board Pick Order Plan
+- [x] ADP-Picknotation korrigieren: Snake-Runden so berechnen, dass Overall #13 als 2.1 geführt wird und der links stehende Slot in Runde 2 als 2.12 angezeigt wird — bestehender roter Akzent und hell/dunkles Kartenlayout bleiben unverändert.
+- [x] Draftboard-Anzeige anpassen: Zellen in Snake-Runden visuell korrekt positionieren, ohne ADP-Ranking, Filter, Tabellenansicht oder Linear-Layout zu verändern.
+- [x] ADP-Board-Logik mit realistischen Snake-/Linear-Beispielen und vorhandener Supabase-ADP-Ladefolge validieren.

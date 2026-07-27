@@ -373,8 +373,25 @@ def _board_cell(cell: rx.Var) -> rx.Component:
     )
 
 
+def _board_slot(rnd: rx.Var, slot: rx.Var) -> rx.Component:
+    """Render the fixed visual slot for a round, including its snake-order pick."""
+    return rx.el.div(
+        rx.foreach(
+            AdpState.filtered_board_cells,
+            lambda cell: rx.cond(
+                (cell["round"] == rnd) & (cell["display_column"] == slot),
+                _board_cell(cell),
+                rx.fragment(),
+            ),
+        ),
+        min_width="140px",
+        width="140px",
+        flex_shrink="0",
+    )
+
+
 def _board_row(rnd: rx.Var) -> rx.Component:
-    """Render one round row: 12 slot cells."""
+    """Render a round with twelve fixed visual slots in board order."""
     return rx.hstack(
         rx.box(
             rx.vstack(
@@ -402,22 +419,7 @@ def _board_row(rnd: rx.Var) -> rx.Component:
                 "bg-red-50 border-red-200",
             ),
         ),
-        rx.foreach(
-            AdpState.slot_range,
-            lambda slot: rx.box(
-                rx.foreach(
-                    AdpState.filtered_board_cells,
-                    lambda c: rx.cond(
-                        (c["round"] == rnd) & (c["column"] == slot),
-                        _board_cell(c),
-                        rx.fragment(),
-                    ),
-                ),
-                min_width="140px",
-                width="140px",
-                flex_shrink="0",
-            ),
-        ),
+        rx.foreach(AdpState.slot_range, lambda slot: _board_slot(rnd, slot)),
         spacing="2",
         align="stretch",
         width="fit-content",
