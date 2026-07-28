@@ -1,4 +1,3 @@
-## League Types Plan
-- [x] Ligatyp-Daten normalisieren: `league_types` aus Supabase als Text oder Liste lesen, ältere `league_type`-Werte kompatibel halten und alle Typen in einheitlichen Anzeigen/Filtern verfügbar machen — Design bleibt bestehender roter Akzent mit hell/dunkel Kartenstil.
-- [x] League Cards aktualisieren: auf Home, Ligen, Archiv, Admin, Draft/ADP-Kontext alle zutreffenden Formen als Badges anzeigen und Typzählungen/Filter nach `redraft`, `dynasty`, `bestball`, `idp`, `idp_only` korrekt unterstützen.
-- [x] Redraft/Dynasty/Bestball/IDP-Logik validieren: bestehende Liga-Einteilungen, ADP-Formatfilter und Admin-Sync/Add-Flows auf mehrfache Typen umstellen und mit echten Supabase-Daten prüfen.
+## News Markdown Links Plan
+- [x] News-Inhalte korrigieren: Markdown-Links aus der Content-Spalte auf Startseite und Community-Seite klickbar rendern — bestehender roter Akzent, hell/dunkles Kartenlayout und Typografie bleiben unverändert.
+- [x] Link-Darstellung validieren: interne relative Links und externe Links in News-Texten sichtbar, erreichbar und ohne Bruch des News-Layouts darstellen.

@@ -417,10 +417,11 @@ def _news_item(item: dict) -> rx.Component:
                 weight="bold",
                 class_name="line-clamp-1 " + TEXT_PRIMARY,
             ),
-            rx.text(
+            rx.markdown(
                 item["content"].to(str),
                 size="2",
-                class_name="line-clamp-2 " + TEXT_SECONDARY,
+                class_name="line-clamp-2 [&_a]:text-[#DC2626] [&_a]:hover:underline "
+                + TEXT_SECONDARY,
             ),
             spacing="1",
             align="start",

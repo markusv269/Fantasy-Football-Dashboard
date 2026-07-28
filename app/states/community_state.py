@@ -40,8 +40,8 @@ class CommunityState(rx.State):
             if polls_res and polls_res.data:
                 new_polls = []
                 for p in polls_res.data:
-                    answers = p.get("answers", [])
-                    stats = p.get("stats", [])
+                    answers = p.get("answers") or []
+                    stats = p.get("stats") or []
                     options = []
                     total = 0
                     for i, ans in enumerate(answers):

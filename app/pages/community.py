@@ -217,7 +217,8 @@ def news_card(news: dict) -> rx.Component:
             rx.markdown(
                 news["content"].to(str),
                 size="2",
-                class_name="line-clamp-3 leading-relaxed " + TEXT_PRIMARY,
+                class_name="leading-relaxed [&_a]:text-[#DC2626] [&_a]:hover:underline "
+                + TEXT_PRIMARY,
             ),
             spacing="2",
             width="100%",
