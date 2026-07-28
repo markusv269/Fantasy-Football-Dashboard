@@ -1,3 +1,5 @@
-## News Markdown Links Plan
-- [x] News-Inhalte korrigieren: Markdown-Links aus der Content-Spalte auf Startseite und Community-Seite klickbar rendern — bestehender roter Akzent, hell/dunkles Kartenlayout und Typografie bleiben unverändert.
-- [x] Link-Darstellung validieren: interne relative Links und externe Links in News-Texten sichtbar, erreichbar und ohne Bruch des News-Layouts darstellen.
+## Data Sync and Matchups Plan
+- [x] Geplante Datenbank-Updates bereitstellen: GitHub Actions/Cron-Workflows für Matchups, Drafts, Draftpicks, Roster, Manager und NFL-Spieler mit sinnvollen Intervallen, Supabase-Secrets und vorhandenen Sync-Skripten nutzbar machen — bestehender roter Akzent und hell/dunkles Kartenlayout bleiben unverändert.
+- [x] Sync-Skripte erweitern: wartbare Kommandozeilen-Jobs für gezielte Sync-Arten und Batch-Ausführung bereitstellen, sodass Actions nur notwendige Datenbereiche aktualisieren.
+- [x] Matchup-Seite erweitern: Kategorien wie Highscoring Game, Lowscoring Game, knappste Begegnung und größte Differenz anzeigen und aktuelle Matchups nach league_sort sortieren.
+- [x] Datenjobs und Matchup-Logik validieren: geplante Job-Konfiguration, Supabase-Zugriff und Matchup-Kategorien mit realistischen Daten prüfen.

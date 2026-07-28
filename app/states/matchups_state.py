@@ -43,6 +43,129 @@ class MatchupsState(rx.State):
     def current_league_options(self) -> list[dict[str, str]]:
         return self.current_leagues_meta
 
+    @rx.var
+    def ordered_league_ids(self) -> list[str]:
+        """League IDs present in matchups_by_league, ordered by league_sort.
+
+        current_leagues_meta is already league_sort-ascending (nulls last,
+        then name), so we filter it by the leagues that actually have
+        matchup rows this week and preserve that stable order.
+        """
+        available = set(self.matchups_by_league.keys())
+        return [
+            str(m.get("league_id", ""))
+            for m in self.current_leagues_meta
+            if str(m.get("league_id", "")) in available
+        ]
+
+    def _collect_visible_pairs(self) -> list[dict]:
+        """Flatten all currently visible pairs (excluding byes)."""
+        pairs: list[dict] = []
+        if self.matchups_by_league:
+            for lid in self.ordered_league_ids:
+                for p in self.matchups_by_league.get(lid, []):
+                    if p.get("team_b") is None:
+                        continue
+                    pairs.append(p)
+        elif self.paired_matchups:
+            for p in self.paired_matchups:
+                if p.get("team_b") is None:
+                    continue
+                pairs.append(p)
+        return pairs
+
+    def _pair_to_card(
+        self, p: dict, kind: str, value_label: str, value: float
+    ) -> dict:
+        a = p.get("team_a") or {}
+        b = p.get("team_b") or {}
+        lid = str(p.get("league_id", ""))
+        try:
+            ap = float(a.get("points") or 0.0)
+        except Exception:
+            logging.exception("Unexpected error")
+            ap = 0.0
+        try:
+            bp = float(b.get("points") or 0.0)
+        except Exception:
+            logging.exception("Unexpected error")
+            bp = 0.0
+        return {
+            "kind": kind,
+            "league_id": lid,
+            "league_name": str(self.league_names.get(lid, "")),
+            "team_a_name": str(a.get("team_name") or ""),
+            "team_a_points": round(ap, 2),
+            "team_b_name": str(b.get("team_name") or ""),
+            "team_b_points": round(bp, 2),
+            "value_label": value_label,
+            "value": round(float(value), 2),
+        }
+
+    @rx.var
+    def matchup_highlights(self) -> dict[str, dict[str, str | float]]:
+        """Compute 4 category highlights across the currently visible pairs.
+
+        Categories:
+          - high:    Highscoring Game (highest combined points)
+          - low:     Lowscoring Game (lowest combined points)
+          - close:   Knappste Begegnung (smallest absolute point diff)
+          - blowout: Größte Differenz (largest absolute point diff)
+
+        Returns an empty dict when no valid pair (i.e. only byes or no
+        matchups at all) is available so the UI can render an empty state.
+        """
+        pairs = self._collect_visible_pairs()
+        if not pairs:
+            return {}
+
+        def _combined(p: dict) -> float:
+            a = p.get("team_a") or {}
+            b = p.get("team_b") or {}
+            try:
+                return float(a.get("points") or 0.0) + float(
+                    b.get("points") or 0.0
+                )
+            except Exception:
+                logging.exception("Unexpected error")
+                return 0.0
+
+        def _diff(p: dict) -> float:
+            a = p.get("team_a") or {}
+            b = p.get("team_b") or {}
+            try:
+                return abs(
+                    float(a.get("points") or 0.0)
+                    - float(b.get("points") or 0.0)
+                )
+            except Exception:
+                logging.exception("Unexpected error")
+                return 0.0
+
+        high = max(pairs, key=_combined)
+        low = min(pairs, key=_combined)
+        close = min(pairs, key=_diff)
+        blow = max(pairs, key=_diff)
+
+        return {
+            "high": self._pair_to_card(
+                high, "high", "Gesamtpunkte", _combined(high)
+            ),
+            "low": self._pair_to_card(
+                low, "low", "Gesamtpunkte", _combined(low)
+            ),
+            "close": self._pair_to_card(
+                close, "close", "Differenz", _diff(close)
+            ),
+            "blowout": self._pair_to_card(
+                blow, "blowout", "Differenz", _diff(blow)
+            ),
+        }
+
+    @rx.var
+    def has_highlights(self) -> bool:
+        return len(self.matchup_highlights) > 0
+
     def _determine_current_season(self, app_state: AppState) -> str:
         seasons: list[int] = []
         for lg in app_state.leagues_data:
@@ -380,6 +503,7 @@ class MatchupsState(rx.State):
 
         return {
             "matchup_id": matchup_id,
+            "league_id": str(league_id),
             "team_a": a,
             "team_b": b,
         }

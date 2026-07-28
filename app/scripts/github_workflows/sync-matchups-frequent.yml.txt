@@ -1,0 +1,70 @@
+name: Sync Matchups & Rosters (frequent, in-season)
+
+# Frequent refresh of current-week matchups, rosters and manager rows for all
+# leagues in Supabase. Restricted to the active NFL window (August through
+# early February) so we don't burn API calls in the offseason. Draft metadata
+# is skipped here — it's covered by the daily workflow.
+#
+# Uses the existing `app/scripts/weekly_sync.py` runner as-is. The script
+# fetches the current NFL week from Sleeper and upserts matchup_week_stats
+# and rosters up to that week, plus manager rows.
+
+on:
+  schedule:
+    # Every 3 hours during Aug–Dec and Jan–early Feb (playoffs).
+    # GitHub Actions cron uses UTC; comma-separated month lists are supported.
+    - cron: "0 */3 * 8,9,10,11,12,1,2 *"
+  workflow_dispatch:
+    inputs:
+      skip_drafts:
+        description: "Skip draft metadata sync (default: true — daily workflow handles drafts)"
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: sync-matchups-frequent
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Refresh current-week matchups & rosters
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Sync matchups, rosters & managers (skip drafts by default)
+        run: |
+          SKIP_DRAFTS_FLAG="--skip-drafts"
+          if [ "${{ github.event.inputs.skip_drafts }}" = "false" ]; then
+            SKIP_DRAFTS_FLAG=""
+          fi
+          python -m app.scripts.weekly_sync ${SKIP_DRAFTS_FLAG}

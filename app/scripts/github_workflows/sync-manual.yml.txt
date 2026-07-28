@@ -1,0 +1,145 @@
+name: Manual Targeted Sync (batched)
+
+# On-demand runner for targeted syncs. Exposes the full set of batch flags
+# supported by `app/scripts/weekly_sync.py` — `--league-id` for one-off
+# leagues and `--offset` / `--start` / `--end` / `--limit` for splitting the
+# full inventory into controlled windows (useful when the daily workflow hits
+# the job timeout on large sets).
+#
+# This workflow only runs on manual dispatch. No cron schedule.
+
+on:
+  workflow_dispatch:
+    inputs:
+      league_ids:
+        description: "Comma-separated Sleeper league IDs (empty = all)."
+        required: false
+        default: ""
+        type: string
+      offset:
+        description: "0-based number of leagues to skip (ignored if league_ids is set)."
+        required: false
+        default: "0"
+        type: string
+      start:
+        description: "1-based start position (inclusive). Overrides offset."
+        required: false
+        default: ""
+        type: string
+      end:
+        description: "1-based end position (inclusive). Combined with start/offset."
+        required: false
+        default: ""
+        type: string
+      limit:
+        description: "Maximum number of leagues to process in this run."
+        required: false
+        default: ""
+        type: string
+      skip_matchups:
+        description: "Skip matchup week upserts"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      skip_drafts:
+        description: "Skip draft metadata upserts"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      verbose_http:
+        description: "Enable HTTP INFO logs from httpx/postgrest"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: sync-manual-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Targeted league sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Run targeted sync
+        run: |
+          FLAGS=""
+
+          # League ID list — repeats --league-id for each comma-separated value.
+          IDS_INPUT="${{ github.event.inputs.league_ids }}"
+          if [ -n "${IDS_INPUT}" ]; then
+            IFS=',' read -ra IDS_ARR <<< "${IDS_INPUT}"
+            for raw_id in "${IDS_ARR[@]}"; do
+              trimmed=$(echo "${raw_id}" | tr -d '[:space:]')
+              if [ -n "${trimmed}" ]; then
+                FLAGS="${FLAGS} --league-id ${trimmed}"
+              fi
+            done
+          fi
+
+          # Batch window flags — only add when the user actually provided a value.
+          OFFSET_INPUT="${{ github.event.inputs.offset }}"
+          if [ -n "${OFFSET_INPUT}" ] && [ "${OFFSET_INPUT}" != "0" ]; then
+            FLAGS="${FLAGS} --offset ${OFFSET_INPUT}"
+          fi
+          START_INPUT="${{ github.event.inputs.start }}"
+          if [ -n "${START_INPUT}" ]; then
+            FLAGS="${FLAGS} --start ${START_INPUT}"
+          fi
+          END_INPUT="${{ github.event.inputs.end }}"
+          if [ -n "${END_INPUT}" ]; then
+            FLAGS="${FLAGS} --end ${END_INPUT}"
+          fi
+          LIMIT_INPUT="${{ github.event.inputs.limit }}"
+          if [ -n "${LIMIT_INPUT}" ]; then
+            FLAGS="${FLAGS} --limit ${LIMIT_INPUT}"
+          fi
+
+          if [ "${{ github.event.inputs.skip_matchups }}" = "true" ]; then
+            FLAGS="${FLAGS} --skip-matchups"
+          fi
+          if [ "${{ github.event.inputs.skip_drafts }}" = "true" ]; then
+            FLAGS="${FLAGS} --skip-drafts"
+          fi
+          if [ "${{ github.event.inputs.verbose_http }}" = "true" ]; then
+            FLAGS="${FLAGS} --verbose-http"
+          fi
+
+          echo "Running: python -m app.scripts.weekly_sync${FLAGS}"
+          python -m app.scripts.weekly_sync ${FLAGS}

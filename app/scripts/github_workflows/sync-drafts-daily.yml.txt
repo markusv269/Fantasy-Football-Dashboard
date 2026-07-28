@@ -1,0 +1,54 @@
+name: Daily Drafts Sync (metadata only)
+
+# Refreshes the `drafts` table across every league in Supabase once per day.
+# Draft metadata (status, start_time, draft_type, season) changes rarely
+# outside of the offseason build-up, so a daily pass is enough. Draft picks
+# have their own workflow (`sync-draft-picks-frequent.yml`) that only runs
+# during draft season.
+#
+# Uses the targeted sync script so we don't burn API calls on managers,
+# matchups or rosters.
+
+on:
+  schedule:
+    - cron: "30 5 * * *"  # 05:30 UTC daily
+  workflow_dispatch: {}
+
+concurrency:
+  group: sync-drafts-daily
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Refresh drafts metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Sync drafts metadata for all leagues
+        run: python -m app.scripts.targeted_sync --modes drafts

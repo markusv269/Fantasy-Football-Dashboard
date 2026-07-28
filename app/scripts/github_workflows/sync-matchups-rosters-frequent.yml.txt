@@ -1,0 +1,100 @@
+name: Sync Matchups & Rosters (targeted, frequent, in-season)
+
+# Frequent in-season refresh of the current NFL week's matchup_week_stats
+# and rosters, plus manager rows. Uses the targeted sync script so we
+# don't pull drafts / draft_picks / nfl_players on every 3-hour run.
+#
+# Restricted to Aug..early Feb — offseason data changes are covered by
+# the daily full sync.
+
+on:
+  schedule:
+    # Every 3 hours during Aug..Dec and Jan..Feb (playoffs).
+    - cron: "0 */3 * 8,9,10,11,12,1,2 *"
+  workflow_dispatch:
+    inputs:
+      week_mode:
+        description: "Week window (default: current NFL week)."
+        required: false
+        default: "current"
+        type: choice
+        options:
+          - "current"
+          - "single"
+          - "range"
+          - "all"
+      week:
+        description: "Week for --week-mode single."
+        required: false
+        default: "1"
+        type: string
+      week_start:
+        description: "Start week for --week-mode range."
+        required: false
+        default: "1"
+        type: string
+      week_end:
+        description: "End week for --week-mode range."
+        required: false
+        default: "18"
+        type: string
+
+concurrency:
+  group: sync-matchups-rosters-frequent
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Refresh matchups, rosters & managers
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Sync matchups, rosters & managers (targeted)
+        run: |
+          WEEK_MODE="${{ github.event.inputs.week_mode }}"
+          if [ -z "${WEEK_MODE}" ]; then
+            WEEK_MODE="current"
+          fi
+          FLAGS="--modes managers,rosters,matchups --week-mode ${WEEK_MODE}"
+
+          WEEK_INPUT="${{ github.event.inputs.week }}"
+          if [ -n "${WEEK_INPUT}" ]; then
+            FLAGS="${FLAGS} --week ${WEEK_INPUT}"
+          fi
+          WS_INPUT="${{ github.event.inputs.week_start }}"
+          if [ -n "${WS_INPUT}" ]; then
+            FLAGS="${FLAGS} --week-start ${WS_INPUT}"
+          fi
+          WE_INPUT="${{ github.event.inputs.week_end }}"
+          if [ -n "${WE_INPUT}" ]; then
+            FLAGS="${FLAGS} --week-end ${WE_INPUT}"
+          fi
+
+          echo "Running: python -m app.scripts.targeted_sync${FLAGS}"
+          python -m app.scripts.targeted_sync ${FLAGS}

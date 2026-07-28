@@ -1,0 +1,55 @@
+name: Draft Picks Sync (frequent, draft season)
+
+# Refreshes the `draft_picks` table for every draft in Supabase. Draft
+# picks change actively while drafts are running (rookie drafts, redraft
+# drafts, offseason startups), so during the draft season we refresh
+# every 2 hours. Restricted to the months where drafts typically happen
+# (April rookie drafts through early September redraft startups).
+#
+# The targeted script uses delete+insert per draft (idempotent) so
+# reversals and out-of-order picks stay consistent.
+
+on:
+  schedule:
+    # Every 2 hours during Apr..Sep. GitHub Actions cron uses UTC.
+    - cron: "0 */2 * 4,5,6,7,8,9 *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: sync-draft-picks-frequent
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Refresh draft picks
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Sync draft picks for all leagues
+        run: python -m app.scripts.targeted_sync --modes draft_picks

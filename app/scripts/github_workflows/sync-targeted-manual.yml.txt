@@ -1,0 +1,174 @@
+name: Manual Targeted Sync (per-mode)
+
+# On-demand runner for the new targeted sync script. Exposes each supported
+# mode and every batch/week flag so operators can rerun a specific slice of
+# the data pipeline without triggering a full sync.
+#
+# Manual dispatch only — no cron schedule.
+
+on:
+  workflow_dispatch:
+    inputs:
+      modes:
+        description: "Comma-separated modes (metadata, managers, rosters, matchups, drafts, draft_picks, nfl_players) or 'all'."
+        required: true
+        default: "matchups,rosters"
+        type: string
+      league_ids:
+        description: "Comma-separated Sleeper league IDs (empty = all leagues in Supabase)."
+        required: false
+        default: ""
+        type: string
+      offset:
+        description: "0-based number of leagues to skip (ignored if league_ids is set)."
+        required: false
+        default: "0"
+        type: string
+      start:
+        description: "1-based start position (inclusive). Overrides offset."
+        required: false
+        default: ""
+        type: string
+      end:
+        description: "1-based end position (inclusive)."
+        required: false
+        default: ""
+        type: string
+      limit:
+        description: "Maximum leagues to process."
+        required: false
+        default: ""
+        type: string
+      week_mode:
+        description: "Week window: current (default), single, range, or all (0..18)."
+        required: false
+        default: "current"
+        type: choice
+        options:
+          - "current"
+          - "single"
+          - "range"
+          - "all"
+      week:
+        description: "Week for --week-mode single (0..18)."
+        required: false
+        default: "1"
+        type: string
+      week_start:
+        description: "Start week for --week-mode range (0..18)."
+        required: false
+        default: "1"
+        type: string
+      week_end:
+        description: "End week for --week-mode range (0..18)."
+        required: false
+        default: "18"
+        type: string
+      dry_run:
+        description: "Log intended writes without touching Supabase."
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      verbose_http:
+        description: "Enable HTTP INFO logs from httpx/postgrest."
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: sync-targeted-manual-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Targeted sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Supabase credentials are present
+        run: |
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_KEY secrets must be configured on this repository."
+            exit 2
+          fi
+          echo "Supabase credentials are set."
+
+      - name: Run targeted sync
+        run: |
+          FLAGS="--modes ${{ github.event.inputs.modes }}"
+
+          IDS_INPUT="${{ github.event.inputs.league_ids }}"
+          if [ -n "${IDS_INPUT}" ]; then
+            IFS=',' read -ra IDS_ARR <<< "${IDS_INPUT}"
+            for raw_id in "${IDS_ARR[@]}"; do
+              trimmed=$(echo "${raw_id}" | tr -d '[:space:]')
+              if [ -n "${trimmed}" ]; then
+                FLAGS="${FLAGS} --league-id ${trimmed}"
+              fi
+            done
+          fi
+
+          OFFSET_INPUT="${{ github.event.inputs.offset }}"
+          if [ -n "${OFFSET_INPUT}" ] && [ "${OFFSET_INPUT}" != "0" ]; then
+            FLAGS="${FLAGS} --offset ${OFFSET_INPUT}"
+          fi
+          START_INPUT="${{ github.event.inputs.start }}"
+          if [ -n "${START_INPUT}" ]; then
+            FLAGS="${FLAGS} --start ${START_INPUT}"
+          fi
+          END_INPUT="${{ github.event.inputs.end }}"
+          if [ -n "${END_INPUT}" ]; then
+            FLAGS="${FLAGS} --end ${END_INPUT}"
+          fi
+          LIMIT_INPUT="${{ github.event.inputs.limit }}"
+          if [ -n "${LIMIT_INPUT}" ]; then
+            FLAGS="${FLAGS} --limit ${LIMIT_INPUT}"
+          fi
+
+          FLAGS="${FLAGS} --week-mode ${{ github.event.inputs.week_mode }}"
+          WEEK_INPUT="${{ github.event.inputs.week }}"
+          if [ -n "${WEEK_INPUT}" ]; then
+            FLAGS="${FLAGS} --week ${WEEK_INPUT}"
+          fi
+          WS_INPUT="${{ github.event.inputs.week_start }}"
+          if [ -n "${WS_INPUT}" ]; then
+            FLAGS="${FLAGS} --week-start ${WS_INPUT}"
+          fi
+          WE_INPUT="${{ github.event.inputs.week_end }}"
+          if [ -n "${WE_INPUT}" ]; then
+            FLAGS="${FLAGS} --week-end ${WE_INPUT}"
+          fi
+
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            FLAGS="${FLAGS} --dry-run"
+          fi
+          if [ "${{ github.event.inputs.verbose_http }}" = "true" ]; then
+            FLAGS="${FLAGS} --verbose-http"
+          fi
+
+          echo "Running: python -m app.scripts.targeted_sync${FLAGS}"
+          python -m app.scripts.targeted_sync ${FLAGS}

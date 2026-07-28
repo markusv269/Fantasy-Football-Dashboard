@@ -232,6 +232,171 @@ def matchup_card(matchup: rx.Var) -> rx.Component:
     )
 
 
+def _highlight_card(
+    title: str,
+    icon: str,
+    accent: str,
+    entry: rx.Var,
+) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.box(
+                    rx.icon(icon, size=18, color=accent),
+                    padding="8px",
+                    border_radius="10px",
+                    class_name="w-fit " + t("bg-white/5", "bg-gray-50"),
+                ),
+                rx.vstack(
+                    rx.text(
+                        title,
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                    ),
+                    rx.text(
+                        f"{entry['value_label']}: {entry['value']}",
+                        size="2",
+                        weight="bold",
+                        class_name="text-[#DC2626] tabular-nums",
+                    ),
+                    spacing="0",
+                    align="start",
+                ),
+                spacing="3",
+                align="center",
+                width="100%",
+            ),
+            rx.vstack(
+                rx.hstack(
+                    rx.text(
+                        entry["team_a_name"],
+                        size="2",
+                        weight="medium",
+                        class_name="truncate flex-1 min-w-0 " + TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        entry["team_a_points"].to_string(),
+                        size="2",
+                        weight="bold",
+                        class_name="tabular-nums " + TEXT_PRIMARY,
+                    ),
+                    width="100%",
+                    align="center",
+                    spacing="2",
+                ),
+                rx.hstack(
+                    rx.text(
+                        entry["team_b_name"],
+                        size="2",
+                        weight="medium",
+                        class_name="truncate flex-1 min-w-0 " + TEXT_PRIMARY,
+                    ),
+                    rx.text(
+                        entry["team_b_points"].to_string(),
+                        size="2",
+                        weight="bold",
+                        class_name="tabular-nums " + TEXT_PRIMARY,
+                    ),
+                    width="100%",
+                    align="center",
+                    spacing="2",
+                ),
+                spacing="1",
+                width="100%",
+                align="stretch",
+            ),
+            rx.cond(
+                entry["league_name"] != "",
+                rx.hstack(
+                    rx.icon("trophy", size=12, color="#DC2626"),
+                    rx.text(
+                        entry["league_name"],
+                        size="1",
+                        class_name="truncate " + TEXT_SECONDARY,
+                    ),
+                    spacing="1",
+                    align="center",
+                    width="100%",
+                ),
+                rx.fragment(),
+            ),
+            spacing="3",
+            width="100%",
+            align="stretch",
+        ),
+        size="2",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626] hover:shadow-md transition-shadow",
+    )
+
+
+def highlights_section() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.icon("sparkles", size=20, color="#DC2626"),
+            rx.heading(
+                f"Wochen-Highlights · Woche {MatchupsState.selected_week}",
+                size="5",
+                weight="bold",
+            ),
+            spacing="2",
+            align="center",
+        ),
+        rx.cond(
+            MatchupsState.has_highlights,
+            rx.grid(
+                _highlight_card(
+                    "Highscoring Game",
+                    "flame",
+                    "#DC2626",
+                    MatchupsState.matchup_highlights["high"],
+                ),
+                _highlight_card(
+                    "Lowscoring Game",
+                    "snowflake",
+                    "#94A3B8",
+                    MatchupsState.matchup_highlights["low"],
+                ),
+                _highlight_card(
+                    "Knappste Begegnung",
+                    "target",
+                    "#10B981",
+                    MatchupsState.matchup_highlights["close"],
+                ),
+                _highlight_card(
+                    "Größte Differenz",
+                    "zap",
+                    "#F59E0B",
+                    MatchupsState.matchup_highlights["blowout"],
+                ),
+                columns=rx.breakpoints(initial="1", sm="2", lg="4"),
+                spacing="4",
+                width="100%",
+            ),
+            rx.card(
+                rx.hstack(
+                    rx.icon("info", size=18, color="gray"),
+                    rx.text(
+                        "Keine Highlights für diese Woche verfügbar.",
+                        size="2",
+                        color_scheme="gray",
+                        class_name="italic",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
+                ),
+                class_name="border-dashed",
+                width="100%",
+            ),
+        ),
+        spacing="3",
+        width="100%",
+        align="stretch",
+    )
+
+
 def league_matchup_group(league_id: str, matchups: list) -> rx.Component:
     league_name = MatchupsState.league_names[league_id]
     return rx.vstack(
@@ -323,10 +488,11 @@ def matchups_page() -> rx.Component:
                 rx.cond(
                     AppState.selected_league_id == "",
                     rx.cond(
-                        MatchupsState.matchups_by_league.keys().length() > 0,
+                        MatchupsState.ordered_league_ids.length() > 0,
                         rx.vstack(
+                            highlights_section(),
                             rx.foreach(
-                                MatchupsState.matchups_by_league.keys(),
+                                MatchupsState.ordered_league_ids,
                                 lambda lid: league_matchup_group(
                                     lid, MatchupsState.matchups_by_league[lid]
                                 ),
@@ -358,13 +524,21 @@ def matchups_page() -> rx.Component:
                     ),
                     rx.cond(
                         MatchupsState.paired_matchups.length() > 0,
-                        rx.grid(
-                            rx.foreach(
-                                MatchupsState.paired_matchups, matchup_card
+                        rx.vstack(
+                            highlights_section(),
+                            rx.grid(
+                                rx.foreach(
+                                    MatchupsState.paired_matchups, matchup_card
+                                ),
+                                columns=rx.breakpoints(
+                                    initial="1", md="2", xl="3"
+                                ),
+                                spacing="4",
+                                width="100%",
                             ),
-                            columns=rx.breakpoints(initial="1", md="2", xl="3"),
-                            spacing="4",
+                            spacing="6",
                             width="100%",
+                            align="stretch",
                         ),
                         rx.card(
                             rx.vstack(
