@@ -561,15 +561,23 @@ class AdminState(rx.State):
                     leagues[li].append(c)
                     assigned.add(c)
 
-        # Step 5: place remaining owners, preferring wish groups intact.
+        # Step 5: place remaining owners in random order, keeping wish
+        # groups intact when possible. For each owner/group, iterate
+        # leagues in a freshly randomized order per placement attempt
+        # (not fixed 1..N) and drop the group into the first league
+        # with enough free seats. If no league fits, defer to the
+        # fallback pass so members can be split into leftover seats.
+        deferred: list[str] = []
         for owner in other_keys:
             if owner in assigned:
                 continue
             candidates = [o for o in _group_members(owner) if o not in assigned]
             if not candidates:
                 continue
+            league_order = list(range(num_leagues))
+            rnd.shuffle(league_order)
             placed = False
-            for li in range(num_leagues):
+            for li in league_order:
                 if size - len(leagues[li]) >= len(candidates):
                     for c in candidates:
                         leagues[li].append(c)
@@ -577,20 +585,30 @@ class AdminState(rx.State):
                     placed = True
                     break
             if not placed:
-                for li in range(num_leagues):
-                    if len(leagues[li]) < size:
-                        leagues[li].append(owner)
-                        assigned.add(owner)
-                        break
+                for c in candidates:
+                    if c not in deferred:
+                        deferred.append(c)
 
-        # Step 6: fallback for anyone still unplaced.
+        # Step 6: fallback — fill remaining free seats one player at a
+        # time from all still-unassigned participants in random order,
+        # visiting leagues with open seats in a randomized order too.
         leftover = [k for k in other_keys if k not in assigned]
+        for d in deferred:
+            if d not in assigned and d not in leftover:
+                leftover.append(d)
         rnd.shuffle(leftover)
-        for li in range(num_leagues):
-            while len(leagues[li]) < size and leftover:
-                o = leftover.pop(0)
-                leagues[li].append(o)
-                assigned.add(o)
+        while leftover:
+            o = leftover.pop(0)
+            if o in assigned:
+                continue
+            open_leagues = [
+                li for li in range(num_leagues) if len(leagues[li]) < size
+            ]
+            if not open_leagues:
+                break
+            rnd.shuffle(open_leagues)
+            leagues[open_leagues[0]].append(o)
+            assigned.add(o)
 
         # Step 7: shuffle owner order within each league. Selected commish
         # positions are shuffled along with everyone else so the commish
