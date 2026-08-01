@@ -508,20 +508,48 @@ class AdminState(rx.State):
                 return [owner]
             return rnd.sample(grp, k=len(grp))
 
-        # Step 3: pick EXACTLY one commish per league from the pool.
+        # Step 3: prefer at most one commish from each merged wish group.
+        # A fresh SystemRandom shuffle keeps repeated previews unpredictable.
         commish_pool = [
             self._normalize_key(r.get("index") or r.get("sleeper"))
             for r in active_rows
             if r.get("commish")
         ]
-        commish_pool = [k for k in commish_pool if k]
+        commish_pool = list(dict.fromkeys(k for k in commish_pool if k))
         rnd.shuffle(commish_pool)
-        selected_commishes: list[str] = commish_pool[:num_leagues]
-        selected_set: set[str] = set(selected_commishes)
+
+        selected_commishes: list[str] = []
+        selected_set: set[str] = set()
+        selected_group_keys: set[frozenset[str]] = set()
+
+        # First pass: reserve a complete merged group when its members have
+        # not already been used by another selected commissioner.
+        for candidate in commish_pool:
+            group = frozenset(owner_to_group.get(candidate, [candidate]))
+            if group in selected_group_keys:
+                continue
+            selected_commishes.append(candidate)
+            selected_set.add(candidate)
+            selected_group_keys.add(group)
+            if len(selected_commishes) >= num_leagues:
+                break
+
+        # Fallback: if there are fewer distinct commissioner groups than
+        # leagues, fill the remaining slots from the shuffled candidates.
+        # This deliberately permits a second commissioner from an existing
+        # group only when the preferred pass cannot fill every league.
+        if len(selected_commishes) < num_leagues:
+            for candidate in commish_pool:
+                if candidate in selected_set:
+                    continue
+                selected_commishes.append(candidate)
+                selected_set.add(candidate)
+                if len(selected_commishes) >= num_leagues:
+                    break
 
         # Everyone else is a normal player for placement. Former
-        # commish candidates who were not selected go into this pool
-        # and lose their commish marker in the output.
+        # commissioner candidates who were not selected go into this pool
+        # and lose their commissioner marker in the output.
         other_keys = [
             self._normalize_key(r.get("index") or r.get("sleeper"))
             for r in active_rows
@@ -543,35 +571,48 @@ class AdminState(rx.State):
             assigned.add(co)
             league_commish[li] = co
 
-        # Step 4b: try to seat each commish's wish group around them,
-        # but never pull in another selected commish (they belong to
-        # their own league). If the remaining group doesn't fit, keep
-        # the commish solo and let the mates be placed as normal
-        # participants in step 5.
+        # Step 4b: immediately process each selected commish's complete
+        # merged group. In the normal one-commish-per-group case this keeps
+        # every group member in the commissioner's league. If fallback
+        # selection reused a group, other selected commissioners stay pinned
+        # to their own leagues and are excluded rather than duplicated.
         for li, co in enumerate(selected_commishes):
             members = _group_members(co)
             candidates = [
                 o
                 for o in members
-                if o != co and o not in assigned and o not in selected_set
+                if o not in assigned and o not in selected_set
             ]
-            free = size - len(leagues[li])
-            if candidates and len(candidates) <= free:
-                for c in candidates:
-                    leagues[li].append(c)
-                    assigned.add(c)
+            free = max(0, size - len(leagues[li]))
+            if not candidates or free <= 0:
+                continue
+
+            # Keep the complete unassigned group together whenever it fits.
+            # Otherwise, consume only the available capacity and let the
+            # remaining members re-enter randomized placement below.
+            if len(candidates) <= free:
+                immediate = candidates
+            else:
+                immediate = rnd.sample(candidates, k=free)
+            for c in immediate:
+                leagues[li].append(c)
+                assigned.add(c)
 
         # Step 5: place remaining owners in random order, keeping wish
-        # groups intact when possible. For each owner/group, iterate
-        # leagues in a freshly randomized order per placement attempt
-        # (not fixed 1..N) and drop the group into the first league
-        # with enough free seats. If no league fits, defer to the
-        # fallback pass so members can be split into leftover seats.
+        # groups intact when possible. Selected commishes are excluded from
+        # every candidate group, and assigned members are removed so a group
+        # already placed with a commish cannot be duplicated elsewhere.
+        # For each owner/group, iterate leagues in a freshly randomized
+        # order per placement attempt. If no league fits, defer to fallback.
         deferred: list[str] = []
         for owner in other_keys:
-            if owner in assigned:
+            if owner in assigned or owner in selected_set:
                 continue
-            candidates = [o for o in _group_members(owner) if o not in assigned]
+            candidates = [
+                o
+                for o in _group_members(owner)
+                if o not in assigned and o not in selected_set
+            ]
             if not candidates:
                 continue
             league_order = list(range(num_leagues))
@@ -586,7 +627,7 @@ class AdminState(rx.State):
                     break
             if not placed:
                 for c in candidates:
-                    if c not in deferred:
+                    if c not in deferred and c not in assigned:
                         deferred.append(c)
 
         # Step 6: fallback — fill remaining free seats one player at a
