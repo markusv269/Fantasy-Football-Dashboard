@@ -384,36 +384,33 @@ class AdminState(rx.State):
     def _build_assignment(
         self, rows: list[dict]
     ) -> tuple[list[dict], list[dict], str]:
-        """Compute an in-memory league assignment.
+        """Compute an in-memory league assignment (test-only preview).
 
-        Faithfully mirrors the SLR2025 notebook algorithm:
+        Algorithm:
 
-        1. Sort registrations by ``created_at`` ascending and take the
-           first ``N * 12`` as active seats; the rest become Nachrücker.
-        2. Parse each participant's ``mitspieler`` wishes; one-sided
-           mentions are enough (matching the notebook's
-           ``group_to_merge = verified_groups.copy()``).
-        3. Iteratively merge overlapping wish groups until stable, so
-           chains like A→B, B→C collapse into a single group {A,B,C}.
-        4. Split active participants into commishes and non-commishes,
-           shuffle both pools.
-        5. For each league, place exactly one commish first — together
-           with their whole wish group if the group fits, otherwise the
-           commish alone (remaining group members fall through to the
-           later phases). This guarantees every league starts with a
-           commish.
-        6. Iterate over all remaining owners (leftover commishes first,
-           then non-commishes) and try to place each owner's full wish
-           group into the first league with enough free seats. Group
-           members are inserted in a randomized order so wishes never
-           implicitly determine adjacent draft slots.
-        7. Fallback pass: any owner still unplaced is dropped into the
-           first league with free capacity, one at a time.
-        8. Finally, shuffle the owner order within each league so
-           commishes are not fixed at draft slot 1.
+        1. Sort registrations by ``created_at`` ascending; the first
+           ``N * 12`` become active seats, the rest are Nachrücker.
+        2. Parse ``mitspieler`` wishes and merge overlapping groups so
+           chains (A→B, B→C) collapse into one group {A,B,C}.
+        3. Using a fresh :class:`random.SystemRandom` per generation,
+           randomly select EXACTLY ONE commissioner per league from
+           the pool of commish candidates. Any remaining candidates
+           are treated as ordinary players and their ``commish`` flag
+           is cleared in the output.
+        4. Seat each selected commish (with their wish group if it
+           fits, else solo).
+        5. Place all remaining owners, preferring to keep wish groups
+           intact by dropping them into the first league with enough
+           free seats. Wish-group order is randomized so members are
+           not deterministically adjacent in the draft order.
+        6. Fallback pass fills any leftover seats one player at a time.
+        7. Shuffle each league's owner order so the commish is not
+           pinned to draft slot 1.
 
-        The result is purely a preview — nothing is persisted to
-        Supabase.
+        In the output, ONLY the selected league commissioner has
+        ``commish=True``; every other player — including former
+        candidates who were not chosen — has ``commish=False``.
+        Nothing is written back to Supabase.
         """
         size = max(1, int(self.redraft_league_size or 12))
         sorted_rows = sorted(rows, key=lambda r: str(r.get("created_at") or ""))
@@ -421,13 +418,15 @@ class AdminState(rx.State):
         nachruecker_rows = sorted_rows[num_leagues * size :]
 
         def _nach_out() -> list[dict]:
+            # Nachrücker are not placed in any league, so no one there
+            # is marked as commish in the assignment display.
             out: list[dict] = []
             for r in nachruecker_rows:
                 out.append(
                     {
                         "sleeper": str(r.get("sleeper") or ""),
                         "discord": str(r.get("discord") or ""),
-                        "commish": bool(r.get("commish") or False),
+                        "commish": False,
                         "index": str(r.get("index") or ""),
                         "created_display": str(r.get("created_display") or ""),
                     }
@@ -463,7 +462,7 @@ class AdminState(rx.State):
             if mates:
                 groups_raw.append([me] + mates)
 
-        # Iteratively merge overlapping groups.
+        # Iteratively merge overlapping wish groups until stable.
         merged: list[set[str]] = []
         for g in groups_raw:
             g_set = set(g)
@@ -500,75 +499,70 @@ class AdminState(rx.State):
             for o in g_list:
                 owner_to_group[o] = g_list
 
-        rnd = random.Random()
+        # Fresh, unpredictable RNG per generation (OS entropy).
+        rnd = random.SystemRandom()
 
         def _group_members(owner: str) -> list[str]:
-            """Return the owner's wish-group in randomized order.
-
-            Mirrors the notebook's ``get_group_members`` helper which
-            uses ``random.sample`` so no wish-group member is
-            deterministically adjacent to another.
-            """
             grp = owner_to_group.get(owner)
             if not grp:
                 return [owner]
             return rnd.sample(grp, k=len(grp))
 
-        # Step 4: split by commish flag, shuffle both pools.
-        commish_keys = [
+        # Step 3: pick EXACTLY one commish per league from the pool.
+        commish_pool = [
             self._normalize_key(r.get("index") or r.get("sleeper"))
             for r in active_rows
             if r.get("commish")
         ]
-        non_commish_keys = [
+        commish_pool = [k for k in commish_pool if k]
+        rnd.shuffle(commish_pool)
+        selected_commishes: list[str] = commish_pool[:num_leagues]
+        selected_set: set[str] = set(selected_commishes)
+
+        # Everyone else is a normal player for placement. Former
+        # commish candidates who were not selected go into this pool
+        # and lose their commish marker in the output.
+        other_keys = [
             self._normalize_key(r.get("index") or r.get("sleeper"))
             for r in active_rows
-            if not r.get("commish")
+            if self._normalize_key(r.get("index") or r.get("sleeper"))
+            not in selected_set
         ]
-        commish_keys = [k for k in commish_keys if k]
-        non_commish_keys = [k for k in non_commish_keys if k]
-        rnd.shuffle(commish_keys)
-        rnd.shuffle(non_commish_keys)
+        other_keys = [k for k in other_keys if k]
+        rnd.shuffle(other_keys)
 
         leagues: list[list[str]] = [[] for _ in range(num_leagues)]
+        league_commish: dict[int, str] = {}
         assigned: set[str] = set()
 
-        # Step 5: guarantee one commish per league, keeping their wish
-        # group intact when it fits. Commishes whose group does not fit
-        # are placed alone; the extra group members flow through the
-        # later phases and may land in a different league.
-        for li in range(num_leagues):
-            for co in commish_keys:
-                if co in assigned:
-                    continue
-                members = _group_members(co)
-                candidates = [o for o in members if o not in assigned]
-                # Guarantee the commish personally lands in this league
-                # even if we later have to truncate the group: force
-                # them to the front of the candidate list.
-                if co in candidates:
-                    candidates.remove(co)
-                candidates.insert(0, co)
-                free = size - len(leagues[li])
-                if candidates and len(candidates) <= free:
-                    for c in candidates:
-                        leagues[li].append(c)
-                        assigned.add(c)
-                else:
-                    leagues[li].append(co)
-                    assigned.add(co)
-                break
+        # Step 4a: reserve every selected commish in their own league BEFORE
+        # any wish-group placement, so a selected commish can never be
+        # consumed by another league's wish group.
+        for li, co in enumerate(selected_commishes):
+            leagues[li].append(co)
+            assigned.add(co)
+            league_commish[li] = co
 
-        # Step 6: fill remaining seats. Iterate all remaining owners —
-        # leftover commishes first so their wish groups still get a
-        # chance to stay intact, then non-commishes — placing each
-        # owner's full wish group into the first league with enough
-        # free seats.
-        remaining_priority: list[str] = [
-            k for k in commish_keys if k not in assigned
-        ] + [k for k in non_commish_keys if k not in assigned]
+        # Step 4b: try to seat each commish's wish group around them,
+        # but never pull in another selected commish (they belong to
+        # their own league). If the remaining group doesn't fit, keep
+        # the commish solo and let the mates be placed as normal
+        # participants in step 5.
+        for li, co in enumerate(selected_commishes):
+            members = _group_members(co)
+            candidates = [
+                o
+                for o in members
+                if o != co and o not in assigned and o not in selected_set
+            ]
+            free = size - len(leagues[li])
+            if candidates and len(candidates) <= free:
+                for c in candidates:
+                    leagues[li].append(c)
+                    assigned.add(c)
 
-        for owner in remaining_priority:
+        # Step 5: place remaining owners, preferring wish groups intact.
+        for owner in other_keys:
             if owner in assigned:
                 continue
             candidates = [o for o in _group_members(owner) if o not in assigned]
@@ -583,20 +577,14 @@ class AdminState(rx.State):
                     placed = True
                     break
             if not placed:
-                # Group doesn't fit anywhere as a whole — place the
-                # owner solo; any remaining group members are picked
-                # up in the fallback pass below.
                 for li in range(num_leagues):
                     if len(leagues[li]) < size:
                         leagues[li].append(owner)
                         assigned.add(owner)
                         break
 
-        # Step 7: fallback — any owner not yet placed goes into the
-        # first league with free capacity, in randomized order.
-        leftover = [
-            o for o in commish_keys + non_commish_keys if o not in assigned
-        ]
+        # Step 6: fallback for anyone still unplaced.
+        leftover = [k for k in other_keys if k not in assigned]
         rnd.shuffle(leftover)
         for li in range(num_leagues):
             while len(leagues[li]) < size and leftover:
@@ -604,20 +592,22 @@ class AdminState(rx.State):
                 leagues[li].append(o)
                 assigned.add(o)
 
-        # Step 8: shuffle each league so commishes are not fixed at
-        # draft slot 1.
+        # Step 7: shuffle owner order within each league. Selected commish
+        # positions are shuffled along with everyone else so the commish
+        # can land in any draft slot.
         for li in range(num_leagues):
             rnd.shuffle(leagues[li])
 
+        # Build output. Only the selected commish for each league gets
+        # commish=True; every other seat — including unchosen former
+        # candidates — is emitted with commish=False.
         assignments: list[dict] = []
         for li, keys in enumerate(leagues):
             players = []
-            commish_ct = 0
+            selected_co = league_commish.get(li)
             for slot, k in enumerate(keys, start=1):
                 r = by_key.get(k, {})
-                is_commish = bool(r.get("commish") or False)
-                if is_commish:
-                    commish_ct += 1
+                is_commish = bool(selected_co) and (k == selected_co)
                 players.append(
                     {
                         "slot": slot,
@@ -631,7 +621,7 @@ class AdminState(rx.State):
                 {
                     "name": f"Testliga {li + 1}",
                     "size": len(players),
-                    "commish_count": commish_ct,
+                    "commish_count": 1 if selected_co else 0,
                     "players": players,
                 }
             )

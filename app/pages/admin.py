@@ -932,17 +932,27 @@ def _redraft_player_row(p: rx.Var) -> rx.Component:
             weight="bold",
             class_name="font-mono w-6 text-center " + TEXT_SECONDARY,
         ),
-        rx.cond(
-            p["commish"].to(bool),
-            rx.icon("crown", size=14, color="#DC2626"),
-            rx.box(class_name="w-[14px]"),
-        ),
         rx.vstack(
-            rx.text(
-                p["sleeper"].to(str),
-                size="2",
-                weight="bold",
-                class_name="truncate " + TEXT_PRIMARY,
+            rx.hstack(
+                rx.text(
+                    p["sleeper"].to(str),
+                    size="2",
+                    weight="bold",
+                    class_name="truncate " + TEXT_PRIMARY,
+                ),
+                rx.cond(
+                    p["commish"].to(bool),
+                    rx.text(
+                        "— Commish",
+                        size="1",
+                        weight="bold",
+                        class_name="uppercase tracking-wide text-[#DC2626] shrink-0",
+                    ),
+                    rx.fragment(),
+                ),
+                spacing="2",
+                align="center",
+                width="100%",
             ),
             rx.cond(
                 p["discord"].to(str) != "",
@@ -989,16 +999,7 @@ def _redraft_league_card(lg: rx.Var) -> rx.Component:
                 rx.cond(
                     lg["commish_count"].to(int) > 0,
                     rx.badge(
-                        rx.hstack(
-                            rx.icon("crown", size=12),
-                            rx.text(
-                                lg["commish_count"].to_string(),
-                                size="1",
-                                weight="bold",
-                            ),
-                            spacing="1",
-                            align="center",
-                        ),
+                        "Commish",
                         color_scheme="red",
                         variant="soft",
                         size="1",
@@ -1029,11 +1030,6 @@ def _redraft_league_card(lg: rx.Var) -> rx.Component:
 
 def _redraft_nachruecker_row(p: rx.Var) -> rx.Component:
     return rx.hstack(
-        rx.cond(
-            p["commish"].to(bool),
-            rx.icon("crown", size=14, color="#DC2626"),
-            rx.box(class_name="w-[14px]"),
-        ),
         rx.text(
             p["sleeper"].to(str),
             size="2",
