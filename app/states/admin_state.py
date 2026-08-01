@@ -381,6 +381,167 @@ class AdminState(rx.State):
         finally:
             self.redraft_is_loading = False
 
+    _OBSOLETE_ASSIGNMENT_SOURCE = """
+        return self._obsolete_assignment_path(rows)
+
+        size = max(1, int(self.redraft_league_size or 12))
+        sorted_rows = sorted(rows, key=lambda r: str(r.get("created_at") or ""))
+        num_leagues = len(sorted_rows) // size
+        nachruecker_rows = sorted_rows[num_leagues * size :]
+
+        def _nach_out() -> list[dict]:
+            return [
+                {
+                    "sleeper": str(r.get("sleeper") or ""),
+                    "discord": str(r.get("discord") or ""),
+                    "commish": False,
+                    "index": str(r.get("index") or ""),
+                    "created_display": str(r.get("created_display") or ""),
+                }
+                for r in nachruecker_rows
+            ]
+
+        if num_leagues == 0:
+            return (
+                [],
+                _nach_out(),
+                f"Zu wenige Anmeldungen für eine {size}er-Liga. "
+                f"Aktuell {len(sorted_rows)} von mindestens {size} Anmeldungen.",
+            )
+
+        active_rows = sorted_rows[: num_leagues * size]
+        by_key: dict[str, dict] = {}
+        wish_dict: dict[str, list[str]] = {}
+        commish_owners: list[str] = []
+        normal_owners: list[str] = []
+
+        for row in active_rows:
+            owner = self._normalize_key(row.get("index") or row.get("sleeper"))
+            if not owner:
+                continue
+            by_key[owner] = row
+            wishes = self._parse_mitspieler(row.get("mitspieler"))
+            if wishes:
+                wish_dict[owner] = wishes
+            if bool(row.get("commish")):
+                commish_owners.append(owner)
+            else:
+                normal_owners.append(owner)
+
+        verified_groups: list[list[str]] = []
+        seen_groups: set[tuple[str, str]] = set()
+        for owner, wishes in wish_dict.items():
+            for wished in wishes:
+                if wished not in wish_dict or owner not in wish_dict[wished]:
+                    continue
+                group = tuple(sorted((owner, wished)))
+                if group[0] != group[1] and group not in seen_groups:
+                    seen_groups.add(group)
+                    verified_groups.append([group[0], group[1]])
+
+        group_by_owner: dict[str, list[str]] = {}
+        for group in sorted(verified_groups, key=lambda item: tuple(item)):
+            for owner in group:
+                group_by_owner.setdefault(owner, group)
+
+        rnd = random.SystemRandom()
+        league_names = [f"Testliga {i + 1}" for i in range(num_leagues)]
+        leagues_dict: dict[str, list[str]] = {name: [] for name in league_names}
+        assigned_owners: set[str] = set()
+        league_commishes: dict[str, str] = {}
+
+        @rx.event
+        def get_group_members(owner: str) -> list[str]:
+            group = group_by_owner.get(owner)
+            if group:
+                return rnd.sample(group, k=len(group))
+            return [owner]
+
+        rnd.shuffle(commish_owners)
+        for league in league_names:
+            for commish in commish_owners:
+                if commish in assigned_owners:
+                    continue
+                group = get_group_members(commish)
+                unassigned_group = [
+                    member for member in group if member not in assigned_owners
+                ]
+                if len(unassigned_group) <= size:
+                    leagues_dict[league].extend(unassigned_group)
+                    assigned_owners.update(unassigned_group)
+                    league_commishes[league] = commish
+                    break
+
+        unassigned_owners = [
+            owner
+            for owner in commish_owners + normal_owners
+            if owner not in assigned_owners
+        ]
+        rnd.shuffle(unassigned_owners)
+
+        for league in league_names:
+            blocked_attempts = 0
+            while len(leagues_dict[league]) < size and unassigned_owners:
+                current_owner = unassigned_owners.pop(0)
+                if current_owner in assigned_owners:
+                    blocked_attempts = 0
+                    continue
+                group = get_group_members(current_owner)
+                unassigned_group = [
+                    member for member in group if member not in assigned_owners
+                ]
+                if len(leagues_dict[league]) + len(unassigned_group) <= size:
+                    leagues_dict[league].extend(unassigned_group)
+                    assigned_owners.update(unassigned_group)
+                    blocked_attempts = 0
+                else:
+                    unassigned_owners.append(current_owner)
+                    blocked_attempts += 1
+                    if blocked_attempts >= len(unassigned_owners):
+                        break
+
+        remaining_owners = [
+            owner
+            for owner in commish_owners + normal_owners
+            if owner not in assigned_owners
+        ]
+        for league in league_names:
+            while len(leagues_dict[league]) < size and remaining_owners:
+                owner = remaining_owners.pop(0)
+                if owner in assigned_owners:
+                    continue
+                leagues_dict[league].append(owner)
+                assigned_owners.add(owner)
+
+        for league in league_names:
+            rnd.shuffle(leagues_dict[league])
+
+        assignments: list[dict] = []
+        for league in league_names:
+            players: list[dict] = []
+            for slot, owner in enumerate(leagues_dict[league], start=1):
+                row = by_key.get(owner, {})
+                players.append(
+                    {
+                        "slot": slot,
+                        "sleeper": str(row.get("sleeper") or owner),
+                        "discord": str(row.get("discord") or ""),
+                        "index": str(row.get("index") or owner),
+                        "commish": owner == league_commishes.get(league, ""),
+                    }
+                )
+            assignments.append(
+                {
+                    "name": league,
+                    "size": len(players),
+                    "commish_count": 1 if league in league_commishes else 0,
+                    "players": players,
+                }
+            )
+        return assignments, _nach_out(), ""
+
+    """
+
     def _build_assignment(
         self, rows: list[dict]
     ) -> tuple[list[dict], list[dict], str]:
@@ -448,239 +609,166 @@ class AdminState(rx.State):
             if k:
                 by_key[k] = r
 
-        # Wishes: only mates that exist inside the active pool.
-        groups_raw: list[list[str]] = []
-        for r in active_rows:
-            me = self._normalize_key(r.get("index") or r.get("sleeper"))
-            if not me:
+        # Build reciprocal wish pairs, then merge them once in notebook order.
+        wunsch_dict: dict[str, list[str]] = {}
+        commish_owners: list[str] = []
+        non_commish_owners: list[str] = []
+        for row in active_rows:
+            owner = self._normalize_key(row.get("index") or row.get("sleeper"))
+            if not owner:
                 continue
-            mates = [
-                m
-                for m in self._parse_mitspieler(r.get("mitspieler"))
-                if m in by_key and m != me
+            wishes = [
+                self._normalize_key(value)
+                for value in self._parse_mitspieler(row.get("mitspieler"))
+                if self._normalize_key(value) in by_key
+                and self._normalize_key(value) != owner
             ]
-            if mates:
-                groups_raw.append([me] + mates)
-
-        # Iteratively merge overlapping wish groups until stable.
-        merged: list[set[str]] = []
-        for g in groups_raw:
-            g_set = set(g)
-            hit = None
-            for m in merged:
-                if m & g_set:
-                    hit = m
-                    break
-            if hit is not None:
-                hit.update(g_set)
+            if wishes:
+                wunsch_dict.setdefault(owner, []).extend(wishes)
+            if bool(row.get("commish")):
+                commish_owners.append(owner)
             else:
-                merged.append(g_set)
-        changed = True
-        while changed:
-            changed = False
-            out: list[set[str]] = []
-            for g in merged:
-                target = None
-                for o in out:
-                    if o & g:
-                        target = o
-                        break
-                if target is None:
-                    out.append(set(g))
-                else:
-                    if not target.issuperset(g):
-                        target.update(g)
-                        changed = True
-            merged = out
+                non_commish_owners.append(owner)
+
+        verified_groups: list[list[str]] = []
+        seen_pairs: set[tuple[str, str]] = set()
+        for owner, wishes in wunsch_dict.items():
+            for wished in wishes:
+                if wished in wunsch_dict and owner in wunsch_dict[wished]:
+                    pair = tuple(sorted((owner, wished)))
+                    if pair[0] != pair[1] and pair not in seen_pairs:
+                        seen_pairs.add(pair)
+                        verified_groups.append(list(pair))
+
+        merged_groups: list[list[str]] = []
+        for group in verified_groups:
+            added = False
+            for merged_group in merged_groups:
+                if any(member in merged_group for member in group):
+                    merged_group.extend(
+                        member for member in group if member not in merged_group
+                    )
+                    added = True
+                    break
+            if not added:
+                merged_groups.append(list(dict.fromkeys(group)))
+
+        rnd = random.SystemRandom()
+        league_names = [f"Testliga {i + 1}" for i in range(num_leagues)]
+        leagues_dict: dict[str, list[str]] = {name: [] for name in league_names}
+        assigned_owners: set[str] = set()
+        selected_commish_by_league: dict[str, str] = {}
 
         owner_to_group: dict[str, list[str]] = {}
-        for g in merged:
-            g_list = list(g)
-            for o in g_list:
-                owner_to_group[o] = g_list
+        for group in merged_groups:
+            clean_group = [
+                owner
+                for owner in group
+                if owner in by_key and owner not in owner_to_group
+            ]
+            for owner in clean_group:
+                owner_to_group[owner] = clean_group
 
-        # Fresh, unpredictable RNG per generation (OS entropy).
-        rnd = random.SystemRandom()
-
-        def _group_members(owner: str) -> list[str]:
-            grp = owner_to_group.get(owner)
-            if not grp:
+        @rx.event
+        def get_group_members(owner: str) -> list[str]:
+            group = owner_to_group.get(owner)
+            if not group:
                 return [owner]
-            return rnd.sample(grp, k=len(grp))
+            return rnd.sample(group, k=len(group))
 
-        # Step 3: prefer at most one commish from each merged wish group.
-        # A fresh SystemRandom shuffle keeps repeated previews unpredictable.
-        commish_pool = [
-            self._normalize_key(r.get("index") or r.get("sleeper"))
-            for r in active_rows
-            if r.get("commish")
-        ]
-        commish_pool = list(dict.fromkeys(k for k in commish_pool if k))
-        rnd.shuffle(commish_pool)
+        rnd.shuffle(commish_owners)
 
-        selected_commishes: list[str] = []
-        selected_set: set[str] = set()
-        selected_group_keys: set[frozenset[str]] = set()
-
-        # First pass: reserve a complete merged group when its members have
-        # not already been used by another selected commissioner.
-        for candidate in commish_pool:
-            group = frozenset(owner_to_group.get(candidate, [candidate]))
-            if group in selected_group_keys:
-                continue
-            selected_commishes.append(candidate)
-            selected_set.add(candidate)
-            selected_group_keys.add(group)
-            if len(selected_commishes) >= num_leagues:
-                break
-
-        # Fallback: if there are fewer distinct commissioner groups than
-        # leagues, fill the remaining slots from the shuffled candidates.
-        # This deliberately permits a second commissioner from an existing
-        # group only when the preferred pass cannot fill every league.
-        if len(selected_commishes) < num_leagues:
-            for candidate in commish_pool:
-                if candidate in selected_set:
+        # Assign one available commissioner to each league first. The
+        # commissioner's complete wish group is placed with them when it fits.
+        for league_name in league_names:
+            league_owners = leagues_dict[league_name]
+            for commish in commish_owners:
+                if commish in assigned_owners:
                     continue
-                selected_commishes.append(candidate)
-                selected_set.add(candidate)
-                if len(selected_commishes) >= num_leagues:
+                group = get_group_members(commish)
+                unassigned_group = [
+                    owner for owner in group if owner not in assigned_owners
+                ]
+                if len(unassigned_group) <= size:
+                    league_owners.extend(unassigned_group)
+                    assigned_owners.update(unassigned_group)
+                    selected_commish_by_league[league_name] = commish
                     break
 
-        # Everyone else is a normal player for placement. Former
-        # commissioner candidates who were not selected go into this pool
-        # and lose their commissioner marker in the output.
-        other_keys = [
-            self._normalize_key(r.get("index") or r.get("sleeper"))
-            for r in active_rows
-            if self._normalize_key(r.get("index") or r.get("sleeper"))
-            not in selected_set
+        unassigned_owners = [
+            owner
+            for owner in commish_owners + non_commish_owners
+            if owner not in assigned_owners
         ]
-        other_keys = [k for k in other_keys if k]
-        rnd.shuffle(other_keys)
+        rnd.shuffle(unassigned_owners)
 
-        leagues: list[list[str]] = [[] for _ in range(num_leagues)]
-        league_commish: dict[int, str] = {}
-        assigned: set[str] = set()
-
-        # Step 4a: reserve every selected commish in their own league BEFORE
-        # any wish-group placement, so a selected commish can never be
-        # consumed by another league's wish group.
-        for li, co in enumerate(selected_commishes):
-            leagues[li].append(co)
-            assigned.add(co)
-            league_commish[li] = co
-
-        # Step 4b: immediately process each selected commish's complete
-        # merged group. In the normal one-commish-per-group case this keeps
-        # every group member in the commissioner's league. If fallback
-        # selection reused a group, other selected commissioners stay pinned
-        # to their own leagues and are excluded rather than duplicated.
-        for li, co in enumerate(selected_commishes):
-            members = _group_members(co)
-            candidates = [
-                o
-                for o in members
-                if o not in assigned and o not in selected_set
-            ]
-            free = max(0, size - len(leagues[li]))
-            if not candidates or free <= 0:
-                continue
-
-            # Keep the complete unassigned group together whenever it fits.
-            # Otherwise, consume only the available capacity and let the
-            # remaining members re-enter randomized placement below.
-            if len(candidates) <= free:
-                immediate = candidates
-            else:
-                immediate = rnd.sample(candidates, k=free)
-            for c in immediate:
-                leagues[li].append(c)
-                assigned.add(c)
-
-        # Step 5: place remaining owners in random order, keeping wish
-        # groups intact when possible. Selected commishes are excluded from
-        # every candidate group, and assigned members are removed so a group
-        # already placed with a commish cannot be duplicated elsewhere.
-        # For each owner/group, iterate leagues in a freshly randomized
-        # order per placement attempt. If no league fits, defer to fallback.
-        deferred: list[str] = []
-        for owner in other_keys:
-            if owner in assigned or owner in selected_set:
-                continue
-            candidates = [
-                o
-                for o in _group_members(owner)
-                if o not in assigned and o not in selected_set
-            ]
-            if not candidates:
-                continue
-            league_order = list(range(num_leagues))
-            rnd.shuffle(league_order)
-            placed = False
-            for li in league_order:
-                if size - len(leagues[li]) >= len(candidates):
-                    for c in candidates:
-                        leagues[li].append(c)
-                        assigned.add(c)
-                    placed = True
+        # Place remaining wish groups without allowing an oversized group to
+        # stall the whole allocation pass.
+        for league_name in league_names:
+            league_owners = leagues_dict[league_name]
+            deferred: list[str] = []
+            while len(league_owners) < size and unassigned_owners:
+                current_owner = unassigned_owners.pop(0)
+                if current_owner in assigned_owners:
+                    continue
+                group = get_group_members(current_owner)
+                unassigned_group = [
+                    owner for owner in group if owner not in assigned_owners
+                ]
+                if len(league_owners) + len(unassigned_group) <= size:
+                    league_owners.extend(unassigned_group)
+                    assigned_owners.update(unassigned_group)
+                    deferred = []
+                    continue
+                deferred.append(current_owner)
+                if len(deferred) >= len(unassigned_owners):
+                    unassigned_owners.extend(deferred)
+                    deferred = []
                     break
-            if not placed:
-                for c in candidates:
-                    if c not in deferred and c not in assigned:
-                        deferred.append(c)
+            unassigned_owners.extend(deferred)
 
-        # Step 6: fallback — fill remaining free seats one player at a
-        # time from all still-unassigned participants in random order,
-        # visiting leagues with open seats in a randomized order too.
-        leftover = [k for k in other_keys if k not in assigned]
-        for d in deferred:
-            if d not in assigned and d not in leftover:
-                leftover.append(d)
-        rnd.shuffle(leftover)
-        while leftover:
-            o = leftover.pop(0)
-            if o in assigned:
-                continue
-            open_leagues = [
-                li for li in range(num_leagues) if len(leagues[li]) < size
-            ]
-            if not open_leagues:
-                break
-            rnd.shuffle(open_leagues)
-            leagues[open_leagues[0]].append(o)
-            assigned.add(o)
+        # Fill any remaining seats one participant at a time, matching the
+        # notebook's final fallback and guaranteeing full leagues when enough
+        # active registrations exist.
+        remaining_owners = [
+            owner
+            for owner in commish_owners + non_commish_owners
+            if owner not in assigned_owners
+        ]
+        rnd.shuffle(remaining_owners)
+        for league_name in league_names:
+            league_owners = leagues_dict[league_name]
+            while len(league_owners) < size and remaining_owners:
+                owner = remaining_owners.pop(0)
+                if owner in assigned_owners:
+                    continue
+                league_owners.append(owner)
+                assigned_owners.add(owner)
 
-        # Step 7: shuffle owner order within each league. Selected commish
-        # positions are shuffled along with everyone else so the commish
-        # can land in any draft slot.
-        for li in range(num_leagues):
-            rnd.shuffle(leagues[li])
+        for league_name in league_names:
+            rnd.shuffle(leagues_dict[league_name])
 
-        # Build output. Only the selected commish for each league gets
-        # commish=True; every other seat — including unchosen former
-        # candidates — is emitted with commish=False.
         assignments: list[dict] = []
-        for li, keys in enumerate(leagues):
-            players = []
-            selected_co = league_commish.get(li)
-            for slot, k in enumerate(keys, start=1):
-                r = by_key.get(k, {})
-                is_commish = bool(selected_co) and (k == selected_co)
+        for league_name in league_names:
+            players: list[dict] = []
+            selected_commish = selected_commish_by_league.get(league_name, "")
+            for slot, owner in enumerate(leagues_dict[league_name], start=1):
+                row = by_key.get(owner, {})
                 players.append(
                     {
                         "slot": slot,
-                        "sleeper": str(r.get("sleeper") or k),
-                        "discord": str(r.get("discord") or ""),
-                        "commish": is_commish,
-                        "index": str(r.get("index") or k),
+                        "sleeper": str(row.get("sleeper") or owner),
+                        "discord": str(row.get("discord") or ""),
+                        "commish": bool(selected_commish)
+                        and owner == selected_commish,
+                        "index": str(row.get("index") or owner),
                     }
                 )
             assignments.append(
                 {
-                    "name": f"Testliga {li + 1}",
+                    "name": league_name,
                     "size": len(players),
-                    "commish_count": 1 if selected_co else 0,
+                    "commish_count": 1 if selected_commish else 0,
                     "players": players,
                 }
             )
