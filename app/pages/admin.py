@@ -882,6 +882,495 @@ def _data_updates_card() -> rx.Component:
     )
 
 
+def _redraft_stat_tile(
+    label: str, value: rx.Var, icon: str, color: str, subtitle: str = ""
+) -> rx.Component:
+    return rx.box(
+        rx.hstack(
+            rx.box(
+                rx.icon(icon, size=22, color=color),
+                padding="10px",
+                border_radius="10px",
+                class_name="w-fit " + t("bg-white/5", "bg-gray-50"),
+            ),
+            rx.vstack(
+                rx.text(
+                    label,
+                    size="1",
+                    weight="bold",
+                    class_name="uppercase tracking-wide " + TEXT_SECONDARY,
+                ),
+                rx.heading(value, size="6", weight="bold"),
+                rx.cond(
+                    subtitle != "",
+                    rx.text(subtitle, size="1", class_name=TEXT_SECONDARY),
+                    rx.fragment(),
+                ),
+                spacing="0",
+                align="start",
+            ),
+            spacing="3",
+            align="center",
+            width="100%",
+        ),
+        padding="14px",
+        border_radius="12px",
+        width="100%",
+        class_name="border "
+        + t(
+            "bg-[#08090D] border-white/5",
+            "bg-white border-gray-200",
+        ),
+    )
+
+
+def _redraft_player_row(p: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.text(
+            p["slot"].to_string(),
+            size="1",
+            weight="bold",
+            class_name="font-mono w-6 text-center " + TEXT_SECONDARY,
+        ),
+        rx.cond(
+            p["commish"].to(bool),
+            rx.icon("crown", size=14, color="#DC2626"),
+            rx.box(class_name="w-[14px]"),
+        ),
+        rx.vstack(
+            rx.text(
+                p["sleeper"].to(str),
+                size="2",
+                weight="bold",
+                class_name="truncate " + TEXT_PRIMARY,
+            ),
+            rx.cond(
+                p["discord"].to(str) != "",
+                rx.text(
+                    p["discord"].to(str),
+                    size="1",
+                    class_name="truncate " + TEXT_SECONDARY,
+                ),
+                rx.fragment(),
+            ),
+            spacing="0",
+            align="start",
+            flex="1",
+            min_width="0",
+        ),
+        spacing="2",
+        align="center",
+        width="100%",
+        padding_y="6px",
+        padding_x="8px",
+        class_name="border-b last:border-0 "
+        + t("border-white/5", "border-gray-100"),
+    )
+
+
+def _redraft_league_card(lg: rx.Var) -> rx.Component:
+    return rx.box(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("trophy", size=16, color="#DC2626"),
+                rx.heading(
+                    lg["name"].to(str),
+                    size="3",
+                    weight="bold",
+                    class_name=TEXT_PRIMARY,
+                ),
+                rx.spacer(),
+                rx.badge(
+                    lg["size"].to_string() + " / 12",
+                    color_scheme="gray",
+                    variant="soft",
+                    size="1",
+                ),
+                rx.cond(
+                    lg["commish_count"].to(int) > 0,
+                    rx.badge(
+                        rx.hstack(
+                            rx.icon("crown", size=12),
+                            rx.text(
+                                lg["commish_count"].to_string(),
+                                size="1",
+                                weight="bold",
+                            ),
+                            spacing="1",
+                            align="center",
+                        ),
+                        color_scheme="red",
+                        variant="soft",
+                        size="1",
+                    ),
+                    rx.fragment(),
+                ),
+                width="100%",
+                align="center",
+            ),
+            rx.foreach(
+                lg["players"].to(list[dict[str, str | int | bool]]),
+                _redraft_player_row,
+            ),
+            spacing="2",
+            width="100%",
+            align="stretch",
+        ),
+        padding="12px",
+        border_radius="12px",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626] border "
+        + t(
+            "bg-[#08090D] border-white/5",
+            "bg-white border-gray-200",
+        ),
+    )
+
+
+def _redraft_nachruecker_row(p: rx.Var) -> rx.Component:
+    return rx.hstack(
+        rx.cond(
+            p["commish"].to(bool),
+            rx.icon("crown", size=14, color="#DC2626"),
+            rx.box(class_name="w-[14px]"),
+        ),
+        rx.text(
+            p["sleeper"].to(str),
+            size="2",
+            weight="bold",
+            class_name="truncate " + TEXT_PRIMARY,
+        ),
+        rx.text(
+            p["discord"].to(str),
+            size="1",
+            class_name="truncate " + TEXT_SECONDARY,
+        ),
+        rx.spacer(),
+        rx.text(
+            p["created_display"].to(str),
+            size="1",
+            class_name="font-mono " + TEXT_SECONDARY,
+        ),
+        spacing="3",
+        align="center",
+        width="100%",
+        padding_y="6px",
+        padding_x="8px",
+        class_name="border-b last:border-0 "
+        + t("border-white/5", "border-gray-100"),
+    )
+
+
+def _redraft_card() -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.hstack(
+                rx.icon("shuffle", size=22, color="#DC2626"),
+                rx.heading(
+                    "Redraft Ligaeinteilung (Test)", size="4", weight="bold"
+                ),
+                rx.badge(
+                    "Preview",
+                    color_scheme="red",
+                    variant="soft",
+                    size="1",
+                ),
+                rx.spacer(),
+                rx.cond(
+                    AdminState.redraft_last_loaded != "",
+                    rx.text(
+                        f"Daten: {AdminState.redraft_last_loaded}",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    rx.fragment(),
+                ),
+                width="100%",
+                align="center",
+                wrap="wrap",
+                spacing="2",
+            ),
+            rx.text(
+                "Lädt Anmeldungen aus der Supabase-Tabelle „user_registration“ "
+                "und berechnet eine testweise Einteilung in 12er-Ligen: "
+                "Commissioner werden zuerst verteilt, Mitspielerwünsche "
+                "werden nach Möglichkeit erhalten, alle übrigen Plätze werden "
+                "zufällig gefüllt und die Draftreihenfolge pro Liga gemischt. "
+                "Nur Vorschau — es wird nichts nach Supabase geschrieben. "
+                "E-Mail und Änderungscode werden bewusst nicht angezeigt.",
+                size="2",
+                class_name=TEXT_SECONDARY,
+            ),
+            rx.cond(
+                AdminState.redraft_error != "",
+                rx.hstack(
+                    rx.icon("circle-alert", size=16, color="#EF4444"),
+                    rx.text(
+                        AdminState.redraft_error,
+                        size="2",
+                        weight="medium",
+                        class_name="text-red-500",
+                    ),
+                    rx.spacer(),
+                    rx.button(
+                        rx.icon("x", size=12),
+                        on_click=AdminState.clear_redraft_error,
+                        variant="ghost",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
+                    padding="10px 12px",
+                    border_radius="8px",
+                    class_name="border border-red-500/30 bg-red-500/5",
+                ),
+                rx.fragment(),
+            ),
+            rx.cond(
+                AdminState.redraft_warning != "",
+                rx.hstack(
+                    rx.icon("triangle-alert", size=16, color="#F59E0B"),
+                    rx.text(
+                        AdminState.redraft_warning,
+                        size="2",
+                        weight="medium",
+                        class_name="text-amber-600",
+                    ),
+                    rx.spacer(),
+                    rx.button(
+                        rx.icon("x", size=12),
+                        on_click=AdminState.clear_redraft_warning,
+                        variant="ghost",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
+                    padding="10px 12px",
+                    border_radius="8px",
+                    class_name="border border-amber-500/30 bg-amber-500/5",
+                ),
+                rx.fragment(),
+            ),
+            rx.hstack(
+                rx.icon("info", size=14, color="#94A3B8"),
+                rx.text(
+                    "Hinweis: ‚Ligaeinteilung generieren‘ lädt die aktuellen "
+                    "Anmeldungen aus Supabase neu und berechnet die Preview "
+                    "komplett neu. Es werden keine Daten zurückgeschrieben. "
+                    "E-Mail und Änderungscode sind in der Anzeige bewusst "
+                    "ausgeblendet.",
+                    size="1",
+                    class_name="italic " + TEXT_SECONDARY,
+                ),
+                spacing="2",
+                align="start",
+                width="100%",
+            ),
+            rx.grid(
+                _redraft_stat_tile(
+                    "Anmeldungen",
+                    AdminState.redraft_total_count.to_string(),
+                    "users",
+                    "#DC2626",
+                ),
+                _redraft_stat_tile(
+                    "Commish",
+                    AdminState.redraft_commish_count.to_string(),
+                    "crown",
+                    "#DC2626",
+                ),
+                _redraft_stat_tile(
+                    "Mögliche 12er-Ligen",
+                    AdminState.redraft_possible_leagues.to_string(),
+                    "trophy",
+                    "#10B981",
+                ),
+                _redraft_stat_tile(
+                    "Nachrücker",
+                    AdminState.redraft_remaining_count.to_string(),
+                    "user-plus",
+                    "#F59E0B",
+                ),
+                columns=rx.breakpoints(initial="1", sm="2", lg="4"),
+                spacing="3",
+                width="100%",
+            ),
+            rx.hstack(
+                rx.button(
+                    rx.cond(
+                        AdminState.redraft_is_loading,
+                        rx.spinner(size="1"),
+                        rx.icon("refresh-cw", size=14),
+                    ),
+                    "Anmeldungen laden",
+                    on_click=AdminState.load_redraft_registrations,
+                    disabled=AdminState.redraft_is_loading,
+                    variant="soft",
+                    color_scheme="gray",
+                    size="2",
+                ),
+                rx.button(
+                    rx.cond(
+                        AdminState.redraft_is_loading,
+                        rx.spinner(size="1"),
+                        rx.icon("shuffle", size=14),
+                    ),
+                    rx.cond(
+                        AdminState.redraft_has_assignment,
+                        "Neu auslosen (Daten refreshen)",
+                        "Ligaeinteilung generieren",
+                    ),
+                    on_click=AdminState.generate_redraft_assignment,
+                    disabled=AdminState.redraft_is_loading,
+                    size="2",
+                    style={"background_color": "#DC2626"},
+                ),
+                rx.spacer(),
+                rx.cond(
+                    AdminState.redraft_last_generated != "",
+                    rx.text(
+                        f"Letzte Auslosung: {AdminState.redraft_last_generated}",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    rx.fragment(),
+                ),
+                spacing="3",
+                align="center",
+                width="100%",
+                wrap="wrap",
+            ),
+            rx.cond(
+                AdminState.redraft_is_loading,
+                rx.center(
+                    rx.vstack(
+                        rx.spinner(size="3"),
+                        rx.text(
+                            "Lade Daten und berechne Ligen…",
+                            size="2",
+                            class_name=TEXT_SECONDARY,
+                        ),
+                        spacing="2",
+                        align="center",
+                    ),
+                    padding_y="32px",
+                    width="100%",
+                ),
+                rx.cond(
+                    AdminState.redraft_has_assignment,
+                    rx.vstack(
+                        rx.hstack(
+                            rx.icon("list-checks", size=16, color="#DC2626"),
+                            rx.text(
+                                "Ligen",
+                                size="1",
+                                weight="bold",
+                                class_name="uppercase tracking-wide "
+                                + TEXT_SECONDARY,
+                            ),
+                            width="100%",
+                            align="center",
+                        ),
+                        rx.grid(
+                            rx.foreach(
+                                AdminState.redraft_assignments,
+                                _redraft_league_card,
+                            ),
+                            columns=rx.breakpoints(initial="1", md="2", xl="3"),
+                            spacing="3",
+                            width="100%",
+                        ),
+                        rx.cond(
+                            AdminState.redraft_nachruecker.length() > 0,
+                            rx.vstack(
+                                rx.hstack(
+                                    rx.icon(
+                                        "user-plus",
+                                        size=16,
+                                        color="#F59E0B",
+                                    ),
+                                    rx.text(
+                                        "Nachrücker",
+                                        size="1",
+                                        weight="bold",
+                                        class_name="uppercase tracking-wide "
+                                        + TEXT_SECONDARY,
+                                    ),
+                                    rx.badge(
+                                        AdminState.redraft_nachruecker.length().to_string(),
+                                        color_scheme="orange",
+                                        variant="soft",
+                                        size="1",
+                                    ),
+                                    spacing="2",
+                                    align="center",
+                                ),
+                                rx.box(
+                                    rx.foreach(
+                                        AdminState.redraft_nachruecker,
+                                        _redraft_nachruecker_row,
+                                    ),
+                                    width="100%",
+                                    border_radius="12px",
+                                    class_name="border overflow-hidden "
+                                    + t(
+                                        "bg-[#08090D] border-white/5",
+                                        "bg-white border-gray-200",
+                                    ),
+                                ),
+                                spacing="2",
+                                width="100%",
+                                align="stretch",
+                            ),
+                            rx.fragment(),
+                        ),
+                        spacing="4",
+                        width="100%",
+                        align="stretch",
+                    ),
+                    rx.box(
+                        rx.vstack(
+                            rx.icon("shuffle", size=32, color="gray"),
+                            rx.text(
+                                rx.cond(
+                                    AdminState.redraft_total_count > 0,
+                                    "Noch keine Auslosung generiert. Klicke auf "
+                                    "„Ligaeinteilung generieren“, um eine Test-"
+                                    "Einteilung aus den geladenen Anmeldungen zu "
+                                    "erzeugen.",
+                                    "Noch keine Anmeldungen geladen. Klicke auf "
+                                    "„Anmeldungen laden“, um Daten aus "
+                                    "user_registration abzurufen.",
+                                ),
+                                size="2",
+                                class_name="italic text-center "
+                                + TEXT_SECONDARY,
+                            ),
+                            spacing="2",
+                            align="center",
+                            padding="32px",
+                            width="100%",
+                        ),
+                        class_name="border border-dashed rounded-xl "
+                        + t("border-gray-800", "border-gray-200"),
+                        width="100%",
+                    ),
+                ),
+            ),
+            spacing="4",
+            width="100%",
+            align="stretch",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
 def _log_entry(entry: dict) -> rx.Component:
     return rx.hstack(
         rx.text(
@@ -1056,6 +1545,7 @@ def _admin_dashboard() -> rx.Component:
             _add_league_card(),
             _data_updates_card(),
             _leagues_table(),
+            _redraft_card(),
             _log_card(),
             _confirm_sync_all_dialog(),
             spacing="5",

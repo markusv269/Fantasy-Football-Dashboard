@@ -1,5 +1,7 @@
 import reflex as rx
+import json
 import logging
+import random
 from datetime import datetime, timezone
 from app.supabase_client import get_supabase_client
 from app.league_types import normalize_league_types
@@ -32,6 +34,22 @@ class AdminState(rx.State):
     log_entries: list[dict[str, str]] = []
     last_sync_time: str = ""
     show_confirm_sync_all: bool = False
+
+    # Redraft Ligaeinteilung (test-only, read-only preview).
+    # Loads from Supabase.user_registration and computes an in-memory
+    # league assignment mirroring the SLR2025 notebook algorithm. Nothing
+    # is ever written back to Supabase in this phase.
+    redraft_registrations: list[dict[str, str | bool]] = []
+    redraft_assignments: list[
+        dict[str, str | int | list[dict[str, str | int | bool]]]
+    ] = []
+    redraft_nachruecker: list[dict[str, str | bool]] = []
+    redraft_is_loading: bool = False
+    redraft_error: str = ""
+    redraft_last_loaded: str = ""
+    redraft_last_generated: str = ""
+    redraft_league_size: int = 12
+    redraft_warning: str = ""
 
     # New: bulk data update controls
     week_mode: str = "single"  # 'single' | 'range' | 'all'
@@ -194,6 +212,507 @@ class AdminState(rx.State):
     @rx.event
     def clear_log(self):
         self.log_entries = []
+
+    # ---------- Redraft Ligaeinteilung (test-only) ----------
+
+    @rx.var
+    def redraft_total_count(self) -> int:
+        return len(self.redraft_registrations)
+
+    @rx.var
+    def redraft_commish_count(self) -> int:
+        return sum(1 for r in self.redraft_registrations if r.get("commish"))
+
+    @rx.var
+    def redraft_possible_leagues(self) -> int:
+        size = max(1, int(self.redraft_league_size or 12))
+        return len(self.redraft_registrations) // size
+
+    @rx.var
+    def redraft_remaining_count(self) -> int:
+        size = max(1, int(self.redraft_league_size or 12))
+        return len(self.redraft_registrations) - (
+            self.redraft_possible_leagues * size
+        )
+
+    @rx.var
+    def redraft_has_assignment(self) -> bool:
+        return len(self.redraft_assignments) > 0
+
+    @rx.event
+    def clear_redraft_error(self):
+        self.redraft_error = ""
+
+    @rx.event
+    def clear_redraft_warning(self):
+        self.redraft_warning = ""
+
+    @rx.var
+    def redraft_commish_shortfall(self) -> int:
+        need = self.redraft_possible_leagues
+        have = self.redraft_commish_count
+        return max(0, need - have)
+
+    @rx.var
+    def redraft_min_required(self) -> int:
+        return int(self.redraft_league_size or 12)
+
+    def _normalize_key(self, val) -> str:
+        return str(val or "").strip().lower()
+
+    def _parse_mitspieler(self, raw) -> list[str]:
+        """Return a list of normalized mate keys from a mitspieler value.
+
+        Accepts list, JSON-list string, or comma-separated string.
+        """
+        if raw is None:
+            return []
+        if isinstance(raw, list):
+            return [
+                self._normalize_key(m) for m in raw if self._normalize_key(m)
+            ]
+        if isinstance(raw, str):
+            s = raw.strip()
+            if not s:
+                return []
+            if s.startswith("[") and s.endswith("]"):
+                try:
+                    parsed = json.loads(s)
+                    if isinstance(parsed, list):
+                        return [
+                            self._normalize_key(m)
+                            for m in parsed
+                            if self._normalize_key(m)
+                        ]
+                except Exception:
+                    logging.exception("mitspieler JSON parse failed")
+            return [
+                self._normalize_key(m)
+                for m in s.split(",")
+                if self._normalize_key(m)
+            ]
+        return []
+
+    def _format_created(self, iso_str: str) -> str:
+        if not iso_str:
+            return ""
+        try:
+            dt = datetime.fromisoformat(str(iso_str).replace("Z", "+00:00"))
+            return dt.strftime("%d.%m.%Y %H:%M")
+        except Exception:
+            logging.exception("created_at parse failed")
+            return str(iso_str)[:10]
+
+    def _fetch_redraft_registrations(self) -> tuple[list[dict], str]:
+        """Sync helper: pull user_registration rows and normalize them.
+
+        Returns (rows, error). Email and key are never selected.
+        """
+        client = get_supabase_client()
+        if not client:
+            return [], "Supabase nicht verfügbar."
+        try:
+            res = (
+                client.table("user_registration")
+                .select(
+                    "index,sleeper,discord,mitspieler,commish,"
+                    "Doppelanmeldung,created_at,user_id"
+                )
+                .order("created_at", desc=False)
+                .execute()
+            )
+        except Exception as e:
+            logging.exception(f"user_registration fetch failed: {e}")
+            return [], f"Fehler beim Laden: {e}"
+        rows = res.data if res and res.data else []
+        normalized: list[dict] = []
+        for r in rows:
+            sleeper = str(r.get("sleeper") or "").strip()
+            idx = str(r.get("index") or "").strip()
+            if not sleeper and not idx:
+                continue
+            mates_raw = r.get("mitspieler")
+            if isinstance(mates_raw, list):
+                mates_display = ", ".join(
+                    str(m).strip() for m in mates_raw if str(m).strip()
+                )
+            else:
+                mates_display = str(mates_raw or "").strip()
+            created = str(r.get("created_at") or "")
+            normalized.append(
+                {
+                    "user_id": str(r.get("user_id") or ""),
+                    "index": idx or self._normalize_key(sleeper),
+                    "sleeper": sleeper or idx,
+                    "discord": str(r.get("discord") or ""),
+                    "mitspieler": mates_display,
+                    "commish": bool(r.get("commish") or False),
+                    "doppelanmeldung": bool(r.get("Doppelanmeldung") or False),
+                    "created_at": created,
+                    "created_display": self._format_created(created),
+                }
+            )
+        return normalized, ""
+
+    @rx.event
+    async def load_redraft_registrations(self):
+        if not await self._require_auth():
+            return
+        self.redraft_is_loading = True
+        self.redraft_error = ""
+        yield
+        try:
+            rows, err = self._fetch_redraft_registrations()
+            if err:
+                self.redraft_error = err
+                self._log(f"Redraft-Load-Fehler: {err}", "error")
+                return
+            self.redraft_registrations = rows
+            self.redraft_last_loaded = datetime.now().strftime(
+                "%d.%m.%Y %H:%M:%S"
+            )
+            # Invalidate any previous preview when data changes.
+            self.redraft_assignments = []
+            self.redraft_nachruecker = []
+            self.redraft_last_generated = ""
+            self._log(
+                f"Redraft: {len(rows)} Anmeldungen aus user_registration geladen."
+            )
+        finally:
+            self.redraft_is_loading = False
+
+    def _build_assignment(
+        self, rows: list[dict]
+    ) -> tuple[list[dict], list[dict], str]:
+        """Compute an in-memory league assignment.
+
+        Faithfully mirrors the SLR2025 notebook algorithm:
+
+        1. Sort registrations by ``created_at`` ascending and take the
+           first ``N * 12`` as active seats; the rest become Nachrücker.
+        2. Parse each participant's ``mitspieler`` wishes; one-sided
+           mentions are enough (matching the notebook's
+           ``group_to_merge = verified_groups.copy()``).
+        3. Iteratively merge overlapping wish groups until stable, so
+           chains like A→B, B→C collapse into a single group {A,B,C}.
+        4. Split active participants into commishes and non-commishes,
+           shuffle both pools.
+        5. For each league, place exactly one commish first — together
+           with their whole wish group if the group fits, otherwise the
+           commish alone (remaining group members fall through to the
+           later phases). This guarantees every league starts with a
+           commish.
+        6. Iterate over all remaining owners (leftover commishes first,
+           then non-commishes) and try to place each owner's full wish
+           group into the first league with enough free seats. Group
+           members are inserted in a randomized order so wishes never
+           implicitly determine adjacent draft slots.
+        7. Fallback pass: any owner still unplaced is dropped into the
+           first league with free capacity, one at a time.
+        8. Finally, shuffle the owner order within each league so
+           commishes are not fixed at draft slot 1.
+
+        The result is purely a preview — nothing is persisted to
+        Supabase.
+        """
+        size = max(1, int(self.redraft_league_size or 12))
+        sorted_rows = sorted(rows, key=lambda r: str(r.get("created_at") or ""))
+        num_leagues = len(sorted_rows) // size
+        nachruecker_rows = sorted_rows[num_leagues * size :]
+
+        def _nach_out() -> list[dict]:
+            out: list[dict] = []
+            for r in nachruecker_rows:
+                out.append(
+                    {
+                        "sleeper": str(r.get("sleeper") or ""),
+                        "discord": str(r.get("discord") or ""),
+                        "commish": bool(r.get("commish") or False),
+                        "index": str(r.get("index") or ""),
+                        "created_display": str(r.get("created_display") or ""),
+                    }
+                )
+            return out
+
+        if num_leagues == 0:
+            return (
+                [],
+                _nach_out(),
+                f"Zu wenige Anmeldungen für eine {size}er-Liga. "
+                f"Aktuell {len(sorted_rows)} von mindestens {size} Anmeldungen.",
+            )
+
+        active_rows = sorted_rows[: num_leagues * size]
+        by_key: dict[str, dict] = {}
+        for r in active_rows:
+            k = self._normalize_key(r.get("index") or r.get("sleeper"))
+            if k:
+                by_key[k] = r
+
+        # Wishes: only mates that exist inside the active pool.
+        groups_raw: list[list[str]] = []
+        for r in active_rows:
+            me = self._normalize_key(r.get("index") or r.get("sleeper"))
+            if not me:
+                continue
+            mates = [
+                m
+                for m in self._parse_mitspieler(r.get("mitspieler"))
+                if m in by_key and m != me
+            ]
+            if mates:
+                groups_raw.append([me] + mates)
+
+        # Iteratively merge overlapping groups.
+        merged: list[set[str]] = []
+        for g in groups_raw:
+            g_set = set(g)
+            hit = None
+            for m in merged:
+                if m & g_set:
+                    hit = m
+                    break
+            if hit is not None:
+                hit.update(g_set)
+            else:
+                merged.append(g_set)
+        changed = True
+        while changed:
+            changed = False
+            out: list[set[str]] = []
+            for g in merged:
+                target = None
+                for o in out:
+                    if o & g:
+                        target = o
+                        break
+                if target is None:
+                    out.append(set(g))
+                else:
+                    if not target.issuperset(g):
+                        target.update(g)
+                        changed = True
+            merged = out
+
+        owner_to_group: dict[str, list[str]] = {}
+        for g in merged:
+            g_list = list(g)
+            for o in g_list:
+                owner_to_group[o] = g_list
+
+        rnd = random.Random()
+
+        def _group_members(owner: str) -> list[str]:
+            """Return the owner's wish-group in randomized order.
+
+            Mirrors the notebook's ``get_group_members`` helper which
+            uses ``random.sample`` so no wish-group member is
+            deterministically adjacent to another.
+            """
+            grp = owner_to_group.get(owner)
+            if not grp:
+                return [owner]
+            return rnd.sample(grp, k=len(grp))
+
+        # Step 4: split by commish flag, shuffle both pools.
+        commish_keys = [
+            self._normalize_key(r.get("index") or r.get("sleeper"))
+            for r in active_rows
+            if r.get("commish")
+        ]
+        non_commish_keys = [
+            self._normalize_key(r.get("index") or r.get("sleeper"))
+            for r in active_rows
+            if not r.get("commish")
+        ]
+        commish_keys = [k for k in commish_keys if k]
+        non_commish_keys = [k for k in non_commish_keys if k]
+        rnd.shuffle(commish_keys)
+        rnd.shuffle(non_commish_keys)
+
+        leagues: list[list[str]] = [[] for _ in range(num_leagues)]
+        assigned: set[str] = set()
+
+        # Step 5: guarantee one commish per league, keeping their wish
+        # group intact when it fits. Commishes whose group does not fit
+        # are placed alone; the extra group members flow through the
+        # later phases and may land in a different league.
+        for li in range(num_leagues):
+            for co in commish_keys:
+                if co in assigned:
+                    continue
+                members = _group_members(co)
+                candidates = [o for o in members if o not in assigned]
+                # Guarantee the commish personally lands in this league
+                # even if we later have to truncate the group: force
+                # them to the front of the candidate list.
+                if co in candidates:
+                    candidates.remove(co)
+                candidates.insert(0, co)
+                free = size - len(leagues[li])
+                if candidates and len(candidates) <= free:
+                    for c in candidates:
+                        leagues[li].append(c)
+                        assigned.add(c)
+                else:
+                    leagues[li].append(co)
+                    assigned.add(co)
+                break
+
+        # Step 6: fill remaining seats. Iterate all remaining owners —
+        # leftover commishes first so their wish groups still get a
+        # chance to stay intact, then non-commishes — placing each
+        # owner's full wish group into the first league with enough
+        # free seats.
+        remaining_priority: list[str] = [
+            k for k in commish_keys if k not in assigned
+        ] + [k for k in non_commish_keys if k not in assigned]
+
+        for owner in remaining_priority:
+            if owner in assigned:
+                continue
+            candidates = [o for o in _group_members(owner) if o not in assigned]
+            if not candidates:
+                continue
+            placed = False
+            for li in range(num_leagues):
+                if size - len(leagues[li]) >= len(candidates):
+                    for c in candidates:
+                        leagues[li].append(c)
+                        assigned.add(c)
+                    placed = True
+                    break
+            if not placed:
+                # Group doesn't fit anywhere as a whole — place the
+                # owner solo; any remaining group members are picked
+                # up in the fallback pass below.
+                for li in range(num_leagues):
+                    if len(leagues[li]) < size:
+                        leagues[li].append(owner)
+                        assigned.add(owner)
+                        break
+
+        # Step 7: fallback — any owner not yet placed goes into the
+        # first league with free capacity, in randomized order.
+        leftover = [
+            o for o in commish_keys + non_commish_keys if o not in assigned
+        ]
+        rnd.shuffle(leftover)
+        for li in range(num_leagues):
+            while len(leagues[li]) < size and leftover:
+                o = leftover.pop(0)
+                leagues[li].append(o)
+                assigned.add(o)
+
+        # Step 8: shuffle each league so commishes are not fixed at
+        # draft slot 1.
+        for li in range(num_leagues):
+            rnd.shuffle(leagues[li])
+
+        assignments: list[dict] = []
+        for li, keys in enumerate(leagues):
+            players = []
+            commish_ct = 0
+            for slot, k in enumerate(keys, start=1):
+                r = by_key.get(k, {})
+                is_commish = bool(r.get("commish") or False)
+                if is_commish:
+                    commish_ct += 1
+                players.append(
+                    {
+                        "slot": slot,
+                        "sleeper": str(r.get("sleeper") or k),
+                        "discord": str(r.get("discord") or ""),
+                        "commish": is_commish,
+                        "index": str(r.get("index") or k),
+                    }
+                )
+            assignments.append(
+                {
+                    "name": f"Testliga {li + 1}",
+                    "size": len(players),
+                    "commish_count": commish_ct,
+                    "players": players,
+                }
+            )
+        return assignments, _nach_out(), ""
+
+    @rx.event
+    async def generate_redraft_assignment(self):
+        if not await self._require_auth():
+            return
+        self.redraft_error = ""
+        self.redraft_warning = ""
+        self.redraft_is_loading = True
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self.redraft_error = (
+                    "Supabase nicht verfügbar. Bitte SUPABASE_URL und "
+                    "SUPABASE_KEY prüfen."
+                )
+                self.redraft_assignments = []
+                self.redraft_nachruecker = []
+                self._log(
+                    "Redraft-Preview-Fehler: Supabase nicht verfügbar.",
+                    "error",
+                )
+                return
+            # Refresh from Supabase every time the button is pressed so the
+            # preview always reflects the latest state of user_registration.
+            rows, err = self._fetch_redraft_registrations()
+            if err:
+                self.redraft_error = err
+                self._log(f"Redraft-Preview-Fehler: {err}", "error")
+                return
+            self.redraft_registrations = rows
+            self.redraft_last_loaded = datetime.now().strftime(
+                "%d.%m.%Y %H:%M:%S"
+            )
+            if not rows:
+                self.redraft_assignments = []
+                self.redraft_nachruecker = []
+                self.redraft_error = (
+                    "Keine Anmeldungen in user_registration gefunden."
+                )
+                return
+            assignments, nachruecker, err2 = self._build_assignment(list(rows))
+            self.redraft_assignments = assignments
+            self.redraft_nachruecker = nachruecker
+            self.redraft_last_generated = datetime.now().strftime(
+                "%d.%m.%Y %H:%M:%S"
+            )
+            if err2:
+                self.redraft_error = err2
+                self._log(f"Redraft-Preview: {err2}", "error")
+            else:
+                self.redraft_error = ""
+                # Soft warning: mirror notebook's commish requirement
+                # (one commish per league) without blocking the preview.
+                commish_total = sum(1 for r in rows if r.get("commish"))
+                if assignments and commish_total < len(assignments):
+                    missing = len(assignments) - commish_total
+                    self.redraft_warning = (
+                        f"Achtung: Nur {commish_total} Commish-Anmeldung(en) "
+                        f"für {len(assignments)} Liga(en). Es fehlen "
+                        f"{missing} Commish(es) — betroffene Ligen wurden "
+                        f"trotzdem gefüllt, aber ohne garantierten Commish."
+                    )
+                    self._log(
+                        f"Redraft-Preview: Commish-Unterdeckung ({missing}).",
+                        "info",
+                    )
+                self._log(
+                    f"Redraft-Preview generiert: {len(assignments)} Liga(en), "
+                    f"{len(nachruecker)} Nachrücker."
+                )
+        except Exception as e:
+            logging.exception(f"generate_redraft_assignment failed: {e}")
+            self.redraft_error = f"Fehler bei der Berechnung: {e}"
+            self._log(f"Redraft-Preview-Fehler: {e}", "error")
+        finally:
+            self.redraft_is_loading = False
 
     def _log(self, msg: str, level: str = "info"):
         self.log_entries = [

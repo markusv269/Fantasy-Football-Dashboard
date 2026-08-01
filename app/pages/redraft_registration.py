@@ -28,7 +28,7 @@ def _hero() -> rx.Component:
             rx.text(
                 "Nach der Anmeldung erhältst du einen Änderungscode. Bewahre "
                 "ihn gut auf — du brauchst ihn, um deine Anmeldung später zu "
-                "aktualisieren.",
+                "aktualisieren. Mit der Anmeldung erklärst du Dich mit der Veröffentlichung der Namen (sleeper/Discord) sowie der Speicherung der E-Mail-Adresse einverstanden.",
                 size="2",
                 class_name="italic " + TEXT_SECONDARY,
             ),

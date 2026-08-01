@@ -1,4 +1,4 @@
-## League Types Plan
-- [x] Ligatyp-Daten normalisieren: `league_types` aus Supabase als Text oder Liste lesen, ältere `league_type`-Werte kompatibel halten und alle Typen in einheitlichen Anzeigen/Filtern verfügbar machen — Design bleibt bestehender roter Akzent mit hell/dunkel Kartenstil.
-- [x] League Cards aktualisieren: auf Home, Ligen, Archiv, Admin, Draft/ADP-Kontext alle zutreffenden Formen als Badges anzeigen und Typzählungen/Filter nach `redraft`, `dynasty`, `bestball`, `idp`, `idp_only` korrekt unterstützen.
-- [x] Redraft/Dynasty/Bestball/IDP-Logik validieren: bestehende Liga-Einteilungen, ADP-Formatfilter und Admin-Sync/Add-Flows auf mehrfache Typen umstellen und mit echten Supabase-Daten prüfen.
+## Redraft Ligaeinteilung Plan
+- [x] Admin-Bereich erweitern: Button und Übersicht für testweise Redraft-Ligaeinteilung aus `user_registration` integrieren — bestehender roter Akzent, hell/dunkles Kartenlayout und Admin-Stil bleiben unverändert.
+- [x] Ligaeinteilungslogik umsetzen: Anmeldungen laden, Commissioner je Liga priorisieren, Mitspielerwünsche berücksichtigen, übrige Teilnehmer zufällig verteilen und finale Draftreihenfolge pro Liga erneut mischen.
+- [x] Anzeige und Validierung fertigstellen: Ligenweise Darstellung mit Commish-Kennzeichnung, Statusmeldungen/Leerdaten und Prüfung mit echten `user_registration`-Daten.

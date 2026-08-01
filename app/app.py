@@ -103,11 +103,11 @@ app.add_page(adp_draftboard_page, route="/adp", on_load=AdpState.init_adp)
 app.add_page(
     waitinglist_page, route="/waitinglist", on_load=WaitlistState.init_waitlist
 )
-#app.add_page(
-#    redraft_registration_page,
-#    route="/redraft-registration",
-#    on_load=RedraftRegistrationState.init_page,
-#)
+app.add_page(
+    redraft_registration_page,
+    route="/redraft-registration",
+    on_load=RedraftRegistrationState.init_page,
+)
 app.add_page(
     archive_page,
     route="/archive",
