@@ -304,7 +304,7 @@ class AdminState(rx.State):
             return str(iso_str)[:10]
 
     def _fetch_redraft_registrations(self) -> tuple[list[dict], str]:
-        """Sync helper: pull user_registration rows and normalize them.
+        """Sync helper: pull redraft_registration_2026 rows and normalize them.
 
         Returns (rows, error). Email and key are never selected.
         """
@@ -313,16 +313,16 @@ class AdminState(rx.State):
             return [], "Supabase nicht verfügbar."
         try:
             res = (
-                client.table("user_registration")
+                client.table("redraft_registration_2026")
                 .select(
                     "index,sleeper,discord,mitspieler,commish,"
-                    "Doppelanmeldung,created_at,user_id"
+                    "created_at,user_id"
                 )
                 .order("created_at", desc=False)
                 .execute()
             )
         except Exception as e:
-            logging.exception(f"user_registration fetch failed: {e}")
+            logging.exception(f"redraft_registration_2026 fetch failed: {e}")
             return [], f"Fehler beim Laden: {e}"
         rows = res.data if res and res.data else []
         normalized: list[dict] = []
@@ -347,7 +347,7 @@ class AdminState(rx.State):
                     "discord": str(r.get("discord") or ""),
                     "mitspieler": mates_display,
                     "commish": bool(r.get("commish") or False),
-                    "doppelanmeldung": bool(r.get("Doppelanmeldung") or False),
+                    "doppelanmeldung": False,
                     "created_at": created,
                     "created_display": self._format_created(created),
                 }
@@ -376,7 +376,7 @@ class AdminState(rx.State):
             self.redraft_nachruecker = []
             self.redraft_last_generated = ""
             self._log(
-                f"Redraft: {len(rows)} Anmeldungen aus user_registration geladen."
+                f"Redraft: {len(rows)} Anmeldungen aus redraft_registration_2026 geladen."
             )
         finally:
             self.redraft_is_loading = False
@@ -677,6 +677,24 @@ class AdminState(rx.State):
             return rnd.sample(group, k=len(group))
 
         rnd.shuffle(commish_owners)
+
+        # Commish fallback: if there are fewer commish=True registrations
+        # than leagues, randomly promote non-commish active participants
+        # to fill the remaining commish slots. These fallback commishes
+        # are ordinary players in every other respect and are only shown
+        # as commish for the league they end up assigned to.
+        if len(commish_owners) < num_leagues:
+            shortfall = num_leagues - len(commish_owners)
+            existing = set(commish_owners)
+            candidates = [o for o in non_commish_owners if o not in existing]
+            rnd.shuffle(candidates)
+            promoted = candidates[:shortfall]
+            promoted_set = set(promoted)
+            commish_owners.extend(promoted)
+            non_commish_owners = [
+                o for o in non_commish_owners if o not in promoted_set
+            ]
+            rnd.shuffle(commish_owners)
 
         # Assign one available commissioner to each league first. The
         # commissioner's complete wish group is placed with them when it fits.

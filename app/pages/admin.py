@@ -1087,13 +1087,17 @@ def _redraft_card() -> rx.Component:
                 spacing="2",
             ),
             rx.text(
-                "Lädt Anmeldungen aus der Supabase-Tabelle „user_registration“ "
-                "und berechnet eine testweise Einteilung in 12er-Ligen: "
-                "Commissioner werden zuerst verteilt, Mitspielerwünsche "
-                "werden nach Möglichkeit erhalten, alle übrigen Plätze werden "
-                "zufällig gefüllt und die Draftreihenfolge pro Liga gemischt. "
-                "Nur Vorschau — es wird nichts nach Supabase geschrieben. "
-                "E-Mail und Änderungscode werden bewusst nicht angezeigt.",
+                "Lädt Anmeldungen aus der Supabase-Tabelle "
+                "„redraft_registration_2026“ und berechnet eine testweise "
+                "Einteilung in 12er-Ligen: Commissioner werden zuerst "
+                "verteilt, Mitspielerwünsche werden nach Möglichkeit "
+                "erhalten, alle übrigen Plätze werden zufällig gefüllt und "
+                "die Draftreihenfolge pro Liga gemischt. Fehlen echte "
+                "Commish-Anmeldungen, werden zufällig weitere aktive "
+                "Teilnehmer als Commish ausgewählt, damit jede Liga genau "
+                "einen Commish hat. Nur Vorschau — es wird nichts nach "
+                "Supabase geschrieben. E-Mail und Änderungscode werden "
+                "bewusst nicht angezeigt.",
                 size="2",
                 class_name=TEXT_SECONDARY,
             ),
@@ -1155,10 +1159,10 @@ def _redraft_card() -> rx.Component:
                 rx.icon("info", size=14, color="#94A3B8"),
                 rx.text(
                     "Hinweis: ‚Ligaeinteilung generieren‘ lädt die aktuellen "
-                    "Anmeldungen aus Supabase neu und berechnet die Preview "
-                    "komplett neu. Es werden keine Daten zurückgeschrieben. "
-                    "E-Mail und Änderungscode sind in der Anzeige bewusst "
-                    "ausgeblendet.",
+                    "Anmeldungen aus redraft_registration_2026 neu und "
+                    "berechnet die Preview komplett neu. Es werden keine "
+                    "Daten zurückgeschrieben. E-Mail und Änderungscode sind "
+                    "in der Anzeige bewusst ausgeblendet.",
                     size="1",
                     class_name="italic " + TEXT_SECONDARY,
                 ),
@@ -1340,7 +1344,7 @@ def _redraft_card() -> rx.Component:
                                     "erzeugen.",
                                     "Noch keine Anmeldungen geladen. Klicke auf "
                                     "„Anmeldungen laden“, um Daten aus "
-                                    "user_registration abzurufen.",
+                                    "redraft_registration_2026 abzurufen.",
                                 ),
                                 size="2",
                                 class_name="italic text-center "
