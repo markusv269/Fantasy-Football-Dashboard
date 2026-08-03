@@ -1,4 +1,4 @@
-## Redraft Ligaeinteilung Datenquelle Plan
-- [x] Redraft-Preview im Admin-Bereich auf `redraft_registration_2026` umstellen und die bestehende rote Admin-Kartenoptik unverändert beibehalten.
-- [x] Commish-Fallback in der Einteilung ergänzen: falls weniger Commish-Anmeldungen als Ligen vorhanden sind, werden zusätzliche Commishs zufällig aus den aktiven Teilnehmern bestimmt.
-- [x] Einteilung mit echten Registrierungsdaten validieren: volle 12er-Ligen, Nachrücker, genau ein Commish je Liga und zufällige Verteilung prüfen.
+## Redraft Auslosung Speichern Plan
+- [x] Admin-Redraft-Preview um Speichern/Überschreiben erweitern: rote bestehende Admin-Optik beibehalten, klare Statusmeldungen und Sicherheits-Hinweis für die Supabase-Persistenz.
+- [x] Supabase-Persistenz für Auslosungsläufe, Spielerzuordnungen und Nachrückerliste implementieren, inklusive league_id und league_invite_link als spätere Platzhalter-Felder.
+- [x] Speicherlogik mit echten Tabellen validieren: vorhandene aktive Auslosung überschreiben, Spieler-/Nachrücker-Zeilen korrekt schreiben und genau eine aktive Run-Zuordnung sicherstellen.

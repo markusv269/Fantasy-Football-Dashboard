@@ -51,6 +51,13 @@ class AdminState(rx.State):
     redraft_league_size: int = 12
     redraft_warning: str = ""
 
+    # Save-to-Supabase state for redraft assignment persistence.
+    redraft_is_saving: bool = False
+    redraft_save_message: str = ""
+    redraft_save_type: str = ""  # 'success' | 'error' | ''
+    redraft_last_saved: str = ""
+    redraft_last_saved_run_id: str = ""
+
     # New: bulk data update controls
     week_mode: str = "single"  # 'single' | 'range' | 'all'
     week_single: int = 1
@@ -246,6 +253,260 @@ class AdminState(rx.State):
     @rx.event
     def clear_redraft_warning(self):
         self.redraft_warning = ""
+
+    @rx.event
+    def clear_redraft_save_message(self):
+        self.redraft_save_message = ""
+        self.redraft_save_type = ""
+
+    @rx.event
+    async def save_redraft_assignment(self):
+        """Persist the currently generated redraft preview to Supabase.
+
+        Overwrite semantics:
+        - Deactivate every existing row in redraft_assignment_runs_2026
+          (set is_active=false). Historical runs are preserved because
+          child rows cascade on delete only.
+        - Insert a new run row with is_active=true and aggregate totals.
+        - Insert all player rows referencing the new run id.
+        - Insert all waitlist rows referencing the new run id.
+        - Result: exactly one active run remains after save.
+        """
+        if not await self._require_auth():
+            return
+        if not self.redraft_assignments:
+            self.redraft_save_message = (
+                "Keine Auslosung vorhanden. Bitte zuerst eine "
+                "Ligaeinteilung generieren."
+            )
+            self.redraft_save_type = "error"
+            return
+        self.redraft_is_saving = True
+        self.redraft_save_message = ""
+        self.redraft_save_type = ""
+        yield
+        try:
+            client = get_supabase_client()
+            if not client:
+                self.redraft_save_message = (
+                    "Supabase nicht verfügbar. Speichern abgebrochen."
+                )
+                self.redraft_save_type = "error"
+                self._log(
+                    "Redraft-Save-Fehler: Supabase nicht verfügbar.",
+                    "error",
+                )
+                return
+
+            # Build lookup maps from current redraft_registrations so
+            # each assigned player/waitlist row can resolve sleeper_user_id,
+            # created_at and source_registration_id reliably.
+            by_index: dict[str, dict] = {}
+            by_norm_sleeper: dict[str, dict] = {}
+            for r in self.redraft_registrations:
+                idx = self._normalize_key(r.get("index"))
+                slp = self._normalize_key(r.get("sleeper"))
+                if idx:
+                    by_index[idx] = r
+                if slp and slp not in by_norm_sleeper:
+                    by_norm_sleeper[slp] = r
+
+            # 1) Deactivate all existing runs. Use a broad WHERE that
+            # matches any prior row (id IS NOT NULL).
+            try:
+                client.table("redraft_assignment_runs_2026").update(
+                    {"is_active": False}
+                ).neq("id", "00000000-0000-0000-0000-000000000000").execute()
+            except Exception as e:
+                logging.exception(f"Deactivate prior runs failed: {e}")
+                self.redraft_save_message = (
+                    f"Fehler beim Deaktivieren bestehender Runs: {e}"
+                )
+                self.redraft_save_type = "error"
+                self._log(
+                    f"Redraft-Save: Deaktivieren fehlgeschlagen: {e}",
+                    "error",
+                )
+                return
+
+            # 2) Insert the new active run row with totals.
+            total_leagues = len(self.redraft_assignments)
+            total_assigned = sum(
+                len(lg.get("players") or []) for lg in self.redraft_assignments
+            )
+            total_nachruecker = len(self.redraft_nachruecker)
+            total_commish = sum(
+                1
+                for lg in self.redraft_assignments
+                for p in (lg.get("players") or [])
+                if p.get("commish")
+            )
+            now_str = datetime.now().strftime("%d.%m.%Y %H:%M:%S")
+            run_payload = {
+                "season": 2026,
+                "name": f"Redraft 2026 Auslosung {now_str}",
+                "generated_by": "admin_ui",
+                "is_active": True,
+                "total_registrations": len(self.redraft_registrations),
+                "total_leagues": total_leagues,
+                "total_assigned": total_assigned,
+                "total_nachruecker": total_nachruecker,
+                "total_commish": total_commish,
+                "notes": (
+                    f"Gespeichert aus Admin-Preview am {now_str}. "
+                    f"Überschreibt vorherige aktive Auslosung."
+                ),
+            }
+            try:
+                res = (
+                    client.table("redraft_assignment_runs_2026")
+                    .insert(run_payload)
+                    .execute()
+                )
+                rows = res.data if res and res.data else []
+                if not rows:
+                    raise Exception("Kein Run-Row zurückgegeben.")
+                run_id = str(rows[0].get("id") or "")
+                if not run_id:
+                    raise Exception("Neuer Run hat keine id.")
+            except Exception as e:
+                logging.exception(f"Insert run failed: {e}")
+                self.redraft_save_message = (
+                    f"Fehler beim Anlegen des neuen Runs: {e}"
+                )
+                self.redraft_save_type = "error"
+                self._log(
+                    f"Redraft-Save: Run-Insert fehlgeschlagen: {e}",
+                    "error",
+                )
+                return
+
+            # 3) Build and insert player rows.
+            player_rows: list[dict] = []
+            for lg_index, lg in enumerate(self.redraft_assignments, start=1):
+                lg_name = str(lg.get("name") or f"SLR 2026 - Liga {lg_index}")
+                players = lg.get("players") or []
+                for p in players:
+                    sleeper_name = str(p.get("sleeper") or "")
+                    source_key = self._normalize_key(
+                        p.get("index") or sleeper_name
+                    )
+                    src = (
+                        by_index.get(source_key)
+                        or by_norm_sleeper.get(source_key)
+                        or {}
+                    )
+                    slot = int(p.get("slot") or 0)
+                    player_rows.append(
+                        {
+                            "assignment_run_id": run_id,
+                            "season": 2026,
+                            "league_number": lg_index,
+                            "league_name": lg_name,
+                            "roster_position": slot,
+                            "draft_position": slot,
+                            "sleeper_username": sleeper_name,
+                            "sleeper_user_id": str(src.get("user_id") or ""),
+                            "discord": str(
+                                p.get("discord") or src.get("discord") or ""
+                            ),
+                            "commish": bool(p.get("commish") or False),
+                            "source_registration_id": str(
+                                src.get("user_id") or src.get("index") or ""
+                            ),
+                            "source_registration_created_at": (
+                                src.get("created_at") or None
+                            ),
+                            "league_id": "",
+                            "league_invite_link": "",
+                        }
+                    )
+
+            try:
+                if player_rows:
+                    batch = 500
+                    for i in range(0, len(player_rows), batch):
+                        client.table("redraft_assignment_players_2026").insert(
+                            player_rows[i : i + batch]
+                        ).execute()
+            except Exception as e:
+                logging.exception(f"Insert players failed: {e}")
+                self.redraft_save_message = (
+                    f"Fehler beim Speichern der Spieler: {e}"
+                )
+                self.redraft_save_type = "error"
+                self._log(
+                    f"Redraft-Save: Player-Insert fehlgeschlagen: {e}",
+                    "error",
+                )
+                return
+
+            # 4) Build and insert waitlist rows.
+            waitlist_rows: list[dict] = []
+            for pos, w in enumerate(self.redraft_nachruecker, start=1):
+                sleeper_name = str(w.get("sleeper") or "")
+                source_key = self._normalize_key(w.get("index") or sleeper_name)
+                src = (
+                    by_index.get(source_key)
+                    or by_norm_sleeper.get(source_key)
+                    or {}
+                )
+                waitlist_rows.append(
+                    {
+                        "assignment_run_id": run_id,
+                        "waitlist_position": pos,
+                        "sleeper_username": sleeper_name,
+                        "sleeper_user_id": str(src.get("user_id") or ""),
+                        "discord": str(
+                            w.get("discord") or src.get("discord") or ""
+                        ),
+                        "source_registration_id": str(
+                            src.get("user_id") or src.get("index") or ""
+                        ),
+                        "source_registration_created_at": (
+                            src.get("created_at") or None
+                        ),
+                    }
+                )
+
+            try:
+                if waitlist_rows:
+                    batch = 500
+                    for i in range(0, len(waitlist_rows), batch):
+                        client.table("redraft_assignment_waitlist_2026").insert(
+                            waitlist_rows[i : i + batch]
+                        ).execute()
+            except Exception as e:
+                logging.exception(f"Insert waitlist failed: {e}")
+                self.redraft_save_message = (
+                    f"Fehler beim Speichern der Nachrücker: {e}"
+                )
+                self.redraft_save_type = "error"
+                self._log(
+                    f"Redraft-Save: Waitlist-Insert fehlgeschlagen: {e}",
+                    "error",
+                )
+                return
+
+            self.redraft_last_saved = now_str
+            self.redraft_last_saved_run_id = run_id
+            self.redraft_save_message = (
+                f"Auslosung gespeichert: {total_leagues} Liga(en), "
+                f"{total_assigned} Spieler, {total_nachruecker} Nachrücker. "
+                f"Aktiver Run: {run_id}."
+            )
+            self.redraft_save_type = "success"
+            self._log(
+                f"Redraft-Save OK: run={run_id}, leagues={total_leagues}, "
+                f"players={total_assigned}, waitlist={total_nachruecker}."
+            )
+        except Exception as e:
+            logging.exception(f"save_redraft_assignment failed: {e}")
+            self.redraft_save_message = f"Unerwarteter Fehler: {e}"
+            self.redraft_save_type = "error"
+            self._log(f"Redraft-Save-Fehler: {e}", "error")
+        finally:
+            self.redraft_is_saving = False
 
     @rx.var
     def redraft_commish_shortfall(self) -> int:

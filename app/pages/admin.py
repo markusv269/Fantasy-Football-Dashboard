@@ -1199,6 +1199,70 @@ def _redraft_card() -> rx.Component:
                 spacing="3",
                 width="100%",
             ),
+            rx.cond(
+                AdminState.redraft_save_message != "",
+                rx.hstack(
+                    rx.icon(
+                        rx.cond(
+                            AdminState.redraft_save_type == "success",
+                            "circle-check",
+                            "circle-alert",
+                        ),
+                        size=16,
+                        color=rx.cond(
+                            AdminState.redraft_save_type == "success",
+                            "#10B981",
+                            "#EF4444",
+                        ),
+                    ),
+                    rx.text(
+                        AdminState.redraft_save_message,
+                        size="2",
+                        weight="medium",
+                        class_name=TEXT_PRIMARY,
+                    ),
+                    rx.spacer(),
+                    rx.button(
+                        rx.icon("x", size=12),
+                        on_click=AdminState.clear_redraft_save_message,
+                        variant="ghost",
+                        color_scheme="gray",
+                        size="1",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
+                    padding="10px 12px",
+                    border_radius="8px",
+                    class_name=rx.cond(
+                        AdminState.redraft_save_type == "success",
+                        "border border-emerald-500/30 bg-emerald-500/5",
+                        "border border-red-500/30 bg-red-500/5",
+                    ),
+                ),
+                rx.fragment(),
+            ),
+            rx.cond(
+                AdminState.redraft_has_assignment,
+                rx.hstack(
+                    rx.icon("triangle-alert", size=14, color="#F59E0B"),
+                    rx.text(
+                        "Achtung: „Auslosung speichern“ überschreibt die "
+                        "aktuell aktive gespeicherte Auslosung in Supabase. "
+                        "Alte Runs bleiben inaktiv erhalten.",
+                        size="1",
+                        weight="medium",
+                        class_name="text-amber-500",
+                    ),
+                    spacing="2",
+                    align="center",
+                    width="100%",
+                    padding="8px 12px",
+                    border_radius="8px",
+                    class_name="border border-amber-500/30 bg-amber-500/5",
+                ),
+                rx.fragment(),
+            ),
             rx.hstack(
                 rx.button(
                     rx.cond(
@@ -1208,7 +1272,8 @@ def _redraft_card() -> rx.Component:
                     ),
                     "Anmeldungen laden",
                     on_click=AdminState.load_redraft_registrations,
-                    disabled=AdminState.redraft_is_loading,
+                    disabled=AdminState.redraft_is_loading
+                    | AdminState.redraft_is_saving,
                     variant="soft",
                     color_scheme="gray",
                     size="2",
@@ -1225,11 +1290,39 @@ def _redraft_card() -> rx.Component:
                         "Ligaeinteilung generieren",
                     ),
                     on_click=AdminState.generate_redraft_assignment,
-                    disabled=AdminState.redraft_is_loading,
+                    disabled=AdminState.redraft_is_loading
+                    | AdminState.redraft_is_saving,
+                    size="2",
+                    style={"background_color": "#DC2626"},
+                ),
+                rx.button(
+                    rx.cond(
+                        AdminState.redraft_is_saving,
+                        rx.spinner(size="1"),
+                        rx.icon("save", size=14),
+                    ),
+                    rx.cond(
+                        AdminState.redraft_is_saving,
+                        "Speichere…",
+                        "Auslosung speichern (überschreibt aktive)",
+                    ),
+                    on_click=AdminState.save_redraft_assignment,
+                    disabled=AdminState.redraft_is_saving
+                    | AdminState.redraft_is_loading
+                    | ~AdminState.redraft_has_assignment,
                     size="2",
                     style={"background_color": "#DC2626"},
                 ),
                 rx.spacer(),
+                rx.cond(
+                    AdminState.redraft_last_saved != "",
+                    rx.text(
+                        f"Zuletzt gespeichert: {AdminState.redraft_last_saved}",
+                        size="1",
+                        class_name=TEXT_SECONDARY,
+                    ),
+                    rx.fragment(),
+                ),
                 rx.cond(
                     AdminState.redraft_last_generated != "",
                     rx.text(
