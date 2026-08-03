@@ -654,7 +654,7 @@ class AdminState(rx.State):
                 merged_groups.append(list(dict.fromkeys(group)))
 
         rnd = random.SystemRandom()
-        league_names = [f"Testliga {i + 1}" for i in range(num_leagues)]
+        league_names = [f"SLR 2026 - Liga {i + 1}" for i in range(num_leagues)]
         leagues_dict: dict[str, list[str]] = {name: [] for name in league_names}
         assigned_owners: set[str] = set()
         selected_commish_by_league: dict[str, str] = {}
