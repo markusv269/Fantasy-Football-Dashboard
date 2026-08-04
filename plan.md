@@ -1,4 +1,4 @@
-## Python-Dateien Dokumentation Plan
-- [x] Vollständige Entwicklerdokumentation für Projektstruktur, Einstiegspunkte, Hilfsdateien und externe Datenquellen erstellen.
-- [x] Alle State-Klassen mit Variablen, Computed Values, Events, Datenflüssen und Supabase-/Sleeper-Bezügen dokumentieren.
-- [x] Alle Pages und Komponenten mit ihren State-Verknüpfungen, Events, Routen und Bearbeitungshinweisen dokumentieren.
+## Aktive Auslosung Seite Plan
+- [x] Neue öffentliche Seite für die aktive Redraft-Auslosung erstellen: bestehende rote Stoned-Lack-Optik beibehalten, Navigation ergänzen und aktive Runs mit Liga-/Spielergruppen anzeigen.
+- [x] Supabase-Abgleich implementieren: aktive Auslosung, Spielerzuordnungen, reale Ligen, Roster und Manager laden und Beitrittsstatus pro Sleeper-User berechnen.
+- [x] Tabellenansicht und Zustände vervollständigen: Häkchen für beigetretene Manager, offene Plätze, Ligainfos, Invite-Link/League-ID falls vorhanden, Lade-, Fehler- und Leerzustände.

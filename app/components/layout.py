@@ -48,6 +48,11 @@ nav_items = [
         "label": "Redraft 2026",
         "href": "/redraft-registration",
     },
+    {
+        "icon": "shuffle",
+        "label": "Auslosung 2026",
+        "href": "/redraft-auslosung",
+    },
     {"icon": "shield", "label": "Admin", "href": "/admin"},
 ]
 

@@ -13,6 +13,29 @@ Beteiligte Dateien:
 | `app/pages/admin.py` → `_redraft_card()` | Admin-UI für Preview & Speichern |
 | `app/states/admin_state.py` | Laden, Auslosung (`_build_assignment`), Persistenz (`save_redraft_assignment`) |
 | `assets/SLR2025.ipynb` | Historisches Notebook, fachliche Vorlage des Algorithmus |
+| `app/pages/redraft_auslosung.py` | **Öffentliche Seite** `/redraft-auslosung` (aktive Auslosung) |
+| `app/states/redraft_auslosung_state.py` | `RedraftAuslosungState`: liest den aktiven Run + Beitrittsstatus |
+
+## 0. Öffentliche Seite `/redraft-auslosung`
+
+Route: `app.add_page(redraft_auslosung_page, route="/redraft-auslosung",
+on_load=RedraftAuslosungState.init_page)`. Navigationseintrag „Auslosung 2026“
+(`shuffle`) in `nav_items`.
+
+`RedraftAuslosungState` liest **ausschließlich** aus Supabase:
+
+- `redraft_assignment_runs_2026` mit `is_active = true` (neuester Run)
+- `redraft_assignment_players_2026` für `assignment_run_id` (paginiert)
+- `redraft_assignment_waitlist_2026` für `assignment_run_id`
+- `leagues` (Mapping über `league_id`, sonst über `league_name`)
+- `managers` (Beitrittsstatus je `sleeper_user_id`, liefert `roster_id`/`team_name`)
+- `rosters` (Anzahl vorhandener Roster der verknüpften Liga)
+
+Spieler werden nach `league_number`/`league_name` gruppiert; pro Liga eine Karte
+mit Standard-`rx.table`. Beigetretene Manager erhalten ein Häkchen-Badge, offene
+Plätze ein „Offen“-Badge. `league_invite_link` rendert einen externen
+Beitritts-Button, sonst (falls verknüpft) einen Link auf `/leagues/{id}`.
+Zustände: Laden, Fehler, kein aktiver Run, keine Spieler, kein Liga-Mapping.
 
 ---
 
