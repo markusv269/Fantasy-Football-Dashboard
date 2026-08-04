@@ -111,6 +111,93 @@ def _stat_tile(
     )
 
 
+def _manager_search() -> rx.Component:
+    return rx.card(
+        rx.el.div(
+            rx.el.div(
+                rx.icon("search", size=20, color="#DC2626"),
+                rx.el.div(
+                    rx.el.h2(
+                        "Manager suchen",
+                        class_name="text-base font-bold " + TEXT_PRIMARY,
+                    ),
+                    rx.el.p(
+                        "Finde deine Liga über Sleeper-Name, Discord, Team oder Liga.",
+                        class_name="text-sm " + TEXT_SECONDARY,
+                    ),
+                    class_name="flex min-w-0 flex-col gap-1",
+                ),
+                class_name="flex min-w-0 items-start gap-3",
+            ),
+            rx.el.div(
+                rx.el.input(
+                    placeholder="Manager, Discord, Team oder Liga…",
+                    default_value=RedraftAuslosungState.manager_search_query,
+                    on_change=RedraftAuslosungState.set_manager_search.debounce(
+                        250
+                    ),
+                    class_name="min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-hidden transition focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/20 dark:border-white/10 dark:bg-[#08090D] dark:text-white",
+                ),
+                rx.cond(
+                    RedraftAuslosungState.manager_search_query != "",
+                    rx.el.button(
+                        rx.icon("x", size=14),
+                        "Zurücksetzen",
+                        on_click=RedraftAuslosungState.clear_manager_search,
+                        type="button",
+                        class_name="inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-[#DC2626] hover:text-[#DC2626] dark:border-white/10 dark:text-gray-300",
+                    ),
+                    rx.fragment(),
+                ),
+                class_name="flex w-full min-w-0 flex-col gap-2 sm:flex-row",
+            ),
+            rx.cond(
+                RedraftAuslosungState.manager_search_query != "",
+                rx.el.div(
+                    rx.icon("list-checks", size=14, color="#DC2626"),
+                    rx.el.span(
+                        RedraftAuslosungState.filtered_league_count.to_string()
+                        + " Treffer"
+                    ),
+                    class_name="flex items-center gap-2 text-sm font-semibold text-[#DC2626]",
+                ),
+                rx.fragment(),
+            ),
+            class_name="flex flex-col gap-3",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-l-4 border-l-[#DC2626]",
+    )
+
+
+def _filtered_empty_state() -> rx.Component:
+    return rx.card(
+        rx.el.div(
+            rx.icon("search-x", size=40, color="#DC2626"),
+            rx.el.h2(
+                "Keine passende Liga gefunden",
+                class_name="text-lg font-bold " + TEXT_PRIMARY,
+            ),
+            rx.el.p(
+                "Für deine Suche gibt es keine zugeordneten Manager oder Ligen. Prüfe die Schreibweise oder setze die Suche zurück.",
+                class_name="max-w-xl text-center text-sm " + TEXT_SECONDARY,
+            ),
+            rx.el.button(
+                rx.icon("rotate-ccw", size=14),
+                "Suche zurücksetzen",
+                on_click=RedraftAuslosungState.clear_manager_search,
+                type="button",
+                class_name="inline-flex items-center gap-2 rounded-lg bg-[#DC2626] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#B91C1C]",
+            ),
+            class_name="flex flex-col items-center gap-3 py-10 text-center",
+        ),
+        size="3",
+        width="100%",
+        class_name="border-dashed",
+    )
+
+
 def _stats() -> rx.Component:
     return rx.grid(
         _stat_tile(
@@ -573,7 +660,7 @@ def _content() -> rx.Component:
                     rx.icon("list-checks", size=20, color="#DC2626"),
                     rx.heading("Ligen", size="5", weight="bold"),
                     rx.badge(
-                        RedraftAuslosungState.total_leagues.to_string(),
+                        RedraftAuslosungState.filtered_league_count.to_string(),
                         color_scheme="red",
                         variant="soft",
                         size="1",
@@ -590,11 +677,18 @@ def _content() -> rx.Component:
                     align="center",
                     wrap="wrap",
                 ),
-                rx.grid(
-                    rx.foreach(RedraftAuslosungState.leagues, _league_card),
-                    columns=rx.breakpoints(initial="1", xl="2"),
-                    spacing="4",
-                    width="100%",
+                rx.cond(
+                    RedraftAuslosungState.filtered_leagues.length() > 0,
+                    rx.grid(
+                        rx.foreach(
+                            RedraftAuslosungState.filtered_leagues,
+                            _league_card,
+                        ),
+                        columns=rx.breakpoints(initial="1", xl="2"),
+                        spacing="4",
+                        width="100%",
+                    ),
+                    _filtered_empty_state(),
                 ),
                 spacing="3",
                 width="100%",
@@ -617,6 +711,7 @@ def redraft_auslosung_page() -> rx.Component:
     return layout(
         rx.vstack(
             _hero(),
+            _manager_search(),
             rx.cond(
                 RedraftAuslosungState.is_loading,
                 _loading(),

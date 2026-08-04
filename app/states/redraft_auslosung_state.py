@@ -50,10 +50,59 @@ class RedraftAuslosungState(rx.State):
     joined_count: int = 0
     open_count: int = 0
     mapped_leagues_count: int = 0
+    manager_search_query: str = ""
 
     @rx.var
     def waitlist_count(self) -> int:
         return len(self.waitlist)
+
+    @rx.var
+    def filtered_league_count(self) -> int:
+        return len(self.filtered_leagues)
+
+    @rx.var
+    def filtered_leagues(
+        self,
+    ) -> list[dict[str, str | int | bool | list[dict[str, str | int | bool]]]]:
+        query = self.manager_search_query.strip().lower()
+        if not query:
+            return self.leagues
+
+        filtered: list[
+            dict[str, str | int | bool | list[dict[str, str | int | bool]]]
+        ] = []
+        for league in self.leagues:
+            league_text = " ".join(
+                [
+                    str(league.get("league_name") or ""),
+                    str(league.get("league_number") or ""),
+                ]
+            ).lower()
+            if query in league_text:
+                filtered.append(league)
+                continue
+
+            players = league.get("players") or []
+            for player in players:
+                player_text = " ".join(
+                    [
+                        str(player.get("sleeper_username") or ""),
+                        str(player.get("discord") or ""),
+                        str(player.get("team_name") or ""),
+                    ]
+                ).lower()
+                if query in player_text:
+                    filtered.append(league)
+                    break
+        return filtered
+
+    @rx.event
+    def set_manager_search(self, value: str):
+        self.manager_search_query = str(value or "").strip()
+
+    @rx.event
+    def clear_manager_search(self):
+        self.manager_search_query = ""
 
     @rx.var
     def has_players(self) -> bool:
