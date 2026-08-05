@@ -311,11 +311,11 @@ def _player_row(p: rx.Var) -> rx.Component:
                         class_name="truncate " + TEXT_PRIMARY,
                     ),
                     rx.cond(
-                        p["roster_id"].to(int) > 0,
+                        p["display_name"].to(str) != "",
                         rx.text(
-                            "Roster #" + p["roster_id"].to_string(),
+                            p["display_name"].to(str),
                             size="1",
-                            class_name="font-mono " + TEXT_SECONDARY,
+                            class_name="truncate " + TEXT_SECONDARY,
                         ),
                         rx.fragment(),
                     ),
@@ -452,7 +452,7 @@ def _league_card(lg: rx.Var) -> rx.Component:
                             rx.table.column_header_cell("Sleeper"),
                             rx.table.column_header_cell("Discord"),
                             rx.table.column_header_cell("Status"),
-                            rx.table.column_header_cell("Team / Roster"),
+                            rx.table.column_header_cell("Team"),
                         ),
                     ),
                     rx.table.body(

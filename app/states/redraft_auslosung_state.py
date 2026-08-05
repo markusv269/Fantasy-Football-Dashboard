@@ -1,6 +1,7 @@
 import reflex as rx
 import logging
 import re
+import requests
 from datetime import datetime
 from app.supabase_client import get_supabase_client
 from app.league_types import fetch_optional_league_rows
@@ -223,59 +224,55 @@ class RedraftAuslosungState(rx.State):
                 by_name[canonical_name.lower()] = normalized
         return by_id, by_name
 
-    def _fetch_managers(self, client, league_ids: list[str]) -> dict:
-        """Return {league_id: {user_id: manager_row}}."""
-        out: dict[str, dict[str, dict]] = {}
-        if not league_ids:
-            return out
-        batch = 100
-        for i in range(0, len(league_ids), batch):
-            chunk = league_ids[i : i + batch]
-            try:
-                res = (
-                    client.table("managers")
-                    .select(
-                        "league_id,roster_id,user_id,display_name,team_name"
-                    )
-                    .in_("league_id", chunk)
-                    .execute()
+    def _fetch_live_league_users(self, league_id: str) -> list[dict[str, str]]:
+        """Fetch live league membership and display details from Sleeper."""
+        if not league_id:
+            return []
+        try:
+            response = requests.get(
+                f"https://api.sleeper.com/v1/league/{league_id}/users",
+                timeout=10,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            if not isinstance(payload, list):
+                logging.warning(
+                    f"Sleeper league users response was not a list for {league_id}."
                 )
-                rows = res.data if res and res.data else []
-            except Exception as e:
-                logging.exception(f"managers fetch failed: {e}")
-                rows = []
-            for m in rows:
-                lid = str(m.get("league_id") or "")
-                uid = str(m.get("user_id") or "")
-                if lid and uid:
-                    out.setdefault(lid, {})[uid] = m
-        return out
+                return []
 
-    def _fetch_roster_counts(self, client, league_ids: list[str]) -> dict:
-        """Return {league_id: number_of_distinct_roster_ids}."""
-        out: dict[str, set] = {}
-        if not league_ids:
-            return {}
-        batch = 100
-        for i in range(0, len(league_ids), batch):
-            chunk = league_ids[i : i + batch]
-            try:
-                res = (
-                    client.table("rosters")
-                    .select("league_id,roster_id")
-                    .in_("league_id", chunk)
-                    .execute()
+            users: list[dict[str, str]] = []
+            for raw_user in payload:
+                if not isinstance(raw_user, dict):
+                    continue
+                metadata = raw_user.get("metadata")
+                if not isinstance(metadata, dict):
+                    metadata = {}
+                user_id = str(raw_user.get("user_id") or "").strip()
+                if not user_id:
+                    continue
+                users.append(
+                    {
+                        "user_id": user_id,
+                        "display_name": str(
+                            raw_user.get("display_name") or ""
+                        ).strip(),
+                        "team_name": str(
+                            metadata.get("team_name") or ""
+                        ).strip(),
+                    }
                 )
-                rows = res.data if res and res.data else []
-            except Exception as e:
-                logging.exception(f"rosters fetch failed: {e}")
-                rows = []
-            for r in rows:
-                lid = str(r.get("league_id") or "")
-                rid = r.get("roster_id")
-                if lid and rid is not None:
-                    out.setdefault(lid, set()).add(int(rid))
-        return {k: len(v) for k, v in out.items()}
+            return users
+        except requests.exceptions.RequestException as e:
+            logging.exception(
+                f"Sleeper league users request failed for {league_id}: {e}"
+            )
+            return []
+        except Exception as e:
+            logging.exception(
+                f"Sleeper league users response failed for {league_id}: {e}"
+            )
+            return []
 
     @rx.event
     def load_assignment(self):
@@ -392,8 +389,12 @@ class RedraftAuslosungState(rx.State):
             mapped_ids = [
                 v["league_id"] for v in resolved.values() if v["league_id"]
             ]
-            managers_map = self._fetch_managers(client, mapped_ids)
-            roster_counts = self._fetch_roster_counts(client, mapped_ids)
+            live_users_by_league: dict[str, dict[str, dict[str, str]]] = {}
+            for league_id in dict.fromkeys(mapped_ids):
+                live_users = self._fetch_live_league_users(league_id)
+                live_users_by_league[league_id] = {
+                    user["user_id"]: user for user in live_users
+                }
 
             leagues_out: list[dict] = []
             total_joined = 0
@@ -404,15 +405,15 @@ class RedraftAuslosungState(rx.State):
                 rows = groups[key]
                 info = resolved[key]
                 lid = str(info["league_id"] or "")
-                mgrs = managers_map.get(lid, {})
+                live_users = live_users_by_league.get(lid, {})
                 players_out: list[dict] = []
                 joined_here = 0
                 for row in sorted(
                     rows, key=lambda x: int(x.get("roster_position") or 0)
                 ):
                     uid = str(row.get("sleeper_user_id") or "")
-                    m = mgrs.get(uid) if uid else None
-                    joined = bool(m)
+                    live_user = live_users.get(uid, {}) if uid else {}
+                    joined = bool(live_user)
                     if joined:
                         joined_here += 1
                     players_out.append(
@@ -428,16 +429,10 @@ class RedraftAuslosungState(rx.State):
                             "discord": str(row.get("discord") or ""),
                             "commish": bool(row.get("commish") or False),
                             "joined": joined,
-                            "roster_id": int((m or {}).get("roster_id") or 0)
-                            if joined
-                            else 0,
-                            "team_name": str(
-                                (m or {}).get("team_name")
-                                or (m or {}).get("display_name")
-                                or ""
-                            )
-                            if joined
-                            else "",
+                            "display_name": str(
+                                live_user.get("display_name") or ""
+                            ),
+                            "team_name": str(live_user.get("team_name") or ""),
                         }
                     )
                 size = len(players_out)
@@ -455,7 +450,6 @@ class RedraftAuslosungState(rx.State):
                         "is_mapped": bool(lid),
                         "real_league_name": str(meta.get("league_name") or ""),
                         "avatar": str(meta.get("avatar") or ""),
-                        "roster_count": int(roster_counts.get(lid, 0) or 0),
                         "size": size,
                         "joined_count": joined_here,
                         "open_count": size - joined_here,
