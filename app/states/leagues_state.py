@@ -3,8 +3,7 @@ import logging
 from app.supabase_client import get_supabase_client
 from app.league_types import (
     SUPPORTED_TYPES,
-    add_types_col,
-    is_missing_league_types_column_error,
+    fetch_optional_league_rows,
     normalize_league_types,
 )
 
@@ -125,37 +124,14 @@ class LeaguesState(rx.State):
                 "league_id,league_name,league_season,league_type,"
                 "league_sort,avatar"
             )
-            typed_cols = add_types_col(base_cols)
-            invite_cols = f"{typed_cols},invite_link"
-            try:
-                res = (
+            leagues_rows = fetch_optional_league_rows(
+                lambda columns: (
                     client.table("leagues")
-                    .select(invite_cols)
+                    .select(columns)
                     .eq("league_season", current_season_val)
-                    .execute()
-                )
-            except Exception as e:
-                error_text = str(e).lower()
-                invite_missing = "invite_link" in error_text and (
-                    "does not exist" in error_text
-                    or "could not find" in error_text
-                    or "pgrst204" in error_text
-                )
-                if is_missing_league_types_column_error(e) or invite_missing:
-                    # Optional columns may be absent on older deployments.
-                    fallback_cols = base_cols if invite_missing else typed_cols
-                    res = (
-                        client.table("leagues")
-                        .select(fallback_cols)
-                        .eq("league_season", current_season_val)
-                        .execute()
-                    )
-                else:
-                    logging.exception(
-                        f"leagues select (current season) failed: {e}"
-                    )
-                    raise
-            leagues_rows = res.data if res and res.data else []
+                ),
+                base_cols,
+            )
             self._populate_from_rows(client, leagues_rows)
             self.is_full_loaded = False
         except Exception as e:
@@ -360,37 +336,15 @@ class LeaguesState(rx.State):
                 "league_id,league_name,league_season,league_type,"
                 "league_sort,avatar"
             )
-            typed_cols = add_types_col(base_cols)
-            invite_cols = f"{typed_cols},invite_link"
-            try:
-                res = (
+            leagues_rows = fetch_optional_league_rows(
+                lambda columns: (
                     client.table("leagues")
-                    .select(invite_cols)
+                    .select(columns)
                     .order("league_season", desc=True)
                     .order("league_sort", desc=False)
-                    .execute()
-                )
-            except Exception as e:
-                error_text = str(e).lower()
-                invite_missing = "invite_link" in error_text and (
-                    "does not exist" in error_text
-                    or "could not find" in error_text
-                    or "pgrst204" in error_text
-                )
-                if is_missing_league_types_column_error(e) or invite_missing:
-                    # Optional columns may be absent on older deployments.
-                    fallback_cols = base_cols if invite_missing else typed_cols
-                    res = (
-                        client.table("leagues")
-                        .select(fallback_cols)
-                        .order("league_season", desc=True)
-                        .order("league_sort", desc=False)
-                        .execute()
-                    )
-                else:
-                    logging.exception(f"leagues select (full) failed: {e}")
-                    raise
-            leagues_rows = res.data if res and res.data else []
+                ),
+                base_cols,
+            )
             self._populate_from_rows(
                 client, leagues_rows, include_week_metadata=False
             )

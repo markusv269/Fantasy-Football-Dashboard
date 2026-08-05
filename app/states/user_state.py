@@ -2,11 +2,7 @@ import reflex as rx
 import requests
 import logging
 from app.supabase_client import get_supabase_client
-from app.league_types import (
-    add_types_col,
-    is_missing_league_types_column_error,
-    normalize_league_types,
-)
+from app.league_types import fetch_optional_league_rows, normalize_league_types
 
 
 class UserState(rx.State):
@@ -93,47 +89,19 @@ class UserState(rx.State):
                 "league_id,league_name,league_season,league_type,"
                 "league_sort,avatar"
             )
-            typed_cols = add_types_col(base_cols)
-            invite_cols = f"{typed_cols},invite_link"
             for i in range(0, len(ids), batch):
                 chunk = ids[i : i + batch]
                 if not chunk:
                     continue
-                try:
-                    res = (
+                rows = fetch_optional_league_rows(
+                    lambda columns: (
                         client.table("leagues")
-                        .select(invite_cols)
+                        .select(columns)
                         .in_("league_id", chunk)
-                        .execute()
-                    )
-                except Exception as e:
-                    error_text = str(e).lower()
-                    invite_missing = "invite_link" in error_text and (
-                        "does not exist" in error_text
-                        or "could not find" in error_text
-                        or "pgrst204" in error_text
-                    )
-                    if (
-                        is_missing_league_types_column_error(e)
-                        or invite_missing
-                    ):
-                        # Older schemas may not expose one of the optional columns.
-                        fallback_cols = (
-                            base_cols if invite_missing else typed_cols
-                        )
-                        res = (
-                            client.table("leagues")
-                            .select(fallback_cols)
-                            .in_("league_id", chunk)
-                            .execute()
-                        )
-                    else:
-                        logging.exception(
-                            f"leagues select failed for chunk: {e}"
-                        )
-                        raise
-                if res and res.data:
-                    all_rows.extend(res.data)
+                    ),
+                    base_cols,
+                )
+                all_rows.extend(rows)
             normalized = []
             for lg in all_rows:
                 lid = str(lg.get("league_id", "") or "").strip('"').strip()

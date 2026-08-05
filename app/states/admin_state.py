@@ -384,7 +384,7 @@ class AdminState(rx.State):
             # 3) Build and insert player rows.
             player_rows: list[dict] = []
             for lg_index, lg in enumerate(self.redraft_assignments, start=1):
-                lg_name = str(lg.get("name") or f"SLR 2026 - Liga {lg_index}")
+                lg_name = str(lg.get("name") or f"SLR2026 - Liga {str(lg_index).zfill(2)}")
                 players = lg.get("players") or []
                 for p in players:
                     sleeper_name = str(p.get("sleeper") or "")

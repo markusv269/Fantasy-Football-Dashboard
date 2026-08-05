@@ -2,6 +2,7 @@ import reflex as rx
 import logging
 from datetime import datetime
 from app.supabase_client import get_supabase_client
+from app.league_types import fetch_optional_league_rows
 
 RUNS_TABLE = "redraft_assignment_runs_2026"
 PLAYERS_TABLE = "redraft_assignment_players_2026"
@@ -180,24 +181,21 @@ class RedraftAuslosungState(rx.State):
         by_name: dict[str, dict] = {}
         base_columns = "league_id,league_name,league_season,avatar"
         try:
-            res = (
-                client.table("leagues")
-                .select(f"{base_columns},invite_link")
-                .execute()
+            rows = fetch_optional_league_rows(
+                lambda columns: client.table("leagues").select(columns),
+                base_columns,
             )
-            rows = res.data if res and res.data else []
         except Exception as e:
-            logging.exception(f"leagues fetch with invite_link failed: {e}")
-            try:
-                res = client.table("leagues").select(base_columns).execute()
-                rows = res.data if res and res.data else []
-            except Exception as fallback_error:
-                logging.exception(
-                    f"leagues fetch fallback failed: {fallback_error}"
-                )
-                rows = []
+            logging.exception(
+                f"leagues fetch with optional columns failed: {e}"
+            )
+            rows = []
         for lg in rows:
             normalized = dict(lg)
+            raw_types = lg.get("league_types")
+            normalized["league_types"] = (
+                list(raw_types) if isinstance(raw_types, list) else []
+            )
             normalized["invite_link"] = str(lg.get("invite_link") or "").strip()
             lid = str(normalized.get("league_id") or "").strip()
             if lid:

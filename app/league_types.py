@@ -22,6 +22,7 @@ using :func:`is_missing_league_types_column_error` to detect the case.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import logging
 
@@ -243,6 +244,65 @@ def add_types_col(select_cols: str) -> str:
     if "league_types" in parts:
         return select_cols
     return select_cols + ",league_types"
+
+
+def is_missing_optional_column_error(exc: Exception, column: str) -> bool:
+    """Return whether a PostgREST error reports a missing optional column."""
+    message = str(exc).lower()
+    column_name = column.lower()
+    return column_name in message and (
+        "does not exist" in message
+        or "42703" in message
+        or "could not find" in message
+    )
+
+
+def fetch_optional_league_rows(
+    query_builder: Callable[[str], object], base_cols: str
+) -> list[dict]:
+    """Fetch league rows while tolerating optional schema columns.
+
+    The deployed database may omit either ``league_types`` or ``invite_link``.
+    Keep retrying only for those schema errors and preserve every column that
+    is available by trying both optional columns, then each reduced shape.
+    """
+    typed_cols = add_types_col(base_cols)
+    attempts = (
+        (f"{base_cols},invite_link", "base+invite"),
+        (typed_cols, "typed"),
+        (base_cols, "base"),
+    )
+    last_error: Exception | None = None
+    for columns, attempt_name in attempts:
+        try:
+            response = query_builder(columns).execute()
+            raw_rows = getattr(response, "data", [])
+            if not isinstance(raw_rows, list):
+                return []
+            rows: list[dict] = []
+            for row in raw_rows:
+                if isinstance(row, dict):
+                    rows.append(row)
+            return rows
+        except Exception as exc:
+            last_error = exc
+            types_missing = is_missing_optional_column_error(
+                exc, "league_types"
+            )
+            invite_missing = is_missing_optional_column_error(
+                exc, "invite_link"
+            )
+            if not (types_missing or invite_missing):
+                logging.exception(
+                    f"League select failed during {attempt_name} attempt: {exc}"
+                )
+                raise
+            logging.exception(
+                f"League select {attempt_name} missing optional column: {exc}"
+            )
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("No league select fallback attempt was configured.")
 
 
 def has_type(types: list[str], form: str) -> bool:
