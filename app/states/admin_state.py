@@ -384,7 +384,7 @@ class AdminState(rx.State):
             # 3) Build and insert player rows.
             player_rows: list[dict] = []
             for lg_index, lg in enumerate(self.redraft_assignments, start=1):
-                lg_name = str(lg.get("name") or f"SLR2026 - Liga {str(lg_index).zfill(2)}")
+                lg_name = f"SLR2026 - Liga {lg_index:02d}"
                 players = lg.get("players") or []
                 for p in players:
                     sleeper_name = str(p.get("sleeper") or "")
@@ -915,7 +915,9 @@ class AdminState(rx.State):
                 merged_groups.append(list(dict.fromkeys(group)))
 
         rnd = random.SystemRandom()
-        league_names = [f"SLR 2026 - Liga {i + 1}" for i in range(num_leagues)]
+        league_names = [
+            f"SLR2026 - Liga {i + 1:02d}" for i in range(num_leagues)
+        ]
         leagues_dict: dict[str, list[str]] = {name: [] for name in league_names}
         assigned_owners: set[str] = set()
         selected_commish_by_league: dict[str, str] = {}

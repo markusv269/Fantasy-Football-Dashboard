@@ -1,5 +1,6 @@
 import reflex as rx
 import logging
+import re
 from datetime import datetime
 from app.supabase_client import get_supabase_client
 from app.league_types import fetch_optional_league_rows
@@ -7,6 +8,20 @@ from app.league_types import fetch_optional_league_rows
 RUNS_TABLE = "redraft_assignment_runs_2026"
 PLAYERS_TABLE = "redraft_assignment_players_2026"
 WAITLIST_TABLE = "redraft_assignment_waitlist_2026"
+
+
+def _canonical_league_name(raw: object, league_number: int = 0) -> str:
+    """Normalize assignment names to the canonical SLR2026 format."""
+    text = str(raw or "").strip()
+    match = re.fullmatch(
+        r"SLR\s*2026\s*-\s*Liga\s*0*(\d+)", text, re.IGNORECASE
+    )
+    number = league_number
+    if match:
+        number = int(match.group(1))
+    if number > 0:
+        return f"SLR2026 - Liga {number:02d}"
+    return text
 
 
 def _fmt_dt(raw) -> str:
@@ -200,9 +215,12 @@ class RedraftAuslosungState(rx.State):
             lid = str(normalized.get("league_id") or "").strip()
             if lid:
                 by_id[lid] = normalized
-            nm = str(normalized.get("league_name") or "").strip().lower()
-            if nm and nm not in by_name:
-                by_name[nm] = normalized
+            raw_name = str(normalized.get("league_name") or "").strip()
+            canonical_name = _canonical_league_name(raw_name)
+            if canonical_name and canonical_name != raw_name:
+                normalized["league_name"] = canonical_name
+            if canonical_name and canonical_name.lower() not in by_name:
+                by_name[canonical_name.lower()] = normalized
         return by_id, by_name
 
     def _fetch_managers(self, client, league_ids: list[str]) -> dict:
@@ -336,7 +354,9 @@ class RedraftAuslosungState(rx.State):
                 except Exception:
                     logging.exception("bad league_number")
                     num = 0
-                name = str(p.get("league_name") or f"Liga {num}")
+                name = _canonical_league_name(
+                    p.get("league_name") or f"Liga {num}", num
+                )
                 groups.setdefault((num, name), []).append(p)
 
             # Resolve real league mapping per group.
@@ -355,13 +375,13 @@ class RedraftAuslosungState(rx.State):
                         ).strip()
                         if cand_i:
                             assignment_invite = cand_i
-                meta = {}
-                if lid and lid in lg_by_id:
+                meta = lg_by_name.get(
+                    _canonical_league_name(key[1], key[0]).lower(), {}
+                )
+                if meta:
+                    lid = str(meta.get("league_id") or "")
+                elif lid and lid in lg_by_id:
                     meta = lg_by_id[lid]
-                else:
-                    meta = lg_by_name.get(key[1].strip().lower(), {})
-                    if meta:
-                        lid = str(meta.get("league_id") or "")
                 league_invite = str(meta.get("invite_link") or "").strip()
                 resolved[key] = {
                     "league_id": lid,
@@ -428,7 +448,7 @@ class RedraftAuslosungState(rx.State):
                 leagues_out.append(
                     {
                         "league_number": num,
-                        "league_name": name,
+                        "league_name": _canonical_league_name(name, num),
                         "league_id": lid,
                         "invite_link": str(info["invite"] or ""),
                         "has_invite": bool(info["invite"]),
