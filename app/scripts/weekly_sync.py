@@ -261,7 +261,7 @@ def _sync_drafts(client, league_id: str) -> int:
         draft_id = str(d.get("draft_id") or "")
         if not draft_id:
             continue
-        start_time_iso = ""
+        start_time_iso: str | None = None
         start = d.get("start_time")
         if start:
             try:
@@ -270,7 +270,7 @@ def _sync_drafts(client, league_id: str) -> int:
                 ).isoformat()
             except Exception:
                 logging.exception("Invalid draft start_time")
-                start_time_iso = ""
+                start_time_iso = None
         dtype_raw = d.get("type", "")
         dtype_val = dtype_map.get(str(dtype_raw).lower(), dtype_raw)
         rows.append(

@@ -38,21 +38,29 @@ class ArchiveState(rx.State):
                 "league_id,league_name,league_season,league_type,"
                 "league_sort,avatar"
             )
+            typed_cols = add_types_col(base_cols)
+            invite_cols = f"{typed_cols},invite_link"
             try:
                 res = (
                     client.table("leagues")
-                    .select(add_types_col(base_cols))
+                    .select(invite_cols)
                     .order("league_season", desc=True)
                     .order("league_sort", desc=False)
-                    .execute()
+                    .execute
                 )
             except Exception as e:
-                if is_missing_league_types_column_error(e):
-                    # Expected fallback: `league_types` column not yet
-                    # deployed. Retry without it silently.
+                error_text = str(e).lower()
+                invite_missing = "invite_link" in error_text and (
+                    "does not exist" in error_text
+                    or "could not find" in error_text
+                    or "pgrst204" in error_text
+                )
+                if is_missing_league_types_column_error(e) or invite_missing:
+                    # Optional columns may be absent on older deployments.
+                    fallback_cols = base_cols if invite_missing else typed_cols
                     res = (
                         client.table("leagues")
-                        .select(base_cols)
+                        .select(fallback_cols)
                         .order("league_season", desc=True)
                         .order("league_sort", desc=False)
                         .execute()
@@ -142,6 +150,7 @@ class ArchiveState(rx.State):
                         "types": types_list,
                         "league_sort": ls_val,
                         "avatar": str(lg.get("avatar") or ""),
+                        "invite_link": str(lg.get("invite_link") or ""),
                     }
                 )
 
@@ -290,6 +299,7 @@ class ArchiveState(rx.State):
                     ),
                     "league_sort": lg.get("league_sort", -1),
                     "avatar": lg.get("avatar", ""),
+                    "invite_link": lg.get("invite_link", ""),
                 }
             )
 

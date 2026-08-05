@@ -81,6 +81,7 @@ class AppState(rx.State):
         primary, types_list = normalize_league_types(new_types, legacy_type)
         status = primary or str(legacy_type or "unknown")
         avatar = str(lg.get("avatar") or "")
+        invite_link = str(lg.get("invite_link") or "")
         total_rosters = ""
         raw_sort = lg.get("league_sort")
         try:
@@ -110,6 +111,7 @@ class AppState(rx.State):
             "types": types_list,
             "total_rosters": total_rosters,
             "avatar": avatar,
+            "invite_link": invite_link,
             "league_sort": league_sort,
         }
 

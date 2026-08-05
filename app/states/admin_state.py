@@ -1227,6 +1227,7 @@ class AdminState(rx.State):
                         or str(lg.get("league_type", "")),
                         "league_types": types_list,
                         "avatar": str(lg.get("avatar") or ""),
+                        "invite_link": str(lg.get("invite_link") or ""),
                         "league_sort": ls_val,
                     }
                 )
@@ -1446,7 +1447,7 @@ class AdminState(rx.State):
             draft_id = str(d.get("draft_id") or "")
             if not draft_id:
                 continue
-            start_time_iso = ""
+            start_time_iso: str | None = None
             start = d.get("start_time")
             if start:
                 try:
@@ -1455,7 +1456,7 @@ class AdminState(rx.State):
                     ).isoformat()
                 except Exception:
                     logging.exception("Unexpected error")
-                    start_time_iso = ""
+                    start_time_iso = None
             dtype_raw = d.get("type", "")
             dtype_map = {"snake": "0", "linear": "1", "auction": "2"}
             dtype_val = dtype_map.get(str(dtype_raw).lower(), dtype_raw)
@@ -1638,7 +1639,7 @@ class AdminState(rx.State):
                         did = str(d.get("draft_id") or "")
                         if not did:
                             continue
-                        start_iso = ""
+                        start_iso: str | None = None
                         start = d.get("start_time")
                         if start:
                             try:
@@ -1647,6 +1648,7 @@ class AdminState(rx.State):
                                 ).isoformat()
                             except Exception:
                                 logging.exception("Unexpected error")
+                                start_iso = None
                         dtype_raw = d.get("type", "")
                         dtype_val = dtype_map.get(
                             str(dtype_raw).lower(), dtype_raw

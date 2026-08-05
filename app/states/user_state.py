@@ -93,6 +93,8 @@ class UserState(rx.State):
                 "league_id,league_name,league_season,league_type,"
                 "league_sort,avatar"
             )
+            typed_cols = add_types_col(base_cols)
+            invite_cols = f"{typed_cols},invite_link"
             for i in range(0, len(ids), batch):
                 chunk = ids[i : i + batch]
                 if not chunk:
@@ -100,17 +102,28 @@ class UserState(rx.State):
                 try:
                     res = (
                         client.table("leagues")
-                        .select(add_types_col(base_cols))
+                        .select(invite_cols)
                         .in_("league_id", chunk)
                         .execute()
                     )
                 except Exception as e:
-                    if is_missing_league_types_column_error(e):
-                        # Expected fallback: `league_types` column not yet
-                        # deployed. Retry without it silently.
+                    error_text = str(e).lower()
+                    invite_missing = "invite_link" in error_text and (
+                        "does not exist" in error_text
+                        or "could not find" in error_text
+                        or "pgrst204" in error_text
+                    )
+                    if (
+                        is_missing_league_types_column_error(e)
+                        or invite_missing
+                    ):
+                        # Older schemas may not expose one of the optional columns.
+                        fallback_cols = (
+                            base_cols if invite_missing else typed_cols
+                        )
                         res = (
                             client.table("leagues")
-                            .select(base_cols)
+                            .select(fallback_cols)
                             .in_("league_id", chunk)
                             .execute()
                         )
@@ -143,6 +156,7 @@ class UserState(rx.State):
                         "types": types_list,
                         "total_rosters": "",
                         "avatar": str(lg.get("avatar") or ""),
+                        "invite_link": str(lg.get("invite_link") or ""),
                         "league_sort": ls_val,
                     }
                 )

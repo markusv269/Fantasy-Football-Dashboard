@@ -178,23 +178,33 @@ class RedraftAuslosungState(rx.State):
         """Return (by_id, by_normalized_name) maps of leagues rows."""
         by_id: dict[str, dict] = {}
         by_name: dict[str, dict] = {}
+        base_columns = "league_id,league_name,league_season,avatar"
         try:
             res = (
                 client.table("leagues")
-                .select("league_id,league_name,league_season,avatar")
+                .select(f"{base_columns},invite_link")
                 .execute()
             )
             rows = res.data if res and res.data else []
         except Exception as e:
-            logging.exception(f"leagues fetch failed: {e}")
-            rows = []
+            logging.exception(f"leagues fetch with invite_link failed: {e}")
+            try:
+                res = client.table("leagues").select(base_columns).execute()
+                rows = res.data if res and res.data else []
+            except Exception as fallback_error:
+                logging.exception(
+                    f"leagues fetch fallback failed: {fallback_error}"
+                )
+                rows = []
         for lg in rows:
-            lid = str(lg.get("league_id") or "").strip()
+            normalized = dict(lg)
+            normalized["invite_link"] = str(lg.get("invite_link") or "").strip()
+            lid = str(normalized.get("league_id") or "").strip()
             if lid:
-                by_id[lid] = lg
-            nm = str(lg.get("league_name") or "").strip().lower()
+                by_id[lid] = normalized
+            nm = str(normalized.get("league_name") or "").strip().lower()
             if nm and nm not in by_name:
-                by_name[nm] = lg
+                by_name[nm] = normalized
         return by_id, by_name
 
     def _fetch_managers(self, client, league_ids: list[str]) -> dict:
@@ -335,28 +345,29 @@ class RedraftAuslosungState(rx.State):
             resolved: dict[tuple[int, str], dict] = {}
             for key, rows in groups.items():
                 lid = ""
-                invite = ""
+                assignment_invite = ""
                 for row in rows:
                     if not lid:
                         cand = str(row.get("league_id") or "").strip()
                         if cand:
                             lid = cand
-                    if not invite:
+                    if not assignment_invite:
                         cand_i = str(
                             row.get("league_invite_link") or ""
                         ).strip()
                         if cand_i:
-                            invite = cand_i
+                            assignment_invite = cand_i
                 meta = {}
                 if lid and lid in lg_by_id:
                     meta = lg_by_id[lid]
-                elif not lid:
+                else:
                     meta = lg_by_name.get(key[1].strip().lower(), {})
                     if meta:
                         lid = str(meta.get("league_id") or "")
+                league_invite = str(meta.get("invite_link") or "").strip()
                 resolved[key] = {
                     "league_id": lid,
-                    "invite": invite,
+                    "invite": league_invite or assignment_invite,
                     "meta": meta,
                 }
 
