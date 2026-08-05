@@ -397,6 +397,14 @@ def _hero() -> rx.Component:
     )
 
 
+def _news_link(text, **props) -> rx.Component:
+    return rx.link(
+        text,
+        **props,
+        class_name="text-[#DC2626] underline underline-offset-2 hover:text-[#B91C1C] transition-colors",
+    )
+
+
 def _news_item(item: dict) -> rx.Component:
     return rx.box(
         rx.vstack(
@@ -417,10 +425,13 @@ def _news_item(item: dict) -> rx.Component:
                 weight="bold",
                 class_name="line-clamp-1 " + TEXT_PRIMARY,
             ),
-            rx.text(
+            rx.markdown(
                 item["content"].to(str),
-                size="2",
-                class_name="line-clamp-2 " + TEXT_SECONDARY,
+                component_map={"a": _news_link},
+                class_name=t(
+                    "line-clamp-2 leading-relaxed text-slate-400",
+                    "line-clamp-2 leading-relaxed text-gray-500",
+                ),
             ),
             spacing="1",
             align="start",

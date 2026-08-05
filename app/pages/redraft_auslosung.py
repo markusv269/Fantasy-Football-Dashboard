@@ -407,7 +407,7 @@ def _league_card(lg: rx.Var) -> rx.Component:
                 rx.link(
                     rx.button(
                         rx.icon("external-link", size=14),
-                        "Liga beitreten",
+                        "Deine Liga? Hier beitreten!",
                         size="2",
                         style={"background_color": "#DC2626"},
                     ),
