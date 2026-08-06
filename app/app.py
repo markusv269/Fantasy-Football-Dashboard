@@ -1,7 +1,9 @@
 import reflex as rx
 from app.pages.home import home_page
 from app.pages.archive import archive_page
+from app.pages.fantasyboerse import fantasyboerse_page
 from app.states.archive_state import ArchiveState
+from app.states.fantasyboerse_state import FantasyBoerseState
 from app.pages.leagues import leagues_page
 from app.states.leagues_state import LeaguesState
 from app.pages.league_detail import league_detail_page
@@ -119,6 +121,11 @@ app.add_page(
     archive_page,
     route="/archive",
     on_load=[AppState.init_app, UserState.init_user, ArchiveState.load_archive],
+)
+app.add_page(
+    fantasyboerse_page,
+    route="/fantasyboerse",
+    on_load=FantasyBoerseState.load_entries,
 )
 app.add_page(
     admin_page,
