@@ -10,7 +10,7 @@ def _hero() -> rx.Component:
         rx.vstack(
             rx.hstack(
                 rx.icon("shuffle", size=28, color="#DC2626"),
-                rx.heading("Aktive Redraft-Auslosung", size="7", weight="bold"),
+                rx.heading("Stoned Lack Redraftligen - offizielle Auslosung", size="7", weight="bold"),
                 rx.spacer(),
                 rx.button(
                     rx.cond(
@@ -31,7 +31,7 @@ def _hero() -> rx.Component:
                 wrap="wrap",
             ),
             rx.text(
-                "Die aktuell gültige Ligaeinteilung für die Redraft-Saison "
+                "Die offizielle Ligaeinteilung für die Redraft-Saison "
                 "2026. Ein Häkchen bedeutet, dass der Manager der echten "
                 "Sleeper-Liga bereits beigetreten ist. Offene Plätze warten "
                 "noch auf den Beitritt.",
