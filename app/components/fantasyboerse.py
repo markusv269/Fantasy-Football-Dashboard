@@ -71,20 +71,20 @@ def _entry_type_badge(entry: rx.Var) -> rx.Component:
 def _stat_card(label: str, value: rx.Var, icon: str) -> rx.Component:
     return rx.el.div(
         rx.el.div(
-            rx.icon(icon, class_name="h-5 w-5 text-[#DC2626]"),
+            rx.icon(icon, class_name="h-4 w-4 text-[#DC2626]"),
             class_name=t(
-                "flex h-10 w-10 items-center justify-center rounded-xl bg-[#DC2626]/10",
-                "flex h-10 w-10 items-center justify-center rounded-xl bg-red-50",
+                "flex h-9 w-9 items-center justify-center rounded-lg bg-[#DC2626]/10",
+                "flex h-9 w-9 items-center justify-center rounded-lg bg-red-50",
             ),
         ),
         rx.el.p(
-            label, class_name="mt-4 text-sm font-semibold " + TEXT_SECONDARY
+            label, class_name="mt-3 text-xs font-semibold " + TEXT_SECONDARY
         ),
         rx.el.p(
             value.to_string(),
-            class_name="mt-1 text-2xl font-bold " + TEXT_PRIMARY,
+            class_name="mt-0.5 text-xl font-bold " + TEXT_PRIMARY,
         ),
-        class_name="rounded-2xl border border-gray-200 bg-white p-5 "
+        class_name="rounded-xl border border-gray-200 bg-white p-4 "
         + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white")
         + "",
     )
@@ -107,7 +107,7 @@ def _filter_select(
                 options,
                 value=value,
                 on_change=on_change,
-                class_name="w-full appearance-none rounded-xl border px-3 py-2.5 pr-9 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
+                class_name="h-10 w-full appearance-none rounded-xl border px-3 py-2 pr-9 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
                 + t(
                     "border-white/10 bg-[#12141C] text-slate-100",
                     "border-gray-200 bg-white text-gray-800",
@@ -185,7 +185,7 @@ def _filter_bar() -> rx.Component:
             ),
             rx.el.div(class_name="hidden md:block"),
         ),
-        class_name="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5",
+        class_name="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5",
     )
 
 
@@ -287,7 +287,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
             ),
             rx.el.h3(
                 entry["league_name"].to(str),
-                class_name="mt-4 line-clamp-1 text-lg font-bold "
+                class_name="mt-3 line-clamp-1 text-base font-bold "
                 + TEXT_PRIMARY,
             ),
             rx.el.p(
@@ -304,7 +304,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
         ),
         rx.el.p(
             entry["description"].to(str),
-            class_name="mt-4 min-h-12 text-sm leading-6 " + TEXT_SECONDARY,
+            class_name="mt-3 min-h-10 text-sm leading-5 ",
         ),
         rx.el.div(
             rx.el.div(
@@ -331,7 +331,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                 ),
                 class_name="flex items-center gap-3",
             ),
-            class_name="mt-5 grid grid-cols-2 gap-3",
+            class_name="mt-4 grid grid-cols-2 gap-2.5",
         ),
         rx.el.div(
             rx.el.div(
@@ -367,7 +367,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                 ),
                 class_name="flex items-start gap-2",
             ),
-            class_name="mt-5 grid grid-cols-1 gap-3 border-t border-gray-100 pt-4 "
+            class_name="mt-4 grid grid-cols-1 gap-2.5 border-t border-gray-100 pt-3 "
             + t("border-white/10", "border-gray-100"),
         ),
         rx.cond(
@@ -381,7 +381,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                     f"Aktuelles Team: {entry['team_name']}",
                     class_name="text-xs font-semibold text-amber-700",
                 ),
-                class_name="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2",
+                class_name="mt-3 flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2",
             ),
             rx.fragment(),
         ),
@@ -389,7 +389,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
             entry["live_error"].to(str) != "",
             rx.el.p(
                 entry["live_error"].to(str),
-                class_name="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700",
+                class_name="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700",
             ),
             rx.fragment(),
         ),
@@ -402,7 +402,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                 f"Discord: {entry['contact_discord']}",
                 class_name="truncate text-xs font-medium " + TEXT_SECONDARY,
             ),
-            class_name="mt-5 space-y-1 border-t border-gray-100 pt-4 "
+            class_name="mt-4 space-y-1 border-t border-gray-100 pt-3 "
             + t("border-white/10", "border-gray-100"),
         ),
         rx.cond(
@@ -413,14 +413,14 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                 href=entry["invite_link"].to(str),
                 target="_blank",
                 rel="noreferrer",
-                class_name="mt-4 flex w-fit items-center gap-2 text-sm font-bold text-[#DC2626] hover:text-[#B91C1C]",
+                class_name="mt-3 flex w-fit items-center gap-2 text-sm font-bold text-[#DC2626] hover:text-[#B91C1C]",
             ),
             rx.el.p(
                 "Invite-Link auf Anfrage",
-                class_name="mt-4 text-xs font-semibold " + TEXT_MUTED,
+                class_name="mt-3 text-xs font-semibold " + TEXT_MUTED,
             ),
         ),
-        class_name="flex h-full flex-col rounded-2xl border p-5 transition-colors hover:border-[#DC2626] "
+        class_name="flex h-full flex-col rounded-xl border p-4 transition-colors hover:border-[#DC2626] "
         + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
     )
 
@@ -654,7 +654,7 @@ def _entry_form() -> rx.Component:
                         input_mode="numeric",
                         placeholder="z. B. 123456789",
                         required=True,
-                        class_name="w-full rounded-xl border px-3 py-2.5 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
+                        class_name="h-10 w-full rounded-xl border px-3 py-2 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
                         + t(
                             "border-white/10 bg-[#12141C] text-slate-100 placeholder:text-slate-500",
                             "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400",
@@ -678,7 +678,7 @@ def _entry_form() -> rx.Component:
                                 step="1",
                                 placeholder="z. B. 7",
                                 required=True,
-                                class_name="w-full rounded-xl border px-3 py-2.5 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
+                                class_name="h-10 w-full rounded-xl border px-3 py-2 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
                                 + t(
                                     "border-white/10 bg-[#12141C] text-slate-100 placeholder:text-slate-500",
                                     "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400",
@@ -795,7 +795,7 @@ def _entry_form() -> rx.Component:
                     required=True,
                     rows=4,
                     max_length=500,
-                    class_name="w-full resize-y rounded-xl border px-3 py-2.5 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
+                    class_name="min-h-24 w-full resize-y rounded-xl border px-3 py-2 text-sm font-medium outline-hidden transition focus:border-[#DC2626] "
                     + t(
                         "border-white/10 bg-[#12141C] text-slate-100 placeholder:text-slate-500",
                         "border-gray-200 bg-white text-gray-800 placeholder:text-gray-400",
@@ -833,9 +833,9 @@ def _entry_form() -> rx.Component:
             key=FantasyBoerseState.form_reset_counter.to_string(),
             on_submit=FantasyBoerseState.submit_entry,
             reset_on_submit=False,
-            class_name="flex flex-col gap-5",
+            class_name="flex flex-col gap-4",
         ),
-        class_name="flex flex-col gap-5 rounded-2xl border-l-4 border-l-[#DC2626] p-5 "
+        class_name="flex flex-col gap-4 rounded-xl border-l-4 border-l-[#DC2626] p-4 "
         + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
     )
 
@@ -857,7 +857,7 @@ def _listings() -> rx.Component:
         ),
         rx.el.div(
             rx.foreach(FantasyBoerseState.filtered_entries, _entry_card),
-            class_name="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3",
+            class_name="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3",
         ),
         rx.el.div(
             rx.el.div(
@@ -920,10 +920,10 @@ def _listings() -> rx.Component:
                     ),
                     class_name="table-auto min-w-full",
                 ),
-                class_name="mt-4 overflow-x-auto rounded-2xl border "
+                class_name="mt-3 overflow-x-auto rounded-xl border "
                 + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
             ),
-            class_name="mt-10",
+            class_name="mt-8",
         ),
         class_name="w-full",
     )
@@ -958,7 +958,7 @@ def fantasyboerse_page_content() -> rx.Component:
                         ),
                         rx.el.h1(
                             "Fantasybörse",
-                            class_name="mt-1 text-3xl font-bold tracking-tight "
+                            class_name="mt-1 text-2xl font-bold tracking-tight "
                             + TEXT_PRIMARY,
                         ),
                     ),
@@ -966,10 +966,10 @@ def fantasyboerse_page_content() -> rx.Component:
                 ),
                 rx.el.p(
                     "Freie Managerposten und ganze Ligen der Stoned Lack Army auf einen Blick.",
-                    class_name="mt-5 max-w-3xl text-base leading-7 "
+                    class_name="mt-3 max-w-3xl text-sm leading-6 "
                     + TEXT_SECONDARY,
                 ),
-                class_name="rounded-2xl border-l-4 border-l-[#DC2626] p-6 "
+                class_name="rounded-xl border-l-4 border-l-[#DC2626] p-4 sm:p-5 "
                 + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
             ),
             class_name="w-full",
@@ -989,7 +989,7 @@ def fantasyboerse_page_content() -> rx.Component:
             _stat_card(
                 "Ganze Ligen", FantasyBoerseState.whole_league_count, "trophy"
             ),
-            class_name="grid grid-cols-2 gap-4 lg:grid-cols-4",
+            class_name="grid grid-cols-2 gap-3 sm:grid-cols-4",
         ),
         rx.el.section(
             rx.el.div(
@@ -1008,14 +1008,20 @@ def fantasyboerse_page_content() -> rx.Component:
                     "Finde das passende Format, die richtige Liga-Größe und dein Budget.",
                     class_name="mt-1 text-sm " + TEXT_SECONDARY,
                 ),
-                class_name="mb-5",
+                class_name="mb-4",
             ),
             _filter_bar(),
             _active_filters(),
-            class_name="rounded-2xl border p-5 "
+            class_name="rounded-xl border p-4 "
             + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
         ),
-        _entry_form(),
-        fantasyboerse_content(),
-        class_name="flex w-full flex-col gap-6",
+        rx.el.div(
+            fantasyboerse_content(),
+            rx.el.div(
+                _entry_form(),
+                class_name="xl:sticky xl:top-24 xl:self-start",
+            ),
+            class_name="grid grid-cols-1 items-start gap-5 lg:gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.8fr)]",
+        ),
+        class_name="flex w-full flex-col gap-5",
     )
