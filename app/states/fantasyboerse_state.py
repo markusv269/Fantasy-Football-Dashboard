@@ -192,6 +192,22 @@ class FantasyBoerseState(rx.State):
         return " · ".join(parts)
 
     @staticmethod
+    def _summarize_roster_structure(positions: list[str]) -> str:
+        counts: dict[str, int] = {}
+        position_order: list[str] = []
+        for raw_position in positions:
+            position = str(raw_position).strip()
+            if not position:
+                continue
+            if position not in counts:
+                counts[position] = 0
+                position_order.append(position)
+            counts[position] += 1
+        return " · ".join(
+            f"{counts[position]} {position}" for position in position_order
+        )
+
+    @staticmethod
     def _user_team_name(
         user: dict[str, object], roster: dict[str, object]
     ) -> str:
@@ -264,18 +280,16 @@ class FantasyBoerseState(rx.State):
                         selected_roster.get("owner_id") or ""
                     ).strip()
                     owner: dict[str, object] = {}
-                    for user in users:
-                        if (
-                            str(user.get("user_id") or "").strip()
-                            == owner_user_id
-                        ):
-                            owner = user
-                            break
                     if owner_user_id:
-                        team_name = (
-                            self._user_team_name(owner, selected_roster)
-                            or f"User {owner_user_id}"
-                        )
+                        for user in users:
+                            if (
+                                str(user.get("user_id") or "").strip()
+                                == owner_user_id
+                            ):
+                                owner = user
+                                break
+                    team_name = self._user_team_name(owner, selected_roster)
+                    if owner_user_id:
                         status = "filled"
             else:
                 claimed_ids: set[str] = set()
@@ -298,7 +312,7 @@ class FantasyBoerseState(rx.State):
                 "league_form": form,
                 "roster_positions": positions,
                 "roster_structure": (
-                    " · ".join(positions)
+                    FantasyBoerseState._summarize_roster_structure(positions)
                     if positions
                     else "Keine Roster-Struktur verfügbar"
                 ),
@@ -721,12 +735,45 @@ def _safe_infer_form(
 def _safe_user_team_name(
     user: dict[str, object], roster: dict[str, object]
 ) -> str:
-    metadata = user.get("metadata") or {}
-    roster_metadata = roster.get("metadata") or {}
-    team_name = str(
-        metadata.get("team_name") or roster_metadata.get("team_name") or ""
-    ).strip()
-    display_name = str(user.get("display_name") or "").strip()
+    def _mapping(value: object) -> dict[str, object]:
+        return value if isinstance(value, dict) else {}
+
+    def _first_text(mapping: dict[str, object], keys: tuple[str, ...]) -> str:
+        for key in keys:
+            value = mapping.get(key)
+            text = str(value or "").strip()
+            if text:
+                return text
+        return ""
+
+    user_metadata = _mapping(user.get("metadata"))
+    roster_metadata = _mapping(roster.get("metadata"))
+    roster_settings = _mapping(roster.get("settings"))
+
+    user_team = _first_text(
+        user,
+        ("team_name", "teamName"),
+    ) or _first_text(
+        user_metadata,
+        ("team_name", "teamName", "team_name_override"),
+    )
+    roster_team = (
+        _first_text(
+            roster,
+            ("team_name", "teamName"),
+        )
+        or _first_text(
+            roster_metadata,
+            ("team_name", "teamName", "team_name_override"),
+        )
+        or _first_text(
+            roster_settings,
+            ("team_name", "teamName"),
+        )
+    )
+    team_name = user_team or roster_team
+    display_name = _first_text(user, ("display_name", "username"))
+
     if team_name and display_name and team_name.lower() != display_name.lower():
         return f"{team_name} · {display_name}"
     return team_name or display_name
