@@ -378,7 +378,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
                     "user-round-check", class_name="h-4 w-4 text-amber-600"
                 ),
                 rx.el.p(
-                    f"Aktuell besetzt: {entry['team_name']}",
+                    f"Aktuelles Team: {entry['team_name']}",
                     class_name="text-xs font-semibold text-amber-700",
                 ),
                 class_name="mt-4 flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2",
@@ -479,7 +479,7 @@ def _table_row(entry: rx.Var) -> rx.Component:
                     (entry["entry_type"].to(str) == "manager_spot")
                     & (entry["team_name"].to(str) != ""),
                     rx.el.p(
-                        f"Besetzt: {entry['team_name']}",
+                        f"Aktuelles Team: {entry['team_name']}",
                         class_name="mt-1 text-xs font-semibold text-amber-700",
                     ),
                     rx.fragment(),
