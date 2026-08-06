@@ -304,7 +304,7 @@ def _entry_card(entry: rx.Var) -> rx.Component:
         ),
         rx.el.p(
             entry["description"].to(str),
-            class_name="mt-3 min-h-10 text-sm leading-5 ",
+            class_name="mt-3 min-h-10 text-sm leading-5 " + TEXT_SECONDARY,
         ),
         rx.el.div(
             rx.el.div(
@@ -835,7 +835,7 @@ def _entry_form() -> rx.Component:
             reset_on_submit=False,
             class_name="flex flex-col gap-4",
         ),
-        class_name="flex flex-col gap-4 rounded-xl border-l-4 border-l-[#DC2626] p-4 "
+        class_name="flex flex-col gap-4 rounded-xl border-l-4 border-l-[#DC2626] p-4 pl-6 sm:pl-8 "
         + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
     )
 
@@ -938,7 +938,8 @@ def fantasyboerse_content() -> rx.Component:
             ("empty", _empty_state()),
             _listings(),
         ),
-        class_name="w-full",
+        class_name="w-full rounded-xl border p-4 "
+        + t("border-white/10 bg-[#0D1117]", "border-gray-200 bg-white"),
     )
 
 
@@ -949,7 +950,7 @@ def fantasyboerse_page_content() -> rx.Component:
                 rx.el.div(
                     rx.el.div(
                         rx.icon("store", class_name="h-7 w-7 text-white"),
-                        class_name="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#DC2626]",
+                        class_name="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[#DC2626]",
                     ),
                     rx.el.div(
                         rx.el.p(
@@ -969,7 +970,7 @@ def fantasyboerse_page_content() -> rx.Component:
                     class_name="mt-3 max-w-3xl text-sm leading-6 "
                     + TEXT_SECONDARY,
                 ),
-                class_name="rounded-xl border-l-4 border-l-[#DC2626] p-4 sm:p-5 "
+                class_name="overflow-hidden rounded-xl border border-l-4 border-l-[#DC2626] p-4 sm:p-5 "
                 + t("border-white/10 bg-[#12141C]", "border-gray-200 bg-white"),
             ),
             class_name="w-full",
