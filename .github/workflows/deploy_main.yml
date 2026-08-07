@@ -1,0 +1,22 @@
+name: Deploy Reflex App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    steps:
+      - name: Deploy to Reflex Cloud
+        uses: reflex-dev/reflex-deploy-action@v1
+        with:
+          auth_token: ${{ secrets.REFLEX_AUTH_TOKEN }}
+          project_id: ${{ secrets.REFLEX_PROJECT_ID }}
+          # Keep these here for the cloud runtime
+          extra_args: "--app-id ${{ secrets.APP_ID }} --env SUPABASE_URL=${{ secrets.SUPABASE_URL }} --env SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}"
+          python_version: "3.12" # Optional
