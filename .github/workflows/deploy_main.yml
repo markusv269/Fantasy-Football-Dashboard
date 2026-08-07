@@ -19,4 +19,3 @@ jobs:
           project_id: ${{ secrets.REFLEX_PROJECT_ID }}
           # Keep these here for the cloud runtime
           extra_args: "--env SUPABASE_URL=${{ secrets.SUPABASE_URL }} --env SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}"
-          python_version: "3.13" # Optional
