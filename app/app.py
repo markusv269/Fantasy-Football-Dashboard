@@ -122,11 +122,11 @@ app.add_page(
     route="/archive",
     on_load=[AppState.init_app, UserState.init_user, ArchiveState.load_archive],
 )
-app.add_page(
-    fantasyboerse_page,
-    route="/fantasyboerse",
-    on_load=FantasyBoerseState.load_entries,
-)
+# app.add_page(
+#     fantasyboerse_page,
+#     route="/fantasyboerse",
+#     on_load=FantasyBoerseState.load_entries,
+# )
 app.add_page(
     admin_page,
     route="/admin",
