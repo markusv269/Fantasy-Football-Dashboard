@@ -42,7 +42,7 @@ nav_items = [
     {"icon": "trending-up", "label": "Trending", "href": "/trending"},
     {"icon": "mic", "label": "Community", "href": "/community"},
     {"icon": "archive", "label": "Archiv", "href": "/archive"},
-    {"icon": "store", "label": "Fantasybörse", "href": "/fantasyboerse"},
+    # {"icon": "store", "label": "Fantasybörse", "href": "/fantasyboerse"},
     {"icon": "clipboard-list", "label": "Warteliste", "href": "/waitinglist"},
     {
         "icon": "user-plus",
