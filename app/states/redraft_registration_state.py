@@ -131,15 +131,41 @@ class RedraftRegistrationState(rx.State):
         self._clear_status()
 
     def _fetch_from_table(self, client, table: str) -> list[dict]:
-        res = (
-            client.table(table)
-            .select(
-                "user_id,sleeper,discord,email,mitspieler,key,created_at,commish"
+        """Load all rows from Supabase in batches.
+
+        Supabase/PostgREST commonly limits a single response to 1000 rows.
+        We therefore page through the result set explicitly.
+        """
+        batch_size = 1000
+        rows: list[dict] = []
+        offset = 0
+
+        while True:
+            res = (
+                client.table(table)
+                .select(
+                    "user_id,sleeper,discord,email,mitspieler,key,created_at,commish"
+                )
+                .order("created_at", desc=False, nullsfirst=False)
+                .range(offset, offset + batch_size - 1)
+                .execute()
             )
-            .order("created_at", desc=False, nullsfirst=False)
-            .execute()
+
+            batch = res.data if res and res.data else []
+            rows.extend(batch)
+
+            if len(batch) < batch_size:
+                break
+
+            offset += batch_size
+
+        logging.info(
+            "Loaded %d rows from %s in batches of %d",
+            len(rows),
+            table,
+            batch_size,
         )
-        return res.data if res and res.data else []
+        return rows
 
     def _parse_mates(self, raw) -> list[str]:
         """Normalize the ``mitspieler`` column into a list of names.

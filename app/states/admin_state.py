@@ -572,20 +572,40 @@ class AdminState(rx.State):
         client = get_supabase_client()
         if not client:
             return [], "Supabase nicht verfügbar."
+        # Supabase/PostgREST may cap a single response at 1000 rows.
+        # The league draw must therefore page through the complete
+        # registration table instead of relying on one unbounded select().
+        batch_size = 1000
+        rows: list[dict] = []
+        offset = 0
         try:
-            res = (
-                client.table("redraft_registration_2026")
-                .select(
-                    "index,sleeper,discord,mitspieler,commish,"
-                    "created_at,user_id"
+            while True:
+                res = (
+                    client.table("redraft_registration_2026")
+                    .select(
+                        "index,sleeper,discord,mitspieler,commish,"
+                        "created_at,user_id"
+                    )
+                    .order("created_at", desc=False)
+                    .order("user_id", desc=False)
+                    .range(offset, offset + batch_size - 1)
+                    .execute()
                 )
-                .order("created_at", desc=False)
-                .execute()
+                batch = res.data if res and res.data else []
+                rows.extend(batch)
+
+                if len(batch) < batch_size:
+                    break
+                offset += batch_size
+
+            logging.info(
+                "Redraft registrations loaded completely: %d rows (batch=%d)",
+                len(rows),
+                batch_size,
             )
         except Exception as e:
             logging.exception(f"redraft_registration_2026 fetch failed: {e}")
             return [], f"Fehler beim Laden: {e}"
-        rows = res.data if res and res.data else []
         normalized: list[dict] = []
         for r in rows:
             sleeper = str(r.get("sleeper") or "").strip()
