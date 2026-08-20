@@ -224,55 +224,55 @@ class RedraftAuslosungState(rx.State):
                 by_name[canonical_name.lower()] = normalized
         return by_id, by_name
 
-    def _fetch_live_league_users(self, league_id: str) -> list[dict[str, str]]:
-        """Fetch live league membership and display details from Sleeper."""
-        if not league_id:
-            return []
-        try:
-            response = requests.get(
-                f"https://api.sleeper.com/v1/league/{league_id}/users",
-                timeout=10,
-            )
-            response.raise_for_status()
-            payload = response.json()
-            if not isinstance(payload, list):
-                logging.warning(
-                    f"Sleeper league users response was not a list for {league_id}."
-                )
-                return []
+    # def _fetch_live_league_users(self, league_id: str) -> list[dict[str, str]]:
+    #     """Fetch live league membership and display details from Sleeper."""
+    #     if not league_id:
+    #         return []
+    #     try:
+    #         response = requests.get(
+    #             f"https://api.sleeper.com/v1/league/{league_id}/users",
+    #             timeout=10,
+    #         )
+    #         response.raise_for_status()
+    #         payload = response.json()
+    #         if not isinstance(payload, list):
+    #             logging.warning(
+    #                 f"Sleeper league users response was not a list for {league_id}."
+    #             )
+    #             return []
 
-            users: list[dict[str, str]] = []
-            for raw_user in payload:
-                if not isinstance(raw_user, dict):
-                    continue
-                metadata = raw_user.get("metadata")
-                if not isinstance(metadata, dict):
-                    metadata = {}
-                user_id = str(raw_user.get("user_id") or "").strip()
-                if not user_id:
-                    continue
-                users.append(
-                    {
-                        "user_id": user_id,
-                        "display_name": str(
-                            raw_user.get("display_name") or ""
-                        ).strip(),
-                        "team_name": str(
-                            metadata.get("team_name") or ""
-                        ).strip(),
-                    }
-                )
-            return users
-        except requests.exceptions.RequestException as e:
-            logging.exception(
-                f"Sleeper league users request failed for {league_id}: {e}"
-            )
-            return []
-        except Exception as e:
-            logging.exception(
-                f"Sleeper league users response failed for {league_id}: {e}"
-            )
-            return []
+    #         users: list[dict[str, str]] = []
+    #         for raw_user in payload:
+    #             if not isinstance(raw_user, dict):
+    #                 continue
+    #             metadata = raw_user.get("metadata")
+    #             if not isinstance(metadata, dict):
+    #                 metadata = {}
+    #             user_id = str(raw_user.get("user_id") or "").strip()
+    #             if not user_id:
+    #                 continue
+    #             users.append(
+    #                 {
+    #                     "user_id": user_id,
+    #                     "display_name": str(
+    #                         raw_user.get("display_name") or ""
+    #                     ).strip(),
+    #                     "team_name": str(
+    #                         metadata.get("team_name") or ""
+    #                     ).strip(),
+    #                 }
+    #             )
+    #         return users
+    #     except requests.exceptions.RequestException as e:
+    #         logging.exception(
+    #             f"Sleeper league users request failed for {league_id}: {e}"
+    #         )
+    #         return []
+    #     except Exception as e:
+    #         logging.exception(
+    #             f"Sleeper league users response failed for {league_id}: {e}"
+    #         )
+    #         return []
 
     @rx.event
     def load_assignment(self):
@@ -390,11 +390,11 @@ class RedraftAuslosungState(rx.State):
                 v["league_id"] for v in resolved.values() if v["league_id"]
             ]
             live_users_by_league: dict[str, dict[str, dict[str, str]]] = {}
-            for league_id in dict.fromkeys(mapped_ids):
-                live_users = self._fetch_live_league_users(league_id)
-                live_users_by_league[league_id] = {
-                    user["user_id"]: user for user in live_users
-                }
+            # for league_id in dict.fromkeys(mapped_ids):
+            #     live_users = self._fetch_live_league_users(league_id)
+            #     live_users_by_league[league_id] = {
+            #         user["user_id"]: user for user in live_users
+            #     }
 
             leagues_out: list[dict] = []
             total_joined = 0
@@ -411,9 +411,12 @@ class RedraftAuslosungState(rx.State):
                 for row in sorted(
                     rows, key=lambda x: int(x.get("roster_position") or 0)
                 ):
+                    # uid = str(row.get("sleeper_user_id") or "")
+                    # live_user = live_users.get(uid, {}) if uid else {}
+                    # joined = bool(live_user)
                     uid = str(row.get("sleeper_user_id") or "")
-                    live_user = live_users.get(uid, {}) if uid else {}
-                    joined = bool(live_user)
+                    joined = False
+                    live_user = {}
                     if joined:
                         joined_here += 1
                     players_out.append(
