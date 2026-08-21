@@ -17,8 +17,11 @@ from app.pages.drafts import drafts_page
 from app.pages.adp_draftboard import adp_draftboard_page
 from app.states.adp_state import AdpState
 from app.pages.waitinglist import waitinglist_page
-from app.pages.redraft_registration import redraft_registration_page
-from app.states.redraft_registration_state import RedraftRegistrationState
+# from app.pages.redraft_registration import redraft_registration_page
+# from app.states.redraft_registration_state import RedraftRegistrationState
+from app.states.redraft_registration_state_updated import RedraftRegistrationState
+from app.pages.redraft_registration_page_updated import redraft_registration_page
+
 from app.pages.redraft_auslosung import redraft_auslosung_page
 from app.states.redraft_auslosung_state import RedraftAuslosungState
 from app.pages.admin import admin_page
@@ -107,11 +110,18 @@ app.add_page(adp_draftboard_page, route="/adp", on_load=AdpState.init_adp)
 app.add_page(
     waitinglist_page, route="/waitinglist", on_load=WaitlistState.init_waitlist
 )
+# app.add_page(
+#     redraft_registration_page,
+#     route="/redraft-registration",
+#     on_load=RedraftRegistrationState.init_page,
+# )
+
 app.add_page(
     redraft_registration_page,
     route="/redraft-registration",
     on_load=RedraftRegistrationState.init_page,
 )
+
 app.add_page(
     redraft_auslosung_page,
     route="/redraft-auslosung",
