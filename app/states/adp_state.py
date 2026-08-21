@@ -368,7 +368,7 @@ class AdpState(rx.State):
                     client.table("drafts")
                     .select("draft_id,season,league_id,status,draft_type")
                     .in_("league_id", chunk)
-                    .eq("status", "complete")
+                    # .eq("status", "complete")
                     .eq("season", self.selected_season)
                     .eq("draft_type", self.selected_draft_type)
                 )

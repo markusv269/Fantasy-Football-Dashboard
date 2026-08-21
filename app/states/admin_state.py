@@ -1466,6 +1466,11 @@ class AdminState(rx.State):
             return 0
         rows = []
         for d in drafts:
+            # Completed drafts are immutable for our sync purposes.
+            # Do not overwrite their stored snapshot/status.
+            status = str(d.get("status") or "").strip().lower()
+            if status == "complete":
+                continue
             draft_id = str(d.get("draft_id") or "")
             if not draft_id:
                 continue
@@ -1596,16 +1601,18 @@ class AdminState(rx.State):
             yield AdminState.load_leagues
 
     def _sync_draft_picks_for_draft(self, client, draft_id: str) -> int:
+        """Sync picks for one non-complete draft using upsert semantics.
+
+        The caller only passes drafts whose status is not ``complete``.
+        No delete/reinsert is performed, so existing pick rows keep their
+        identity and are updated in place. New picks are inserted.
+
+        Requires a unique constraint on ``draft_picks(draft_id, round, pick_no)``.
+        """
         picks = get_draft_picks(draft_id) or []
-        try:
-            client.table("draft_picks").delete().eq(
-                "draft_id", str(draft_id)
-            ).execute()
-        except Exception as e:
-            logging.exception(f"draft_picks delete failed {draft_id}: {e}")
-            raise
         if not picks:
             return 0
+
         rows = []
         for p in picks:
             rows.append(
@@ -1621,14 +1628,16 @@ class AdminState(rx.State):
                     "json_data": p,
                 }
             )
+
         try:
             batch = 500
             for i in range(0, len(rows), batch):
-                client.table("draft_picks").insert(
-                    rows[i : i + batch]
+                client.table("draft_picks").upsert(
+                    rows[i : i + batch],
+                    on_conflict="draft_id,round,pick_no",
                 ).execute()
         except Exception as e:
-            logging.exception(f"draft_picks insert failed {draft_id}: {e}")
+            logging.exception(f"draft_picks upsert failed {draft_id}: {e}")
             raise
         return len(rows)
 
@@ -1658,6 +1667,10 @@ class AdminState(rx.State):
                         continue
                     rows = []
                     for d in drafts:
+                        # Completed drafts must remain untouched.
+                        status = str(d.get("status") or "").strip().lower()
+                        if status == "complete":
+                            continue
                         did = str(d.get("draft_id") or "")
                         if not did:
                             continue
@@ -1701,7 +1714,7 @@ class AdminState(rx.State):
                 f"Draft-Scan fertig: {total} Drafts aus {ok} Ligen ({fail} Fehler)."
             )
             self._set_status(
-                f"{total} Drafts synchronisiert aus {ok} Liga(en).",
+                f"{total} offene Drafts synchronisiert aus {ok} Liga(en).",
                 "success" if fail == 0 else "error",
             )
         except Exception as e:
@@ -1725,12 +1738,17 @@ class AdminState(rx.State):
             if not client:
                 self._set_status("Supabase nicht verfügbar.", "error")
                 return
-            query = client.table("drafts").select("draft_id,league_id")
+            query = client.table("drafts").select("draft_id,league_id,status")
             if self.target_league_id:
                 query = query.eq("league_id", self.target_league_id)
             res = query.execute()
             drafts = res.data if res and res.data else []
-            self._log(f"Draftpicks-Import: {len(drafts)} Draft(s)…")
+            drafts = [
+                d
+                for d in drafts
+                if str(d.get("status") or "").strip().lower() != "complete"
+            ]
+            self._log(f"Draftpicks-Import: {len(drafts)} offene Draft(s)…")
             total = 0
             ok = 0
             fail = 0
@@ -1753,7 +1771,7 @@ class AdminState(rx.State):
                 f"Draftpicks-Import fertig: {total} Picks ({ok} OK, {fail} Fehler)."
             )
             self._set_status(
-                f"{total} Draftpicks importiert.",
+                f"{total} Draftpicks aus offenen Drafts importiert.",
                 "success" if fail == 0 else "error",
             )
         except Exception as e:
