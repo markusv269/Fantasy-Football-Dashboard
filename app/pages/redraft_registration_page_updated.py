@@ -16,22 +16,29 @@ def _hero() -> rx.Component:
                 align="center",
                 wrap="wrap",
             ),
+            # rx.text(
+            #     "Die 85 Redraft-Ligen für 2026 sind bereits erstellt und alle "
+            #     "1.020 Plätze vergeben. Anmeldungen sind weiterhin möglich, "
+            #     "werden aber ausschließlich als Nachrücker auf der Warteliste "
+            #     "geführt. Sleeper-Name und Discord sind Pflichtfelder. E-Mail "
+            #     "ist optional und wird in der öffentlichen Übersicht NICHT angezeigt.",
+            #     size="3",
+            #     color_scheme="gray",
+            # ),
             rx.text(
-                "Die 85 Redraft-Ligen für 2026 sind bereits erstellt und alle "
-                "1.020 Plätze vergeben. Anmeldungen sind weiterhin möglich, "
-                "werden aber ausschließlich als Nachrücker auf der Warteliste "
-                "geführt. Sleeper-Name und Discord sind Pflichtfelder. E-Mail "
-                "ist optional und wird in der öffentlichen Übersicht NICHT angezeigt.",
+                "Die Stoned Lack Redraft Ligen sind ausgelost und bereits am draften. Insgesamt 86 Ligen gehen in die Saison "
+                "für den Kampf um die Champ of Champs Krone. Falls ihr noch Ligen sucht schaut auf den Stoned Lack Discord-Kanal. "
+                "Allen Teilnehmern viel Erfolg und good luck!",
                 size="3",
                 color_scheme="gray",
             ),
-            rx.text(
-                "Nach der Anmeldung erhältst du einen Änderungscode. Bewahre "
-                "ihn gut auf — du brauchst ihn, um deine Anmeldung später zu "
-                "aktualisieren. Mit der Anmeldung erklärst du Dich mit der Veröffentlichung der Namen (sleeper/Discord) sowie der Speicherung der E-Mail-Adresse einverstanden.",
-                size="2",
-                class_name="italic " + TEXT_SECONDARY,
-            ),
+            # rx.text(
+            #     "Nach der Anmeldung erhältst du einen Änderungscode. Bewahre "
+            #     "ihn gut auf — du brauchst ihn, um deine Anmeldung später zu "
+            #     "aktualisieren. Mit der Anmeldung erklärst du Dich mit der Veröffentlichung der Namen (sleeper/Discord) sowie der Speicherung der E-Mail-Adresse einverstanden.",
+            #     size="2",
+            #     class_name="italic " + TEXT_SECONDARY,
+            # ),
             spacing="3",
             width="100%",
             align="stretch",
@@ -795,15 +802,15 @@ def redraft_registration_page() -> rx.Component:
     return layout(
         rx.vstack(
             _hero(),
-            _season_status(),
-            _status_banner(),
-            _table_warning(),
-            rx.cond(
-                RedraftRegistrationState.submit_success,
-                _success_card(),
-                _form(),
-            ),
-            _entries_card(),
+            # _season_status(),
+            # _status_banner(),
+            # _table_warning(),
+            # rx.cond(
+            #     RedraftRegistrationState.submit_success,
+            #     _success_card(),
+            #     _form(),
+            # ),
+            # _entries_card(),
             spacing="5",
             width="100%",
             align="stretch",
